@@ -1,0 +1,57 @@
+appId: ${APP_ID}
+name: profile-form-happy-path
+---
+- openLink: ${DEEPLINK || 'exp://localhost:8081'}
+# 前 flow が下端でスクロール残しの場合があるので、座標指定 swipe で上方向に複数回戻す
+- repeat:
+    times: 8
+    commands:
+      - swipe:
+          start: 50%, 30%
+          end: 50%, 90%
+          duration: 400
+# 上端に戻ったら Tamagui works が見えるはず。bundle cold build を含めて長めに待つ
+- extendedWaitUntil:
+    visible: 'Tamagui works'
+    timeout: 180000
+
+# 名前 (フォームを画面に出すためスクロール)
+- scrollUntilVisible:
+    element:
+      text: '名前'
+# Maestro inputText は Unicode (日本語) 非対応のため ASCII 名で代替
+- tapOn: '名前'
+- inputText: 'Test Taro'
+
+# メール
+- scrollUntilVisible:
+    element:
+      text: 'メールアドレス'
+- tapOn: 'メールアドレス'
+- inputText: 'test@example.com'
+
+# 生年月日 (Web 非対応の DateTimePicker は使わず Input に直接入力)
+- scrollUntilVisible:
+    element:
+      text: 'YYYY-MM-DD'
+- tapOn: 'YYYY-MM-DD'
+- inputText: '2000-01-01'
+
+# 同意 Switch (testID で一意指定)
+- scrollUntilVisible:
+    element:
+      id: 'profile-agreed-switch'
+- tapOn:
+    id: 'profile-agreed-switch'
+
+# 送信
+- scrollUntilVisible:
+    element:
+      text: '送信'
+- tapOn: '送信'
+
+# ネイティブ Alert (AlertDialog のタイトルが見えれば submit 成功とみなす。
+# 本文 (Test Taro 等) は React Native の Alert.alert が UiAutomator hierarchy に
+# 露出しないことがあるためアサート対象から外す)
+- assertVisible: '送信内容'
+- tapOn: 'OK'

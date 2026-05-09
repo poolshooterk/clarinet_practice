@@ -1,0 +1,15 @@
+appId: ${APP_ID}
+name: smoke
+---
+- openLink: ${DEEPLINK || 'exp://localhost:8081'}
+# 初回 cold bundle build (特に tunnel 経由) に時間がかかるため最初は長めに待機
+- extendedWaitUntil:
+    visible: 'Tamagui works'
+    timeout: 180000
+# Form demo / Zustand demo は画面下に積まれているのでスクロールしながら確認
+- scrollUntilVisible:
+    element:
+      text: 'Form demo'
+- scrollUntilVisible:
+    element:
+      text: 'Zustand demo'
