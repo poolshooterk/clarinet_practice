@@ -44,3 +44,6 @@ app-example
 
 # Claude Code — local-only settings (permissions, user-specific paths)
 .claude/settings.local.json
+
+# Brainstorming visual companion
+.superpowers/
