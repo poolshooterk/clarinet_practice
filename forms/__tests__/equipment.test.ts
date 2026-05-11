@@ -22,6 +22,11 @@ describe('parseYmd', () => {
     expect(parseYmd('')).toBeNull();
     expect(parseYmd('20-01-01')).toBeNull();
   });
+
+  it('範囲外の日付コンポーネントは regex を通過し Date がロールオーバーする', () => {
+    // regex は通過するが JS Date がロールオーバーするため null にはならない
+    expect(parseYmd('2024-13-40')).not.toBeNull();
+  });
 });
 
 describe('formatDate', () => {
