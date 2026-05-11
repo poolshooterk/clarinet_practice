@@ -131,7 +131,7 @@ export function PurchasePlanForm() {
                 <Paragraph color="$color12">目標金額</Paragraph>
                 <Input
                   value={value !== undefined ? String(value) : ''}
-                  onChangeText={(t) => onChange(t === '' ? undefined : Number(t) || undefined)}
+                  onChangeText={(t) => onChange(t === '' ? undefined : (Number(t) ?? undefined))}
                   onBlur={onBlur}
                   placeholder="例: 850000"
                   keyboardType="numeric"
@@ -170,7 +170,7 @@ export function PurchasePlanForm() {
                   <Paragraph color="$color12">月の貯蓄額</Paragraph>
                   <Input
                     value={value !== undefined ? String(value) : ''}
-                    onChangeText={(t) => onChange(t === '' ? undefined : Number(t) || undefined)}
+                    onChangeText={(t) => onChange(t === '' ? undefined : (Number(t) ?? undefined))}
                     onBlur={onBlur}
                     placeholder="例: 30000"
                     keyboardType="numeric"

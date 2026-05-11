@@ -81,4 +81,16 @@ describe('PurchasePlanForm (integration)', () => {
       expect(plan!.makerId).toBe('maker-1');
     });
   });
+
+  it('currentSavings が 0 でも "今すぐ購入可能" が正しく表示される', async () => {
+    renderWithProviders(<PurchasePlanForm />);
+
+    fireEvent.changeText(screen.getByLabelText('目標金額'), '100000');
+    fireEvent.changeText(screen.getByLabelText('現在の貯蓄額'), '0');
+    fireEvent.changeText(screen.getByLabelText('月の貯蓄額'), '50000');
+
+    await waitFor(() => {
+      expect(screen.getByText(/ごろ/)).toBeTruthy();
+    });
+  });
 });
