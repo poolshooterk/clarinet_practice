@@ -1,4 +1,4 @@
-import { clarinetEquipmentSchema, formatDate, parseYmd } from '@/forms/equipment';
+import { calcUsagePeriod, clarinetEquipmentSchema, formatDate, parseYmd } from '@/forms/equipment';
 
 const validInstrument = {
   makerId: 'maker-1',
@@ -40,6 +40,50 @@ describe('formatDate', () => {
   it('parseYmd との round-trip が成立する', () => {
     const original = '2023-12-31';
     expect(formatDate(parseYmd(original)!)).toBe(original);
+  });
+});
+
+describe('calcUsagePeriod', () => {
+  const ref = new Date(2026, 4, 11); // 2026-05-11
+
+  it('空文字は null を返す', () => {
+    expect(calcUsagePeriod('', ref)).toBeNull();
+  });
+
+  it('不正な日付は null を返す', () => {
+    expect(calcUsagePeriod('not-a-date', ref)).toBeNull();
+  });
+
+  it('未来の日付は null を返す', () => {
+    expect(calcUsagePeriod('2027-01-01', ref)).toBeNull();
+  });
+
+  it('当日は 1ヶ月未満 を返す', () => {
+    expect(calcUsagePeriod('2026-05-11', ref)).toBe('1ヶ月未満');
+  });
+
+  it('29日差は 1ヶ月未満 を返す', () => {
+    expect(calcUsagePeriod('2026-04-12', ref)).toBe('1ヶ月未満');
+  });
+
+  it('ちょうど1ヶ月は 1ヶ月 を返す', () => {
+    expect(calcUsagePeriod('2026-04-11', ref)).toBe('1ヶ月');
+  });
+
+  it('11ヶ月は 11ヶ月 を返す', () => {
+    expect(calcUsagePeriod('2025-06-11', ref)).toBe('11ヶ月');
+  });
+
+  it('ちょうど1年は 1年 を返す', () => {
+    expect(calcUsagePeriod('2025-05-11', ref)).toBe('1年');
+  });
+
+  it('年をまたぐ月計算が正しい（9ヶ月）', () => {
+    expect(calcUsagePeriod('2025-08-11', ref)).toBe('9ヶ月');
+  });
+
+  it('複数年と月を組み合わせて返す', () => {
+    expect(calcUsagePeriod('2024-02-11', ref)).toBe('2年3ヶ月');
   });
 });
 

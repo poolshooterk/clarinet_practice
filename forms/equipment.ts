@@ -20,6 +20,30 @@ export const formatDate = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
+export const calcUsagePeriod = (startDate: string, now = new Date()): string | null => {
+  const start = parseYmd(startDate);
+  if (!start) return null;
+
+  let years = now.getFullYear() - start.getFullYear();
+  let months = now.getMonth() - start.getMonth();
+
+  // 当月の日付がまだ開始日に達していなければ満月数を1引く
+  if (now.getDate() < start.getDate()) {
+    months--;
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years < 0) return null;
+  if (years === 0 && months === 0) return '1ヶ月未満';
+  if (years === 0) return `${months}ヶ月`;
+  if (months === 0) return `${years}年`;
+  return `${years}年${months}ヶ月`;
+};
+
 export const startDateSchema = z
   .string()
   .min(1, '使用開始日を入力してください')

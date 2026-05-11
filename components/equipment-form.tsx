@@ -9,6 +9,7 @@ import { Button, Card, Input, Paragraph, XStack, YStack } from 'tamagui';
 import { FieldError } from '@/components/form/field-error';
 import { InstrumentPicker } from '@/components/instrument-picker';
 import {
+  calcUsagePeriod,
   type ClarinetEquipment,
   clarinetEquipmentSchema,
   formatDate,
@@ -45,14 +46,28 @@ const OTHER_SECTIONS: {
     label: 'リガチャー',
     emoji: '🔗',
     placeholder: '例: Vandoren M/O',
-    presets: ['Vandoren M/O', 'BG Franck Superior', 'Bonade', 'Rovner Dark', 'Harrison'],
+    presets: [
+      'Vandoren Optimum',
+      'Vandoren M/O',
+      'BG Franck Superior',
+      'Bonade',
+      'Rovner Dark',
+      'Harrison',
+    ],
   },
   {
     key: 'mouthpiece',
     label: 'マウスピース',
     emoji: '🎤',
     placeholder: '例: Vandoren B45',
-    presets: ['Vandoren B45', 'Vandoren M30', 'Vandoren BD5', 'Clark W. Fobes Debut', 'Selmer C85'],
+    presets: [
+      'Vandoren 5RV Lyre',
+      'Vandoren B45',
+      'Vandoren M30',
+      'Vandoren BD5',
+      'Clark W. Fobes Debut',
+      'Selmer C85',
+    ],
   },
 ];
 
@@ -104,6 +119,7 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
   });
 
   const instrumentValue = watch('instrument');
+  const instrumentUsagePeriod = calcUsagePeriod(instrumentValue?.startDate ?? '');
 
   const handleSave = (values: ClarinetEquipment) => {
     setEquipment(values);
@@ -205,6 +221,11 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
                   />
                 )}
                 <FieldError message={errors.instrument?.startDate?.message} />
+                {instrumentUsagePeriod && (
+                  <Paragraph color="$color11" size="$2">
+                    使用期間: {instrumentUsagePeriod}
+                  </Paragraph>
+                )}
               </YStack>
             )}
           />
