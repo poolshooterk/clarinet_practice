@@ -78,6 +78,7 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
   const savedEquipment = useEquipmentStore((s) => s.equipment);
   const fetchAll = useInstrumentCatalogStore((s) => s.fetchAll);
   const [showPicker, setShowPicker] = useState<OtherSection | null>(null);
+  const [showInstrumentPicker, setShowInstrumentPicker] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -130,9 +131,9 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
             }
             onChange={(v) => {
               setValue('instrument.makerId', v.makerId, { shouldValidate: true });
-              setValue('instrument.makerName', v.makerName);
+              setValue('instrument.makerName', v.makerName, { shouldValidate: true });
               setValue('instrument.modelId', v.modelId, { shouldValidate: true });
-              setValue('instrument.modelName', v.modelName);
+              setValue('instrument.modelName', v.modelName, { shouldValidate: true });
             }}
           />
           <FieldError message={errors.instrument?.makerId?.message} />
@@ -174,11 +175,28 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
                     aria-label="楽器使用開始日"
                   />
                   {Platform.OS !== 'web' && (
-                    <Button onPress={() => setShowPicker(null)} aria-label="楽器カレンダーから選択">
+                    <Button
+                      onPress={() => setShowInstrumentPicker(true)}
+                      aria-label="楽器カレンダーから選択"
+                    >
                       📅
                     </Button>
                   )}
                 </XStack>
+                {showInstrumentPicker && Platform.OS !== 'web' && (
+                  <DateTimePicker
+                    mode="date"
+                    display="default"
+                    value={parseYmd(value) ?? new Date()}
+                    maximumDate={new Date()}
+                    onChange={(event, selectedDate) => {
+                      setShowInstrumentPicker(false);
+                      if (event.type === 'set' && selectedDate) {
+                        onChange(formatDate(selectedDate));
+                      }
+                    }}
+                  />
+                )}
                 <FieldError message={errors.instrument?.startDate?.message} />
               </YStack>
             )}

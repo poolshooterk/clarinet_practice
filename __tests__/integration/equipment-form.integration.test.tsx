@@ -85,6 +85,10 @@ describe('EquipmentForm (integration)', () => {
       modelName: 'R13',
       startDate: '2020-04-01',
     });
+    expect(onSubmit.mock.calls[0][0].reed).toEqual({
+      name: 'Vandoren V12',
+      startDate: '2024-01-15',
+    });
   }, 15000);
 
   it('ストアに保存済みデータがあればフォームの初期値として表示される', () => {
