@@ -1,11 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Platform, ScrollView } from 'react-native';
 import { Button, Card, Input, Paragraph, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
+import { InstrumentPicker } from '@/components/instrument-picker';
 import {
   type ClarinetEquipment,
   clarinetEquipmentSchema,
@@ -13,23 +15,17 @@ import {
   parseYmd,
 } from '@/forms/equipment';
 import { useEquipmentStore } from '@/store/equipment';
+import { useInstrumentCatalogStore } from '@/store/instrument-catalog';
 
-type Section = 'instrument' | 'reed' | 'ligature' | 'mouthpiece';
+type OtherSection = 'reed' | 'ligature' | 'mouthpiece';
 
-const SECTIONS: {
-  key: Section;
+const OTHER_SECTIONS: {
+  key: OtherSection;
   label: string;
   emoji: string;
   placeholder: string;
   presets: string[];
 }[] = [
-  {
-    key: 'instrument',
-    label: '楽器',
-    emoji: '🎵',
-    placeholder: '例: B♭クラリネット',
-    presets: ['B♭クラリネット', 'Aクラリネット', 'バスクラリネット', 'Eクラリネット'],
-  },
   {
     key: 'reed',
     label: 'リード',
@@ -60,6 +56,13 @@ const SECTIONS: {
   },
 ];
 
+const emptyInstrument = {
+  makerId: '',
+  makerName: '',
+  modelId: '',
+  modelName: '',
+  startDate: '',
+};
 const emptyItem = { name: '', startDate: '' };
 
 const defaultOnSubmit = (_values: ClarinetEquipment) => {
@@ -73,22 +76,33 @@ type Props = {
 export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
   const setEquipment = useEquipmentStore((s) => s.setEquipment);
   const savedEquipment = useEquipmentStore((s) => s.equipment);
-  const [showPicker, setShowPicker] = useState<Section | null>(null);
+  const fetchAll = useInstrumentCatalogStore((s) => s.fetchAll);
+  const [showPicker, setShowPicker] = useState<OtherSection | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAll();
+    }, [fetchAll]),
+  );
 
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ClarinetEquipment>({
     resolver: zodResolver(clarinetEquipmentSchema),
     mode: 'onTouched',
     defaultValues: savedEquipment ?? {
-      instrument: emptyItem,
+      instrument: emptyInstrument,
       reed: emptyItem,
       ligature: emptyItem,
       mouthpiece: emptyItem,
     },
   });
+
+  const instrumentValue = watch('instrument');
 
   const handleSave = (values: ClarinetEquipment) => {
     setEquipment(values);
@@ -98,7 +112,80 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
   return (
     <ScrollView>
       <YStack gap="$4" p="$4" pb="$8">
-        {SECTIONS.map((section) => (
+        <Card elevation="$2" borderWidth={1} borderColor="$borderColor" p="$4" gap="$3">
+          <Paragraph size="$5" fontWeight="bold">
+            🎵 楽器
+          </Paragraph>
+
+          <InstrumentPicker
+            value={
+              instrumentValue?.makerId
+                ? {
+                    makerId: instrumentValue.makerId,
+                    makerName: instrumentValue.makerName,
+                    modelId: instrumentValue.modelId,
+                    modelName: instrumentValue.modelName,
+                  }
+                : null
+            }
+            onChange={(v) => {
+              setValue('instrument.makerId', v.makerId, { shouldValidate: true });
+              setValue('instrument.makerName', v.makerName);
+              setValue('instrument.modelId', v.modelId, { shouldValidate: true });
+              setValue('instrument.modelName', v.modelName);
+            }}
+          />
+          <FieldError message={errors.instrument?.makerId?.message} />
+          <FieldError message={errors.instrument?.modelId?.message} />
+
+          <Controller
+            control={control}
+            name="instrument.purchasePrice"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <YStack gap="$1">
+                <Paragraph color="$color12">購入金額（任意）</Paragraph>
+                <Input
+                  value={value !== undefined ? String(value) : ''}
+                  onChangeText={(t) => onChange(t === '' ? undefined : Number(t) || undefined)}
+                  onBlur={onBlur}
+                  placeholder="例: 850000"
+                  keyboardType="numeric"
+                  aria-label="購入金額"
+                />
+              </YStack>
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="instrument.startDate"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <YStack gap="$1">
+                <Paragraph color="$color12">使用開始日</Paragraph>
+                <XStack gap="$2" items="center">
+                  <Input
+                    flex={1}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="YYYY-MM-DD"
+                    autoCapitalize="none"
+                    keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+                    aria-label="楽器使用開始日"
+                  />
+                  {Platform.OS !== 'web' && (
+                    <Button onPress={() => setShowPicker(null)} aria-label="楽器カレンダーから選択">
+                      📅
+                    </Button>
+                  )}
+                </XStack>
+                <FieldError message={errors.instrument?.startDate?.message} />
+              </YStack>
+            )}
+          />
+        </Card>
+
+        {OTHER_SECTIONS.map((section) => (
           <Card
             key={section.key}
             elevation="$2"
@@ -113,13 +200,7 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
 
             <Controller
               control={control}
-              name={
-                `${section.key}.name` as
-                  | 'instrument.name'
-                  | 'reed.name'
-                  | 'ligature.name'
-                  | 'mouthpiece.name'
-              }
+              name={`${section.key}.name` as 'reed.name' | 'ligature.name' | 'mouthpiece.name'}
               render={({ field: { onChange, onBlur, value } }) => (
                 <YStack gap="$2">
                   <Input
@@ -151,7 +232,6 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
               control={control}
               name={
                 `${section.key}.startDate` as
-                  | 'instrument.startDate'
                   | 'reed.startDate'
                   | 'ligature.startDate'
                   | 'mouthpiece.startDate'

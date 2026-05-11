@@ -5,7 +5,13 @@ import { useEquipmentStore } from '@/store/equipment';
 const STORAGE_KEY = 'clarinet-practice-equipment';
 
 const sampleEquipment = {
-  instrument: { name: 'B♭クラリネット', startDate: '2020-04-01' },
+  instrument: {
+    makerId: 'maker-1',
+    makerName: 'Buffet Crampon',
+    modelId: 'model-1',
+    modelName: 'R13',
+    startDate: '2020-04-01',
+  },
   reed: { name: 'Vandoren V12', startDate: '2024-01-15' },
   ligature: { name: 'Vandoren M/O', startDate: '2023-06-10' },
   mouthpiece: { name: 'Vandoren B45', startDate: '2022-03-20' },

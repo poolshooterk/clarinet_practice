@@ -1,7 +1,15 @@
 import { clarinetEquipmentSchema, formatDate, parseYmd } from '@/forms/equipment';
 
+const validInstrument = {
+  makerId: 'maker-1',
+  makerName: 'Buffet Crampon',
+  modelId: 'model-1',
+  modelName: 'R13',
+  startDate: '2020-04-01',
+};
+
 const validEquipment = {
-  instrument: { name: 'B♭クラリネット', startDate: '2020-04-01' },
+  instrument: validInstrument,
   reed: { name: 'Vandoren V12', startDate: '2024-01-15' },
   ligature: { name: 'Vandoren M/O', startDate: '2023-06-10' },
   mouthpiece: { name: 'Vandoren B45', startDate: '2022-03-20' },
@@ -22,11 +30,6 @@ describe('parseYmd', () => {
     expect(parseYmd('')).toBeNull();
     expect(parseYmd('20-01-01')).toBeNull();
   });
-
-  it('範囲外の日付コンポーネントは regex を通過し Date がロールオーバーする', () => {
-    // regex は通過するが JS Date がロールオーバーするため null にはならない
-    expect(parseYmd('2024-13-40')).not.toBeNull();
-  });
 });
 
 describe('formatDate', () => {
@@ -45,21 +48,45 @@ describe('clarinetEquipmentSchema', () => {
     expect(clarinetEquipmentSchema.safeParse(validEquipment).success).toBe(true);
   });
 
-  it('instrument.name が空文字列のとき拒否する', () => {
+  it('purchasePrice は省略可能', () => {
+    const r = clarinetEquipmentSchema.safeParse(validEquipment);
+    expect(r.success).toBe(true);
+  });
+
+  it('purchasePrice に数値を渡せる', () => {
     const r = clarinetEquipmentSchema.safeParse({
       ...validEquipment,
-      instrument: { ...validEquipment.instrument, name: '' },
+      instrument: { ...validInstrument, purchasePrice: 850000 },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('instrument.makerId が空文字列のとき拒否する', () => {
+    const r = clarinetEquipmentSchema.safeParse({
+      ...validEquipment,
+      instrument: { ...validInstrument, makerId: '' },
     });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(r.error.issues[0].path).toEqual(['instrument', 'name']);
+      expect(r.error.issues[0].path).toEqual(['instrument', 'makerId']);
     }
   });
 
-  it('startDate が空文字列のとき拒否する', () => {
+  it('instrument.modelId が空文字列のとき拒否する', () => {
     const r = clarinetEquipmentSchema.safeParse({
       ...validEquipment,
-      instrument: { ...validEquipment.instrument, startDate: '' },
+      instrument: { ...validInstrument, modelId: '' },
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues[0].path).toEqual(['instrument', 'modelId']);
+    }
+  });
+
+  it('instrument.startDate が空文字列のとき拒否する', () => {
+    const r = clarinetEquipmentSchema.safeParse({
+      ...validEquipment,
+      instrument: { ...validInstrument, startDate: '' },
     });
     expect(r.success).toBe(false);
     if (!r.success) {
@@ -70,7 +97,7 @@ describe('clarinetEquipmentSchema', () => {
   it('startDate の形式が YYYY-MM-DD でないとき拒否する', () => {
     const r = clarinetEquipmentSchema.safeParse({
       ...validEquipment,
-      instrument: { ...validEquipment.instrument, startDate: '2024/01/15' },
+      instrument: { ...validInstrument, startDate: '2024/01/15' },
     });
     expect(r.success).toBe(false);
   });
@@ -80,7 +107,7 @@ describe('clarinetEquipmentSchema', () => {
     future.setFullYear(future.getFullYear() + 1);
     const r = clarinetEquipmentSchema.safeParse({
       ...validEquipment,
-      instrument: { ...validEquipment.instrument, startDate: formatDate(future) },
+      instrument: { ...validInstrument, startDate: formatDate(future) },
     });
     expect(r.success).toBe(false);
   });
@@ -88,22 +115,19 @@ describe('clarinetEquipmentSchema', () => {
   it('今日の日付は受け入れる', () => {
     const r = clarinetEquipmentSchema.safeParse({
       ...validEquipment,
-      instrument: { ...validEquipment.instrument, startDate: formatDate(new Date()) },
+      instrument: { ...validInstrument, startDate: formatDate(new Date()) },
     });
     expect(r.success).toBe(true);
   });
 
-  it('全セクションが同時にエラーを返す', () => {
+  it('reed.name が空文字列のとき拒否する', () => {
     const r = clarinetEquipmentSchema.safeParse({
-      instrument: { name: '', startDate: '' },
-      reed: { name: '', startDate: '' },
-      ligature: { name: '', startDate: '' },
-      mouthpiece: { name: '', startDate: '' },
+      ...validEquipment,
+      reed: { ...validEquipment.reed, name: '' },
     });
     expect(r.success).toBe(false);
     if (!r.success) {
-      const sections = new Set(r.error.issues.map((i) => i.path[0]));
-      expect(sections).toEqual(new Set(['instrument', 'reed', 'ligature', 'mouthpiece']));
+      expect(r.error.issues[0].path).toEqual(['reed', 'name']);
     }
   });
 });

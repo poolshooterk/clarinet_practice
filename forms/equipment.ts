@@ -20,22 +20,34 @@ export const formatDate = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-const equipmentItemSchema = z.object({
+export const startDateSchema = z
+  .string()
+  .min(1, '使用開始日を入力してください')
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 形式で入力してください')
+  .refine((s) => parseYmd(s) !== null, '有効な日付を入力してください')
+  .refine((s) => parseYmd(s)! <= today(), '未来の日付は選択できません');
+
+export const instrumentItemSchema = z.object({
+  makerId: z.string().min(1, 'メーカーを選択してください'),
+  makerName: z.string().min(1),
+  modelId: z.string().min(1, '機種名を選択してください'),
+  modelName: z.string().min(1),
+  purchasePrice: z.number().optional(),
+  startDate: startDateSchema,
+});
+
+export const equipmentItemSchema = z.object({
   name: z.string().min(1, '名前を入力してください'),
-  startDate: z
-    .string()
-    .min(1, '使用開始日を入力してください')
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 形式で入力してください')
-    .refine((s) => parseYmd(s) !== null, '有効な日付を入力してください')
-    .refine((s) => parseYmd(s)! <= today(), '未来の日付は選択できません'),
+  startDate: startDateSchema,
 });
 
 export const clarinetEquipmentSchema = z.object({
-  instrument: equipmentItemSchema,
+  instrument: instrumentItemSchema,
   reed: equipmentItemSchema,
   ligature: equipmentItemSchema,
   mouthpiece: equipmentItemSchema,
 });
 
+export type InstrumentItem = z.infer<typeof instrumentItemSchema>;
 export type EquipmentItem = z.infer<typeof equipmentItemSchema>;
 export type ClarinetEquipment = z.infer<typeof clarinetEquipmentSchema>;
