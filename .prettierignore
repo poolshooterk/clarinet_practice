@@ -6,3 +6,5 @@ ios
 web-build
 package-lock.json
 *.tsbuildinfo
+.agents
+.mcp.json
