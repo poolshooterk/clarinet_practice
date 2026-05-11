@@ -147,7 +147,14 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
                 <Paragraph color="$color12">購入金額（任意）</Paragraph>
                 <Input
                   value={value !== undefined ? String(value) : ''}
-                  onChangeText={(t) => onChange(t === '' ? undefined : Number(t) || undefined)}
+                  onChangeText={(t) => {
+                    if (t === '') {
+                      onChange(undefined);
+                      return;
+                    }
+                    const n = Number(t);
+                    onChange(Number.isNaN(n) ? undefined : n);
+                  }}
                   onBlur={onBlur}
                   placeholder="例: 850000"
                   keyboardType="numeric"

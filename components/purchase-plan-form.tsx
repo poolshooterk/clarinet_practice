@@ -79,16 +79,6 @@ export function PurchasePlanForm() {
     setPlan,
   ]);
 
-  const values = {
-    makerId,
-    makerName,
-    modelId,
-    modelName,
-    targetPrice,
-    currentSavings,
-    monthlySavings,
-  };
-
   const result =
     targetPrice && currentSavings !== undefined && monthlySavings
       ? calcPurchaseDate(targetPrice, currentSavings, monthlySavings)
@@ -104,12 +94,12 @@ export function PurchasePlanForm() {
 
           <InstrumentPicker
             value={
-              values.makerId
+              makerId
                 ? {
-                    makerId: values.makerId,
-                    makerName: values.makerName,
-                    modelId: values.modelId,
-                    modelName: values.modelName,
+                    makerId,
+                    makerName,
+                    modelId,
+                    modelName,
                   }
                 : null
             }
@@ -131,7 +121,14 @@ export function PurchasePlanForm() {
                 <Paragraph color="$color12">目標金額</Paragraph>
                 <Input
                   value={value !== undefined ? String(value) : ''}
-                  onChangeText={(t) => onChange(t === '' ? undefined : (Number(t) ?? undefined))}
+                  onChangeText={(t) => {
+                    if (t === '') {
+                      onChange(undefined);
+                      return;
+                    }
+                    const n = Number(t);
+                    onChange(Number.isNaN(n) ? undefined : n);
+                  }}
                   onBlur={onBlur}
                   placeholder="例: 850000"
                   keyboardType="numeric"
@@ -151,7 +148,14 @@ export function PurchasePlanForm() {
                   <Paragraph color="$color12">現在の貯蓄額</Paragraph>
                   <Input
                     value={value !== undefined ? String(value) : ''}
-                    onChangeText={(t) => onChange(t === '' ? undefined : (Number(t) ?? undefined))}
+                    onChangeText={(t) => {
+                      if (t === '') {
+                        onChange(undefined);
+                        return;
+                      }
+                      const n = Number(t);
+                      onChange(Number.isNaN(n) ? undefined : n);
+                    }}
                     onBlur={onBlur}
                     placeholder="例: 200000"
                     keyboardType="numeric"
@@ -170,7 +174,14 @@ export function PurchasePlanForm() {
                   <Paragraph color="$color12">月の貯蓄額</Paragraph>
                   <Input
                     value={value !== undefined ? String(value) : ''}
-                    onChangeText={(t) => onChange(t === '' ? undefined : (Number(t) ?? undefined))}
+                    onChangeText={(t) => {
+                      if (t === '') {
+                        onChange(undefined);
+                        return;
+                      }
+                      const n = Number(t);
+                      onChange(Number.isNaN(n) ? undefined : n);
+                    }}
                     onBlur={onBlur}
                     placeholder="例: 30000"
                     keyboardType="numeric"
@@ -201,7 +212,7 @@ export function PurchasePlanForm() {
             {result.months > 0 && (
               <Paragraph color="$green10" size="$2">
                 あと約{result.months}ヶ月・残り￥
-                {((values.targetPrice ?? 0) - (values.currentSavings ?? 0)).toLocaleString()}
+                {((targetPrice ?? 0) - (currentSavings ?? 0)).toLocaleString()}
               </Paragraph>
             )}
           </Card>

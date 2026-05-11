@@ -82,7 +82,7 @@ describe('PurchasePlanForm (integration)', () => {
     });
   });
 
-  it('currentSavings が 0 でも "今すぐ購入可能" が正しく表示される', async () => {
+  it('currentSavings が 0 でも残り月数が正しく算出・表示される', async () => {
     renderWithProviders(<PurchasePlanForm />);
 
     fireEvent.changeText(screen.getByLabelText('目標金額'), '100000');
