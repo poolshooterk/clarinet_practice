@@ -1,9 +1,5 @@
-import { Paragraph, YStack } from 'tamagui';
+import { EquipmentForm } from '@/components/equipment-form';
 
 export default function Equipment() {
-  return (
-    <YStack flex={1} items="center" justify="center">
-      <Paragraph>楽器情報</Paragraph>
-    </YStack>
-  );
+  return <EquipmentForm />;
 }

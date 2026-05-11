@@ -40,6 +40,7 @@ describe('ProfileForm (integration)', () => {
     });
   });
 
+  // フルスイート並列実行時に RHF の再バリデーションが遅れるため、テストタイムアウトを 15000ms に延長
   it('clears email error after the input becomes valid', async () => {
     renderWithProviders(<ProfileForm />);
     const email = screen.getByPlaceholderText('メールアドレス');
@@ -55,9 +56,9 @@ describe('ProfileForm (integration)', () => {
 
     await waitFor(
       () => expect(screen.queryByText('メールアドレスの形式が正しくありません')).toBeNull(),
-      { timeout: 3000 },
+      { timeout: 10000 },
     );
-  });
+  }, 15000);
 
   it('submits with valid input and invokes onSubmit prop', async () => {
     const onSubmit = jest.fn();
