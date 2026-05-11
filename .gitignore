@@ -44,6 +44,12 @@ app-example
 
 # Claude Code — local-only settings (permissions, user-specific paths)
 .claude/settings.local.json
+.claude/skills/
+
+# Agent / MCP local config
+.agents/
+.mcp.json
+skills-lock.json
 
 # Brainstorming visual companion
 .superpowers/
