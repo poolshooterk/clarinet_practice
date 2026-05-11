@@ -15,23 +15,34 @@ jest.mock('@/lib/supabase', () => {
   const newMaker = { id: 'maker-new', name: 'Selmer' };
   const newModel = { id: 'model-new', maker_id: 'maker-1', name: 'Tosca' };
 
+  // fetchAll は select().order() チェーン、addMaker/addModel は insert().select().single() チェーン。
+  // 各テーブルオブジェクトがどちらの呼び出し順にも対応できるよう、
+  // select の戻り値に single を持たせる。
+  const makeSingleResult = (data: unknown) => ({
+    single: jest.fn().mockResolvedValue({ data, error: null }),
+  });
+
   return {
     supabase: {
       from: jest.fn((table: string) => {
         if (table === 'instrument_makers') {
           return {
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockResolvedValue({ data: makersData, error: null }),
+            select: jest.fn().mockImplementation(() => ({
+              order: jest.fn().mockResolvedValue({ data: makersData, error: null }),
+              ...makeSingleResult(newMaker),
+            })),
             insert: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({ data: newMaker, error: null }),
+            order: jest.fn().mockResolvedValue({ data: makersData, error: null }),
           };
         }
         if (table === 'instrument_models') {
           return {
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockResolvedValue({ data: modelsData, error: null }),
+            select: jest.fn().mockImplementation(() => ({
+              order: jest.fn().mockResolvedValue({ data: modelsData, error: null }),
+              ...makeSingleResult(newModel),
+            })),
             insert: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({ data: newModel, error: null }),
+            order: jest.fn().mockResolvedValue({ data: modelsData, error: null }),
           };
         }
         return {};
@@ -66,10 +77,12 @@ describe('useInstrumentCatalogStore', () => {
     expect(makers.some((m) => m.name === 'Selmer')).toBe(true);
   });
 
-  it('addModel で models に追加される', async () => {
+  it('addModel で models に追加され、maker_id が makerId にキャメルケース変換される', async () => {
     await useInstrumentCatalogStore.getState().addModel('maker-1', 'Tosca');
-    const { models } = useInstrumentCatalogStore.getState();
-    expect(models.some((m) => m.name === 'Tosca')).toBe(true);
+    const models = useInstrumentCatalogStore.getState().models;
+    const added = models.find((m) => m.name === 'Tosca');
+    expect(added).toBeDefined();
+    expect(added?.makerId).toBe('maker-1');
   });
 
   it('fetchAll が Supabase エラーを返してもキャッシュがあれば維持される', async () => {
