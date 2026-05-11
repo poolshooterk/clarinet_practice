@@ -62,11 +62,15 @@ const SECTIONS: {
 
 const emptyItem = { name: '', startDate: '' };
 
+const defaultOnSubmit = (_values: ClarinetEquipment) => {
+  Alert.alert('保存しました');
+};
+
 type Props = {
   onSubmit?: (values: ClarinetEquipment) => void;
 };
 
-export function EquipmentForm({ onSubmit }: Props) {
+export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
   const setEquipment = useEquipmentStore((s) => s.setEquipment);
   const savedEquipment = useEquipmentStore((s) => s.equipment);
   const [showPicker, setShowPicker] = useState<Section | null>(null);
@@ -88,11 +92,7 @@ export function EquipmentForm({ onSubmit }: Props) {
 
   const handleSave = (values: ClarinetEquipment) => {
     setEquipment(values);
-    if (onSubmit) {
-      onSubmit(values);
-    } else {
-      Alert.alert('保存しました');
-    }
+    onSubmit(values);
   };
 
   return (
