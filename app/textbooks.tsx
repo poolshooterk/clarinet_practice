@@ -51,7 +51,12 @@ export default function TextbooksScreen() {
   const handleModalSave = async () => {
     if (!modalTextbook) return;
     const page = Number(modalPage);
-    if (isNaN(page) || page < 0) return;
+    if (
+      isNaN(page) ||
+      page < 0 ||
+      (modalTextbook.totalPages !== null && page > modalTextbook.totalPages)
+    )
+      return;
     await upsert(modalTextbook.id, page);
     setModalTextbook(null);
   };
