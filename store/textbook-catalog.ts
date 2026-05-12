@@ -14,6 +14,7 @@ export type Textbook = {
 
 type TextbookCatalogState = {
   textbooks: Textbook[];
+  /** fetchAll ローディング専用。ミューテーション (add/update/remove) はローディング管理しない */
   loading: boolean;
   fetchAll: () => Promise<void>;
   add: (input: TextbookInput) => Promise<void>;
@@ -37,7 +38,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
             id: row.id,
             title: row.title,
             publisher: row.publisher ?? null,
-            difficulty: (row.difficulty as Difficulty) ?? null,
+            difficulty: (row.difficulty as Difficulty) ?? null, // DB CHECK constraint guarantees valid enum value
           })),
         });
       },
@@ -47,7 +48,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
           .from('textbooks')
           .insert({
             title: input.title,
-            publisher: input.publisher || null,
+            publisher: input.publisher || null, // 空文字を null に正規化
             difficulty: input.difficulty ?? null,
           })
           .select()
@@ -60,7 +61,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
               id: data.id,
               title: data.title,
               publisher: data.publisher ?? null,
-              difficulty: (data.difficulty as Difficulty) ?? null,
+              difficulty: (data.difficulty as Difficulty) ?? null, // DB CHECK constraint guarantees valid enum value
             },
           ],
         });
@@ -71,7 +72,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
           .from('textbooks')
           .update({
             title: input.title,
-            publisher: input.publisher || null,
+            publisher: input.publisher || null, // 空文字を null に正規化
             difficulty: input.difficulty ?? null,
           })
           .eq('id', id);
