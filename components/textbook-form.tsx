@@ -24,7 +24,12 @@ export function TextbookForm({ defaultValues, onSubmit = defaultOnSubmit, onDele
   } = useForm<TextbookInput>({
     resolver: zodResolver(textbookSchema),
     mode: 'onTouched',
-    defaultValues: defaultValues ?? { title: '', publisher: '', difficulty: undefined },
+    defaultValues: defaultValues ?? {
+      title: '',
+      publisher: '',
+      difficulty: undefined,
+      totalPages: undefined,
+    },
   });
 
   return (
@@ -84,6 +89,28 @@ export function TextbookForm({ defaultValues, onSubmit = defaultOnSubmit, onDele
                 </Button>
               ))}
             </XStack>
+          </YStack>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="totalPages"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <YStack gap="$1">
+            <Paragraph color="$color12">総ページ数</Paragraph>
+            <Input
+              value={value !== undefined ? String(value) : ''}
+              onChangeText={(t) => {
+                const n = Number(t);
+                onChange(t === '' || isNaN(n) ? undefined : n);
+              }}
+              onBlur={onBlur}
+              placeholder="例: 100"
+              keyboardType="numeric"
+              aria-label="総ページ数"
+            />
+            <FieldError message={errors.totalPages?.message} />
           </YStack>
         )}
       />

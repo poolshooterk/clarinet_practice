@@ -19,6 +19,7 @@ export default function TextbookFormScreen() {
         title: existing.title,
         publisher: existing.publisher ?? undefined,
         difficulty: existing.difficulty ?? undefined,
+        totalPages: existing.totalPages ?? undefined,
       }
     : undefined;
 

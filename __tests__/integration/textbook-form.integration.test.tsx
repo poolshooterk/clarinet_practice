@@ -53,4 +53,33 @@ describe('TextbookForm (integration)', () => {
     expect(screen.getByLabelText('教本名').props.value).toBe('クローゼ 教則本');
     expect(screen.getByLabelText('出版社').props.value).toBe('音楽之友社');
   });
+
+  it('totalPages を入力して保存すると onSubmit に数値が渡される', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('教本名'), 'ローズ 32のエチュード');
+    fireEvent.changeText(screen.getByLabelText('総ページ数'), '100');
+    fireEvent.press(screen.getByText('保存'));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ totalPages: 100 });
+  });
+
+  it('totalPages に 0 を入力するとバリデーションエラーが表示される', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('教本名'), 'テスト教本');
+    fireEvent.changeText(screen.getByLabelText('総ページ数'), '0');
+    fireEvent.press(screen.getByText('保存'));
+    await waitFor(() => {
+      expect(screen.getByText('1以上の整数を入力してください')).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('defaultValues に totalPages が含まれるとフォームに表示される', () => {
+    renderWithProviders(<TextbookForm defaultValues={{ title: 'テスト', totalPages: 80 }} />);
+    expect(screen.getByLabelText('総ページ数').props.value).toBe('80');
+  });
 });
