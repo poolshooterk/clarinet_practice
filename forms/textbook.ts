@@ -7,6 +7,7 @@ export const textbookSchema = z.object({
   title: z.string().min(1, '教本名を入力してください'),
   publisher: z.string().optional(),
   difficulty: z.enum(DIFFICULTY_OPTIONS).optional(),
+  totalPages: z.number().int().min(1, '1以上の整数を入力してください').optional(),
 });
 
 export type TextbookInput = z.infer<typeof textbookSchema>;

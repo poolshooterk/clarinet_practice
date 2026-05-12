@@ -33,4 +33,28 @@ describe('textbookSchema', () => {
   it('publisher が省略可能', () => {
     expect(textbookSchema.safeParse({ title: 'テスト' }).success).toBe(true);
   });
+
+  it('totalPages が省略可能', () => {
+    expect(textbookSchema.safeParse({ title: 'テスト' }).success).toBe(true);
+  });
+
+  it('totalPages に正整数を渡すと有効', () => {
+    expect(textbookSchema.safeParse({ title: 'テスト', totalPages: 100 }).success).toBe(true);
+  });
+
+  it('totalPages に 0 を渡すと拒否する', () => {
+    const r = textbookSchema.safeParse({ title: 'テスト', totalPages: 0 });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0].path).toEqual(['totalPages']);
+  });
+
+  it('totalPages に負数を渡すと拒否する', () => {
+    const r = textbookSchema.safeParse({ title: 'テスト', totalPages: -1 });
+    expect(r.success).toBe(false);
+  });
+
+  it('totalPages に小数を渡すと拒否する', () => {
+    const r = textbookSchema.safeParse({ title: 'テスト', totalPages: 1.5 });
+    expect(r.success).toBe(false);
+  });
 });
