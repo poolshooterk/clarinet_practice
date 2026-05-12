@@ -24,14 +24,16 @@ function buildStorage() {
   };
 }
 
+const isSSR = Platform.OS === 'web' && typeof window === 'undefined';
+
 export const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
   {
     auth: {
       storage: buildStorage(),
-      autoRefreshToken: true,
-      persistSession: true,
+      autoRefreshToken: !isSSR,
+      persistSession: !isSSR,
       detectSessionInUrl: false,
     },
   },
