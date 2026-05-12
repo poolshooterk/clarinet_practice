@@ -53,6 +53,7 @@ export default function TextbooksScreen() {
     const page = Number(modalPage);
     if (
       isNaN(page) ||
+      !Number.isInteger(page) ||
       page < 0 ||
       (modalTextbook.totalPages !== null && page > modalTextbook.totalPages)
     )
