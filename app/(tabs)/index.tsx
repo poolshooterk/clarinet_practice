@@ -22,7 +22,8 @@ export default function PracticeLogScreen() {
     }, [fetchAll]),
   );
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const monthSessions = sessions.filter((s) => s.practicedAt.startsWith(currentMonth));
   const totalMinutes = monthSessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
 
