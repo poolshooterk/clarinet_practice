@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { type PracticeLogInput } from '@/forms/practice-log';
 import { supabase } from '@/lib/supabase';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
+import { useTextbookProgressStore } from '@/store/textbook-progress';
 
 type TextbookEntry = {
   textbookId: string;
@@ -91,32 +92,29 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .single();
     if (sessionError || !session) return;
 
+    const sessionId = (session as { id: string }).id;
+
     if (input.textbookEntries.length > 0) {
       const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
         input.textbookEntries.map((entry) => ({
-          session_id: (session as { id: string }).id,
+          session_id: sessionId,
           textbook_id: entry.textbookId,
           current_page: entry.currentPage,
         })),
       );
-      if (entriesError) return;
+      if (entriesError) {
+        await supabase.from('practice_sessions').delete().eq('id', sessionId);
+        return;
+      }
 
       for (const entry of input.textbookEntries) {
-        await supabase.from('textbook_progress').upsert(
-          {
-            user_id: userData.user.id,
-            textbook_id: entry.textbookId,
-            current_page: entry.currentPage,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,textbook_id' },
-        );
+        await useTextbookProgressStore.getState().upsert(entry.textbookId, entry.currentPage);
       }
     }
 
     const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
     const newSession: PracticeSession = {
-      id: (session as { id: string }).id,
+      id: sessionId,
       practicedAt: input.practicedAt,
       durationMinutes: input.durationMinutes ?? null,
       memo: input.memo || null,

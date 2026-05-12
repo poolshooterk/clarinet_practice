@@ -13,8 +13,15 @@ jest.mock('@/store/textbook-catalog', () => ({
   },
 }));
 
+jest.mock('@/store/textbook-progress', () => ({
+  useTextbookProgressStore: {
+    getState: jest.fn().mockReturnValue({ upsert: jest.fn().mockResolvedValue(undefined) }),
+  },
+}));
+
 const mockSupabase = () => jest.requireMock('@/lib/supabase').supabase;
 const mockCatalog = () => jest.requireMock('@/store/textbook-catalog').useTextbookCatalogStore;
+const mockProgress = () => jest.requireMock('@/store/textbook-progress').useTextbookProgressStore;
 
 describe('usePracticeLogStore', () => {
   beforeEach(() => {
@@ -116,9 +123,6 @@ describe('usePracticeLogStore', () => {
     mockSupabase().from.mockReturnValueOnce({
       insert: jest.fn().mockResolvedValue({ error: null }),
     });
-    mockSupabase().from.mockReturnValueOnce({
-      upsert: jest.fn().mockResolvedValue({ error: null }),
-    });
 
     await usePracticeLogStore.getState().add({
       practicedAt: '2026-05-12',
@@ -138,6 +142,7 @@ describe('usePracticeLogStore', () => {
       totalPages: 32,
     });
     expect(sessions[1].id).toBe('old');
+    expect(mockProgress().getState().upsert).toHaveBeenCalledWith('tb-1', 14);
   });
 
   it('add でユーザーが未ログインのとき sessions を変更せず from を呼ばない', async () => {
