@@ -49,7 +49,6 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   return (
     <ScrollView>
       <YStack gap="$4" p="$4">
-        {/* 日付 */}
         <Controller
           control={control}
           name="practicedAt"
@@ -92,7 +91,6 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           )}
         />
 
-        {/* 練習時間 */}
         <Controller
           control={control}
           name="durationMinutes"
@@ -115,7 +113,6 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           )}
         />
 
-        {/* メモ */}
         <Controller
           control={control}
           name="memo"
@@ -135,7 +132,6 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           )}
         />
 
-        {/* 教本エントリ */}
         <YStack gap="$2">
           <Paragraph color="$color12">教本の進捗</Paragraph>
 
@@ -155,10 +151,14 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                   <Controller
                     control={control}
                     name={`textbookEntries.${index}.textbookId`}
-                    render={({ field: { onChange, value } }) => (
+                    render={({ field: { onChange, onBlur, value } }) => (
                       <YStack flex={1} gap="$1">
                         <Select value={value} onValueChange={onChange}>
-                          <Select.Trigger flex={1} aria-label={`教本を選択 ${index + 1}`}>
+                          <Select.Trigger
+                            flex={1}
+                            onBlur={onBlur}
+                            aria-label={`教本を選択 ${index + 1}`}
+                          >
                             <Select.Value placeholder="教本を選択" />
                           </Select.Trigger>
                           <Select.Content>
@@ -194,38 +194,38 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                   </Button>
                 </XStack>
 
-                <XStack gap="$2" items="center" flexWrap="wrap">
-                  <Paragraph fontSize="$2" color="$color10">
-                    現在ページ:
-                  </Paragraph>
-                  <Controller
-                    control={control}
-                    name={`textbookEntries.${index}.currentPage`}
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <>
-                        <Input
-                          width={64}
-                          value={value !== undefined ? String(value) : ''}
-                          onChangeText={(t) => {
-                            const n = Number(t);
-                            onChange(t === '' || isNaN(n) ? undefined : n);
-                          }}
-                          onBlur={onBlur}
-                          keyboardType="numeric"
-                          aria-label={`ページ ${index + 1}`}
-                        />
-                        {selectedTextbook?.totalPages != null && (
-                          <Paragraph fontSize="$2" color="$color10">
-                            / {selectedTextbook.totalPages}
-                          </Paragraph>
-                        )}
-                        <FieldError
-                          message={errors.textbookEntries?.[index]?.currentPage?.message}
-                        />
-                      </>
-                    )}
-                  />
-                </XStack>
+                <YStack gap="$1">
+                  <XStack gap="$2" items="center">
+                    <Paragraph fontSize="$2" color="$color10">
+                      現在ページ:
+                    </Paragraph>
+                    <Controller
+                      control={control}
+                      name={`textbookEntries.${index}.currentPage`}
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <XStack gap="$2" items="center">
+                          <Input
+                            width={64}
+                            value={value !== undefined ? String(value) : ''}
+                            onChangeText={(t) => {
+                              const n = Number(t);
+                              onChange(t === '' || isNaN(n) ? undefined : n);
+                            }}
+                            onBlur={onBlur}
+                            keyboardType="numeric"
+                            aria-label={`ページ ${index + 1}`}
+                          />
+                          {selectedTextbook?.totalPages != null && (
+                            <Paragraph fontSize="$2" color="$color10">
+                              / {selectedTextbook.totalPages}
+                            </Paragraph>
+                          )}
+                        </XStack>
+                      )}
+                    />
+                  </XStack>
+                  <FieldError message={errors.textbookEntries?.[index]?.currentPage?.message} />
+                </YStack>
               </YStack>
             );
           })}
