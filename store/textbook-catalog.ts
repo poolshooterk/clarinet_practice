@@ -10,6 +10,7 @@ export type Textbook = {
   title: string;
   publisher: string | null;
   difficulty: Difficulty | null;
+  totalPages: number | null;
 };
 
 type TextbookCatalogState = {
@@ -38,7 +39,8 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
             id: row.id,
             title: row.title,
             publisher: row.publisher ?? null,
-            difficulty: (row.difficulty as Difficulty) ?? null, // DB CHECK constraint guarantees valid enum value
+            difficulty: (row.difficulty as Difficulty) ?? null,
+            totalPages: (row.total_pages as number) ?? null,
           })),
         });
       },
@@ -48,8 +50,9 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
           .from('textbooks')
           .insert({
             title: input.title,
-            publisher: input.publisher || null, // 空文字を null に正規化
+            publisher: input.publisher || null,
             difficulty: input.difficulty ?? null,
+            total_pages: input.totalPages ?? null,
           })
           .select()
           .single();
@@ -61,7 +64,8 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
               id: data.id,
               title: data.title,
               publisher: data.publisher ?? null,
-              difficulty: (data.difficulty as Difficulty) ?? null, // DB CHECK constraint guarantees valid enum value
+              difficulty: (data.difficulty as Difficulty) ?? null,
+              totalPages: (data.total_pages as number) ?? null,
             },
           ],
         });
@@ -72,8 +76,9 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
           .from('textbooks')
           .update({
             title: input.title,
-            publisher: input.publisher || null, // 空文字を null に正規化
+            publisher: input.publisher || null,
             difficulty: input.difficulty ?? null,
+            total_pages: input.totalPages ?? null,
           })
           .eq('id', id);
         if (error) return;
@@ -85,6 +90,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
                   title: input.title,
                   publisher: input.publisher || null,
                   difficulty: input.difficulty ?? null,
+                  totalPages: input.totalPages ?? null,
                 }
               : t,
           ),
