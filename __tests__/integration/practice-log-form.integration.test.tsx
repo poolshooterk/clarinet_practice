@@ -85,7 +85,6 @@ jest.mock('tamagui', () => {
 });
 
 const TB1_ID = '123e4567-e89b-12d3-a456-426614174001';
-const TB2_ID = '123e4567-e89b-12d3-a456-426614174002';
 
 describe('PracticeLogForm (integration)', () => {
   beforeEach(async () => {
@@ -100,7 +99,7 @@ describe('PracticeLogForm (integration)', () => {
           totalPages: 32,
         },
         {
-          id: TB2_ID,
+          id: '123e4567-e89b-12d3-a456-426614174002',
           title: 'アルテ教則本 第1巻',
           publisher: null,
           difficulty: null,
