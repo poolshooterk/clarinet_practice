@@ -26,6 +26,18 @@ function buildStorage() {
 
 const isSSR = Platform.OS === 'web' && typeof window === 'undefined';
 
+class NoopWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  readyState = 3;
+  close() {}
+  send() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+
 export const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,5 +48,6 @@ export const supabase = createClient(
       persistSession: !isSSR,
       detectSessionInUrl: false,
     },
+    ...(isSSR && { realtime: { transport: NoopWebSocket as unknown as typeof WebSocket } }),
   },
 );
