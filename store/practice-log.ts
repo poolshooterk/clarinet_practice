@@ -12,12 +12,18 @@ type TextbookEntry = {
   totalPages: number | null;
 };
 
+type BasicMenuEntry = {
+  menuType: string;
+  durationMinutes: number;
+};
+
 export type PracticeSession = {
   id: string;
   practicedAt: string;
   durationMinutes: number | null;
   memo: string | null;
   textbookEntries: TextbookEntry[];
+  basicMenuEntries: BasicMenuEntry[];
 };
 
 type SessionRow = {
@@ -29,6 +35,10 @@ type SessionRow = {
     textbook_id: string;
     current_page: number;
     textbooks: { title: string; total_pages: number | null } | null;
+  }[];
+  practice_session_basic_menus: {
+    menu_type: string;
+    duration_minutes: number;
   }[];
 };
 
@@ -52,7 +62,9 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data, error } = await supabase
       .from('practice_sessions')
       .select(
-        'id, practiced_at, duration_minutes, memo, practice_session_textbooks ( textbook_id, current_page, textbooks ( title, total_pages ) )',
+        'id, practiced_at, duration_minutes, memo, ' +
+          'practice_session_textbooks ( textbook_id, current_page, textbooks ( title, total_pages ) ), ' +
+          'practice_session_basic_menus ( menu_type, duration_minutes )',
       )
       .order('practiced_at', { ascending: false });
     set({ loading: false });
@@ -72,6 +84,10 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           currentPage: entry.current_page,
           totalPages: entry.textbooks?.total_pages ?? null,
         })),
+        basicMenuEntries: (row.practice_session_basic_menus ?? []).map((m) => ({
+          menuType: m.menu_type,
+          durationMinutes: m.duration_minutes,
+        })),
       })),
     });
   },
@@ -80,12 +96,14 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return;
 
+    const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
+
     const { data: session, error: sessionError } = await supabase
       .from('practice_sessions')
       .insert({
         user_id: userData.user.id,
         practiced_at: input.practicedAt,
-        duration_minutes: input.durationMinutes ?? null,
+        duration_minutes: totalDuration > 0 ? totalDuration : null,
         memo: input.memo || null,
       })
       .select()
@@ -112,11 +130,40 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       }
     }
 
+    const basicMenuRows = (
+      [
+        input.longToneMinutes != null
+          ? {
+              session_id: sessionId,
+              menu_type: 'long_tone',
+              duration_minutes: input.longToneMinutes,
+            }
+          : null,
+        input.tonguingMinutes != null
+          ? {
+              session_id: sessionId,
+              menu_type: 'tonguing',
+              duration_minutes: input.tonguingMinutes,
+            }
+          : null,
+      ] as const
+    ).filter((r): r is NonNullable<typeof r> => r !== null);
+
+    if (basicMenuRows.length > 0) {
+      const { error: basicError } = await supabase
+        .from('practice_session_basic_menus')
+        .insert(basicMenuRows);
+      if (basicError) {
+        await supabase.from('practice_sessions').delete().eq('id', sessionId);
+        return;
+      }
+    }
+
     const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
     const newSession: PracticeSession = {
       id: sessionId,
       practicedAt: input.practicedAt,
-      durationMinutes: input.durationMinutes ?? null,
+      durationMinutes: totalDuration > 0 ? totalDuration : null,
       memo: input.memo || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
@@ -127,6 +174,10 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           totalPages: tb?.totalPages ?? null,
         };
       }),
+      basicMenuEntries: basicMenuRows.map((r) => ({
+        menuType: r.menu_type,
+        durationMinutes: r.duration_minutes,
+      })),
     };
     set({ sessions: [newSession, ...get().sessions] });
   },

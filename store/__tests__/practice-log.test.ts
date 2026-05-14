@@ -45,7 +45,7 @@ describe('usePracticeLogStore', () => {
             {
               id: 'session-1',
               practiced_at: '2026-05-12',
-              duration_minutes: 45,
+              duration_minutes: 25,
               memo: 'テスト',
               practice_session_textbooks: [
                 {
@@ -53,6 +53,10 @@ describe('usePracticeLogStore', () => {
                   current_page: 14,
                   textbooks: { title: 'ローズ 32のエチュード', total_pages: 32 },
                 },
+              ],
+              practice_session_basic_menus: [
+                { menu_type: 'long_tone', duration_minutes: 15 },
+                { menu_type: 'tonguing', duration_minutes: 10 },
               ],
             },
           ],
@@ -68,7 +72,7 @@ describe('usePracticeLogStore', () => {
     expect(sessions[0]).toMatchObject({
       id: 'session-1',
       practicedAt: '2026-05-12',
-      durationMinutes: 45,
+      durationMinutes: 25,
       memo: 'テスト',
     });
     expect(sessions[0].textbookEntries[0]).toMatchObject({
@@ -77,6 +81,10 @@ describe('usePracticeLogStore', () => {
       currentPage: 14,
       totalPages: 32,
     });
+    expect(sessions[0].basicMenuEntries).toEqual([
+      { menuType: 'long_tone', durationMinutes: 15 },
+      { menuType: 'tonguing', durationMinutes: 10 },
+    ]);
   });
 
   it('fetchAll でユーザーが未ログインのとき sessions を変更せず from を呼ばない', async () => {
@@ -89,13 +97,14 @@ describe('usePracticeLogStore', () => {
     expect(usePracticeLogStore.getState().sessions).toEqual([]);
   });
 
-  it('add でセッションが sessions の先頭に追加される', async () => {
+  it('add で基礎練習あり: sessions の先頭に追加され durationMinutes が合計になる', async () => {
     const existing = {
       id: 'old',
       practicedAt: '2026-05-11',
       durationMinutes: null,
       memo: null,
       textbookEntries: [],
+      basicMenuEntries: [],
     };
     usePracticeLogStore.setState({ sessions: [existing] });
 
@@ -113,6 +122,7 @@ describe('usePracticeLogStore', () => {
     mockSupabase().auth.getUser.mockResolvedValueOnce({
       data: { user: { id: 'user-1' } },
     });
+    // 1st from: practice_sessions insert
     mockSupabase().from.mockReturnValueOnce({
       insert: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
@@ -120,14 +130,19 @@ describe('usePracticeLogStore', () => {
         }),
       }),
     });
+    // 2nd from: practice_session_textbooks insert
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockResolvedValue({ error: null }),
+    });
+    // 3rd from: practice_session_basic_menus insert
     mockSupabase().from.mockReturnValueOnce({
       insert: jest.fn().mockResolvedValue({ error: null }),
     });
 
     await usePracticeLogStore.getState().add({
       practicedAt: '2026-05-12',
-      durationMinutes: undefined,
-      memo: undefined,
+      longToneMinutes: 15,
+      tonguingMinutes: 10,
       textbookEntries: [{ textbookId: 'tb-1', currentPage: 14 }],
     });
 
@@ -135,6 +150,11 @@ describe('usePracticeLogStore', () => {
     expect(sessions).toHaveLength(2);
     expect(sessions[0].id).toBe('new-session');
     expect(sessions[0].practicedAt).toBe('2026-05-12');
+    expect(sessions[0].durationMinutes).toBe(25);
+    expect(sessions[0].basicMenuEntries).toEqual([
+      { menuType: 'long_tone', durationMinutes: 15 },
+      { menuType: 'tonguing', durationMinutes: 10 },
+    ]);
     expect(sessions[0].textbookEntries[0]).toMatchObject({
       textbookId: 'tb-1',
       textbookTitle: 'ローズ 32のエチュード',
@@ -143,6 +163,28 @@ describe('usePracticeLogStore', () => {
     });
     expect(sessions[1].id).toBe('old');
     expect(mockProgress().getState().upsert).toHaveBeenCalledWith('tb-1', 14);
+  });
+
+  it('add で基礎練習なし: durationMinutes が null になる', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-12',
+      textbookEntries: [],
+    });
+
+    const sessions = usePracticeLogStore.getState().sessions;
+    expect(sessions[0].durationMinutes).toBeNull();
+    expect(sessions[0].basicMenuEntries).toEqual([]);
   });
 
   it('add でユーザーが未ログインのとき sessions を変更せず from を呼ばない', async () => {
@@ -166,6 +208,7 @@ describe('usePracticeLogStore', () => {
           durationMinutes: null,
           memo: null,
           textbookEntries: [],
+          basicMenuEntries: [],
         },
         {
           id: 'session-2',
@@ -173,6 +216,7 @@ describe('usePracticeLogStore', () => {
           durationMinutes: null,
           memo: null,
           textbookEntries: [],
+          basicMenuEntries: [],
         },
       ],
     });
