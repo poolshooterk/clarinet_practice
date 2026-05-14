@@ -134,17 +134,6 @@ describe('PracticeLogForm (integration)', () => {
     });
   });
 
-  it('durationMinutes に 0 を入力して保存するとバリデーションエラーが表示される', async () => {
-    const onSubmit = jest.fn();
-    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
-    fireEvent.changeText(screen.getByLabelText('練習時間'), '0');
-    fireEvent.press(screen.getByLabelText('保存'));
-    await waitFor(() => {
-      expect(screen.getByText('1以上の整数を入力してください')).toBeTruthy();
-    });
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
   it('教本エントリを追加して保存すると onSubmit に正しい値が渡される', async () => {
     const onSubmit = jest.fn();
     renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);

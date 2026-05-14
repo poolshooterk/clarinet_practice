@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+export const BASIC_MENUS = [
+  { type: 'long_tone', label: 'ロングトーン' },
+  { type: 'tonguing', label: 'タンギング' },
+] as const;
+
+export type BasicMenuType = (typeof BASIC_MENUS)[number]['type'];
+
 const textbookEntrySchema = z.object({
   textbookId: z.string().uuid('教本を選択してください'),
   currentPage: z.number().int().min(0, '0以上の整数を入力してください'),
@@ -7,7 +14,8 @@ const textbookEntrySchema = z.object({
 
 export const practiceLogSchema = z.object({
   practicedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください'),
-  durationMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  longToneMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  tonguingMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   memo: z.string().optional(),
   textbookEntries: z.array(textbookEntrySchema),
 });

@@ -34,7 +34,6 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
     mode: 'onTouched',
     defaultValues: {
       practicedAt: today(),
-      durationMinutes: undefined,
       memo: '',
       textbookEntries: [],
     },
@@ -87,28 +86,6 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                 />
               )}
               <FieldError message={errors.practicedAt?.message} />
-            </YStack>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="durationMinutes"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <YStack gap="$1">
-              <Paragraph color="$color12">練習時間（分） 任意</Paragraph>
-              <Input
-                value={value !== undefined ? String(value) : ''}
-                onChangeText={(t) => {
-                  const n = Number(t);
-                  onChange(t === '' || isNaN(n) ? undefined : n);
-                }}
-                onBlur={onBlur}
-                placeholder="例: 45"
-                keyboardType="numeric"
-                aria-label="練習時間"
-              />
-              <FieldError message={errors.durationMinutes?.message} />
             </YStack>
           )}
         />
