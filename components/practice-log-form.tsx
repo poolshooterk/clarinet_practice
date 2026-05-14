@@ -6,7 +6,13 @@ import { Platform, ScrollView } from 'react-native';
 import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
-import { formatDate, type PracticeLogInput, practiceLogSchema, today } from '@/forms/practice-log';
+import {
+  BASIC_MENUS,
+  formatDate,
+  type PracticeLogInput,
+  practiceLogSchema,
+  today,
+} from '@/forms/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
 type Props = {
@@ -34,6 +40,8 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
     mode: 'onTouched',
     defaultValues: {
       practicedAt: today(),
+      longToneMinutes: undefined,
+      tonguingMinutes: undefined,
       memo: '',
       textbookEntries: [],
     },
@@ -41,6 +49,9 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
 
   const { fields, append, remove } = useFieldArray({ control, name: 'textbookEntries' });
   const watchedEntries = watch('textbookEntries') ?? [];
+  const watchedLongTone = watch('longToneMinutes');
+  const watchedTonguing = watch('tonguingMinutes');
+  const totalMinutes = (watchedLongTone ?? 0) + (watchedTonguing ?? 0);
 
   const submitForm = handleSubmit(onSubmit);
   useImperativeHandle(ref, () => ({ submit: submitForm }));
@@ -48,6 +59,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   return (
     <ScrollView>
       <YStack gap="$4" p="$4">
+        {/* 日付 */}
         <Controller
           control={control}
           name="practicedAt"
@@ -90,6 +102,49 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           )}
         />
 
+        {/* 基礎練習 */}
+        <YStack gap="$2">
+          <Paragraph color="$color12">基礎練習</Paragraph>
+
+          {BASIC_MENUS.map(({ type, label }) => {
+            const fieldName = type === 'long_tone' ? 'longToneMinutes' : 'tonguingMinutes';
+            const ariaLabel = type === 'long_tone' ? 'ロングトーン' : 'タンギング';
+            return (
+              <Controller
+                key={type}
+                control={control}
+                name={fieldName}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <YStack gap="$1">
+                    <Paragraph color="$color11" fontSize="$3">
+                      {label}（分）任意
+                    </Paragraph>
+                    <Input
+                      value={value !== undefined ? String(value) : ''}
+                      onChangeText={(t) => {
+                        const n = Number(t);
+                        onChange(t === '' || isNaN(n) ? undefined : n);
+                      }}
+                      onBlur={onBlur}
+                      placeholder="例: 10"
+                      keyboardType="numeric"
+                      aria-label={ariaLabel}
+                    />
+                    <FieldError message={errors[fieldName]?.message} />
+                  </YStack>
+                )}
+              />
+            );
+          })}
+
+          {totalMinutes > 0 && (
+            <Paragraph fontSize="$2" color="$color10">
+              合計: {totalMinutes}分
+            </Paragraph>
+          )}
+        </YStack>
+
+        {/* メモ */}
         <Controller
           control={control}
           name="memo"
@@ -109,6 +164,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           )}
         />
 
+        {/* 教本の進捗 */}
         <YStack gap="$2">
           <Paragraph color="$color12">教本の進捗</Paragraph>
 

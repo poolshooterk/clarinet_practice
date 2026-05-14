@@ -122,6 +122,28 @@ describe('PracticeLogForm (integration)', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it('ロングトーンに 0 を入力して保存するとバリデーションエラーが表示される', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('ロングトーン'), '0');
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(screen.getByText('1以上の整数を入力してください')).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('タンギングに 0 を入力して保存するとバリデーションエラーが表示される', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '0');
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(screen.getByText('1以上の整数を入力してください')).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('教本エントリの追加・削除が動作する', async () => {
     renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
     fireEvent.press(screen.getByLabelText('教本を追加'));
@@ -134,25 +156,30 @@ describe('PracticeLogForm (integration)', () => {
     });
   });
 
-  it('教本エントリを追加して保存すると onSubmit に正しい値が渡される', async () => {
+  it('基礎練習と教本エントリを入力して保存すると onSubmit に正しい値が渡される', async () => {
     const onSubmit = jest.fn();
     renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+
+    fireEvent.changeText(screen.getByLabelText('ロングトーン'), '15');
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '10');
+
     fireEvent.press(screen.getByLabelText('教本を追加'));
     await waitFor(() => {
       expect(screen.getByLabelText('教本を選択 1')).toBeTruthy();
     });
-    // Select の onValueChange を直接呼び出して RHF Controller の onChange を更新する
-    // fireEvent は Tamagui の responder ツリーを通過できないため props を直接呼ぶ
     const trigger = screen.getByLabelText('教本を選択 1');
     await act(async () => {
       await trigger.props.onValueChange?.(TB1_ID);
     });
     fireEvent.changeText(screen.getByLabelText('ページ 1'), '14');
+
     fireEvent.press(screen.getByLabelText('保存'));
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
     expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      longToneMinutes: 15,
+      tonguingMinutes: 10,
       textbookEntries: [{ textbookId: TB1_ID, currentPage: 14 }],
     });
   });
