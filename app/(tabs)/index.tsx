@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { Alert, FlatList, Pressable } from 'react-native';
 import { Paragraph, XStack, YStack } from 'tamagui';
 
+import { BASIC_MENUS } from '@/forms/practice-log';
 import { usePracticeLogStore } from '@/store/practice-log';
 
 function dayOfWeek(dateStr: string): string {
@@ -93,6 +94,15 @@ export default function PracticeLogScreen() {
                   </Paragraph>
                 </XStack>
               ))}
+              {item.basicMenuEntries.length > 0 && (
+                <XStack gap="$3" mt="$1" flexWrap="wrap">
+                  {item.basicMenuEntries.map((entry) => (
+                    <Paragraph key={entry.menuType} fontSize="$2" color="$color10">
+                      {`${BASIC_MENUS.find((m) => m.type === entry.menuType)?.label ?? entry.menuType}: ${entry.durationMinutes}分`}
+                    </Paragraph>
+                  ))}
+                </XStack>
+              )}
             </YStack>
           </Pressable>
         )}
