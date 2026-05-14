@@ -47,7 +47,7 @@
     "@react-navigation/native": "^7.1.8",
     "@supabase/supabase-js": "^2.105.4",
     "@tamagui/config": "^2.0.0-rc.41",
-    "@tamagui/portal": "^2.0.0-rc.41",
+    "@tamagui/portal": "2.0.0-rc.41",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-font": "~14.0.11",
@@ -88,8 +88,11 @@
     "jest-expo": "~54.0.17",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.3",
-    "react-test-renderer": "^19.1.0",
+    "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "@tamagui/portal": "2.0.0-rc.41"
   },
   "private": true
 }
