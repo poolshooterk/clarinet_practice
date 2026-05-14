@@ -1,4 +1,3 @@
-import { PortalProvider } from '@tamagui/portal';
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
@@ -22,9 +21,7 @@ export default function RootLayout() {
 
   return (
     <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme ?? 'light'}>
-      <PortalProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </PortalProvider>
+      <Stack screenOptions={{ headerShown: false }} />
     </TamaguiProvider>
   );
 }
