@@ -1,14 +1,20 @@
 import { router, Stack, useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable } from 'react-native';
 import { Paragraph, XStack, YStack } from 'tamagui';
 
-import { BASIC_MENUS } from '@/forms/practice-log';
+import { PracticeChart } from '@/components/practice-chart';
+import { BASIC_MENUS, today } from '@/forms/practice-log';
 import { usePracticeLogStore } from '@/store/practice-log';
 
 function dayOfWeek(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   return ['日', '月', '火', '水', '木', '金', '土'][new Date(y, m - 1, d).getDay()];
+}
+
+function formatMonthLabel(month: string): string {
+  const [y, m] = month.split('-');
+  return `${y}年${Number(m)}月`;
 }
 
 export default function PracticeLogScreen() {
@@ -17,16 +23,30 @@ export default function PracticeLogScreen() {
   const fetchAll = usePracticeLogStore((s) => s.fetchAll);
   const remove = usePracticeLogStore((s) => s.remove);
 
+  const currentMonth = today().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+
   useFocusEffect(
     useCallback(() => {
       fetchAll();
     }, [fetchAll]),
   );
 
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const monthSessions = sessions.filter((s) => s.practicedAt.startsWith(currentMonth));
+  const monthSessions = sessions.filter((s) => s.practicedAt.startsWith(selectedMonth));
   const totalMinutes = monthSessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+
+  function prevMonth() {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  function nextMonth() {
+    if (selectedMonth >= currentMonth) return;
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m, 1);
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
 
   const handleLongPress = (id: string) => {
     Alert.alert('練習記録を削除', 'この記録を削除しますか？', [
@@ -39,19 +59,45 @@ export default function PracticeLogScreen() {
     <>
       <Stack.Screen options={{ title: '練習記録' }} />
       <FlatList
-        data={sessions}
+        data={monthSessions}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
-          <XStack justify="space-between" items="center" p="$3">
-            <Paragraph fontSize="$2" color="$color10">
-              {`${currentMonth.slice(5)}月: ${monthSessions.length}回 / 計${totalMinutes}分`}
-            </Paragraph>
-            <Pressable onPress={() => router.push('/practice-log-form')}>
+          <YStack>
+            <XStack justify="space-between" items="center" px="$4" pt="$3" pb="$1">
+              <Pressable onPress={prevMonth} aria-label="前月へ">
+                <Paragraph color="$blue9" fontSize="$5">
+                  ＜
+                </Paragraph>
+              </Pressable>
+              <YStack items="center" gap="$1">
+                <Paragraph fontWeight="bold">{formatMonthLabel(selectedMonth)}</Paragraph>
+                <Paragraph fontSize="$2" color="$color10">
+                  {`${monthSessions.length}回 / 計${totalMinutes}分`}
+                </Paragraph>
+              </YStack>
+              <Pressable
+                onPress={nextMonth}
+                disabled={selectedMonth >= currentMonth}
+                aria-label="次月へ"
+              >
+                <Paragraph
+                  color={selectedMonth >= currentMonth ? '$color9' : '$blue9'}
+                  fontSize="$5"
+                >
+                  ＞
+                </Paragraph>
+              </Pressable>
+            </XStack>
+            <PracticeChart sessions={monthSessions} month={selectedMonth} />
+            <Pressable
+              onPress={() => router.push('/practice-log-form')}
+              style={{ alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 4 }}
+            >
               <Paragraph color="$blue9" fontSize="$2">
                 ＋ 記録
               </Paragraph>
             </Pressable>
-          </XStack>
+          </YStack>
         }
         ListEmptyComponent={
           !loading ? (
