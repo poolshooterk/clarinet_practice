@@ -15,6 +15,7 @@ type TextbookEntry = {
 type BasicMenuEntry = {
   menuType: string;
   durationMinutes: number;
+  tempoBpm: number | null;
 };
 
 export type PracticeSession = {
@@ -39,6 +40,7 @@ type SessionRow = {
   practice_session_basic_menus: {
     menu_type: string;
     duration_minutes: number;
+    tempo_bpm: number | null;
   }[];
 };
 
@@ -64,7 +66,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .select(
         'id, practiced_at, duration_minutes, memo, ' +
           'practice_session_textbooks ( textbook_id, current_page, textbooks ( title, total_pages ) ), ' +
-          'practice_session_basic_menus ( menu_type, duration_minutes )',
+          'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpm )',
       )
       .order('practiced_at', { ascending: false });
     set({ loading: false });
@@ -87,6 +89,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         basicMenuEntries: (row.practice_session_basic_menus ?? []).map((m) => ({
           menuType: m.menu_type,
           durationMinutes: m.duration_minutes,
+          tempoBpm: m.tempo_bpm ?? null,
         })),
       })),
     });
@@ -130,24 +133,28 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       }
     }
 
-    const basicMenuRows = (
-      [
-        input.longToneMinutes != null
-          ? {
+    const basicMenuRows = [
+      ...(input.longToneMinutes != null
+        ? [
+            {
               session_id: sessionId,
-              menu_type: 'long_tone',
+              menu_type: 'long_tone' as const,
               duration_minutes: input.longToneMinutes,
-            }
-          : null,
-        input.tonguingMinutes != null
-          ? {
+              tempo_bpm: null as number | null,
+            },
+          ]
+        : []),
+      ...(input.tonguingMinutes != null
+        ? [
+            {
               session_id: sessionId,
-              menu_type: 'tonguing',
+              menu_type: 'tonguing' as const,
               duration_minutes: input.tonguingMinutes,
-            }
-          : null,
-      ] as const
-    ).filter((r): r is NonNullable<typeof r> => r !== null);
+              tempo_bpm: (input.tonguingTempoBpm ?? null) as number | null,
+            },
+          ]
+        : []),
+    ];
 
     if (basicMenuRows.length > 0) {
       const { error: basicError } = await supabase
@@ -177,6 +184,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       basicMenuEntries: basicMenuRows.map((r) => ({
         menuType: r.menu_type,
         durationMinutes: r.duration_minutes,
+        tempoBpm: r.tempo_bpm,
       })),
     };
     set({ sessions: [newSession, ...get().sessions] });
