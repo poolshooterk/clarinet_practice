@@ -89,7 +89,7 @@ export default function PracticeLogScreen() {
               </Pressable>
             </XStack>
             {monthSessions.length > 0 && (
-              <View aria-label="月別練習グラフ">
+              <View accessible={true} aria-label="月別練習グラフ">
                 <PracticeChart sessions={monthSessions} month={selectedMonth} />
               </View>
             )}
