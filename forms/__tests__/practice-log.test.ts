@@ -126,7 +126,7 @@ describe('practiceLogSchema', () => {
     });
   });
 
-  describe('tonguingTempoBpm', () => {
+  describe('tonguingTempoBpms', () => {
     it('省略可能', () => {
       const result = practiceLogSchema.safeParse({
         practicedAt: '2026-05-12',
@@ -135,48 +135,75 @@ describe('practiceLogSchema', () => {
       expect(result.success).toBe(true);
     });
 
-    it('40 は有効', () => {
+    it('空配列は有効', () => {
       const result = practiceLogSchema.safeParse({
         practicedAt: '2026-05-12',
-        tonguingTempoBpm: 40,
+        tonguingTempoBpms: [],
         textbookEntries: [],
       });
       expect(result.success).toBe(true);
     });
 
-    it('240 は有効', () => {
+    it('単一要素 { bpm: 120 } は有効', () => {
       const result = practiceLogSchema.safeParse({
         practicedAt: '2026-05-12',
-        tonguingTempoBpm: 240,
+        tonguingTempoBpms: [{ bpm: 120 }],
         textbookEntries: [],
       });
       expect(result.success).toBe(true);
     });
 
-    it('39 はエラー', () => {
+    it('複数要素は有効', () => {
       const result = practiceLogSchema.safeParse({
         practicedAt: '2026-05-12',
-        tonguingTempoBpm: 39,
+        tonguingTempoBpms: [{ bpm: 80 }, { bpm: 100 }, { bpm: 120 }],
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('bpm: 40 は有効（下限）', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpms: [{ bpm: 40 }],
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('bpm: 240 は有効（上限）', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpms: [{ bpm: 240 }],
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('bpm: 39 はエラー', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpms: [{ bpm: 39 }],
         textbookEntries: [],
       });
       expect(result.success).toBe(false);
       expect(result.error?.issues[0].message).toBe('40以上の整数を入力してください');
     });
 
-    it('241 はエラー', () => {
+    it('bpm: 241 はエラー', () => {
       const result = practiceLogSchema.safeParse({
         practicedAt: '2026-05-12',
-        tonguingTempoBpm: 241,
+        tonguingTempoBpms: [{ bpm: 241 }],
         textbookEntries: [],
       });
       expect(result.success).toBe(false);
       expect(result.error?.issues[0].message).toBe('240以下の整数を入力してください');
     });
 
-    it('小数はエラー', () => {
+    it('bpm: 120.5 はエラー（小数）', () => {
       const result = practiceLogSchema.safeParse({
         practicedAt: '2026-05-12',
-        tonguingTempoBpm: 120.5,
+        tonguingTempoBpms: [{ bpm: 120.5 }],
         textbookEntries: [],
       });
       expect(result.success).toBe(false);
