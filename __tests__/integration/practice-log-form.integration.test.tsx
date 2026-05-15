@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 import { PracticeLogForm } from '@/components/practice-log-form';
+import { usePracticeLogStore } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { renderWithProviders, screen } from '@/test-utils/render';
 
@@ -89,6 +90,7 @@ const TB1_ID = '123e4567-e89b-12d3-a456-426614174001';
 describe('PracticeLogForm (integration)', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
+    usePracticeLogStore.setState({ sessions: [], loading: false });
     useTextbookCatalogStore.setState({
       textbooks: [
         {
@@ -186,55 +188,155 @@ describe('PracticeLogForm (integration)', () => {
     });
   });
 
-  it('タンギングに値を入力すると BPM 入力欄が表示される', async () => {
+  it('タンギングに値を入力すると「テンポを追加」ボタンが表示される', async () => {
     renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
-    expect(screen.queryByLabelText('タンギング テンポ (BPM)')).toBeNull();
+    expect(screen.queryByLabelText('テンポを追加')).toBeNull();
     fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
     await waitFor(() => {
-      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+      expect(screen.getByLabelText('テンポを追加')).toBeTruthy();
     });
   });
 
-  it('タンギングの値を消すと BPM 入力欄が非表示になる', async () => {
+  it('タンギングの値を消すと「テンポを追加」ボタンが非表示になる', async () => {
     renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
     fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
     await waitFor(() => {
-      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+      expect(screen.getByLabelText('テンポを追加')).toBeTruthy();
     });
     fireEvent.changeText(screen.getByLabelText('タンギング'), '');
     await waitFor(() => {
-      expect(screen.queryByLabelText('タンギング テンポ (BPM)')).toBeNull();
+      expect(screen.queryByLabelText('テンポを追加')).toBeNull();
     });
   });
 
-  it.skip('BPM に 39 を入力して保存するとバリデーションエラーが表示される [Task4 で更新予定]', async () => {
+  it('「テンポを追加」を押すと BPM 入力欄が追加される', async () => {
     renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
     fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
     await waitFor(() => {
-      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+      expect(screen.getByLabelText('テンポを追加')).toBeTruthy();
     });
-    fireEvent.changeText(screen.getByLabelText('タンギング テンポ (BPM)'), '39');
+    fireEvent.press(screen.getByLabelText('テンポを追加'));
+    expect(screen.getByLabelText('BPM 1')).toBeTruthy();
+    expect(screen.getByLabelText('BPM 1 を削除')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('テンポを追加'));
+    expect(screen.getByLabelText('BPM 2')).toBeTruthy();
+  });
+
+  it('BPM 入力欄を削除できる', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
+    await waitFor(() => {
+      expect(screen.getByLabelText('テンポを追加')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText('テンポを追加'));
+    expect(screen.getByLabelText('BPM 1')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('BPM 1 を削除'));
+    await waitFor(() => {
+      expect(screen.queryByLabelText('BPM 1')).toBeNull();
+    });
+  });
+
+  it('BPM に 39 を入力して保存するとバリデーションエラーが表示される', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
+    await waitFor(() => {
+      expect(screen.getByLabelText('テンポを追加')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText('テンポを追加'));
+    fireEvent.changeText(screen.getByLabelText('BPM 1'), '39');
     fireEvent.press(screen.getByLabelText('保存'));
     await waitFor(() => {
       expect(screen.getByText('40以上の整数を入力してください')).toBeTruthy();
     });
   });
 
-  it.skip('BPM を入力して保存すると onSubmit に tonguingTempoBpm が含まれる [Task4 で更新予定]', async () => {
+  it('BPM を複数入力して保存すると onSubmit に tonguingTempoBpms が含まれる', async () => {
     const onSubmit = jest.fn();
     renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
     fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
     await waitFor(() => {
-      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+      expect(screen.getByLabelText('テンポを追加')).toBeTruthy();
     });
-    fireEvent.changeText(screen.getByLabelText('タンギング テンポ (BPM)'), '120');
+    fireEvent.press(screen.getByLabelText('テンポを追加'));
+    fireEvent.press(screen.getByLabelText('テンポを追加'));
+    fireEvent.changeText(screen.getByLabelText('BPM 1'), '80');
+    fireEvent.changeText(screen.getByLabelText('BPM 2'), '120');
     fireEvent.press(screen.getByLabelText('保存'));
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
     expect(onSubmit.mock.calls[0][0]).toMatchObject({
       tonguingMinutes: 15,
-      tonguingTempoBpm: 120,
+      tonguingTempoBpms: [{ bpm: 80 }, { bpm: 120 }],
+    });
+  });
+
+  describe('教本デフォルト値', () => {
+    it('前回セッションの教本が初期値として表示される', async () => {
+      usePracticeLogStore.setState({
+        sessions: [
+          {
+            id: 'prev-session',
+            practicedAt: '2026-05-14',
+            durationMinutes: 20,
+            memo: null,
+            textbookEntries: [
+              {
+                textbookId: TB1_ID,
+                textbookTitle: 'ローズ 32のエチュード',
+                currentPage: 14,
+                totalPages: 32,
+              },
+            ],
+            basicMenuEntries: [],
+          },
+        ],
+        loading: false,
+      });
+
+      renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('ページ 1')).toBeTruthy();
+      });
+      expect(screen.getByDisplayValue('14')).toBeTruthy();
+    });
+
+    it('カタログに存在しない教本は除外される', async () => {
+      usePracticeLogStore.setState({
+        sessions: [
+          {
+            id: 'prev-session',
+            practicedAt: '2026-05-14',
+            durationMinutes: 20,
+            memo: null,
+            textbookEntries: [
+              {
+                textbookId: 'deleted-textbook-id-that-is-not-a-valid-uuid',
+                textbookTitle: '削除済み教本',
+                currentPage: 5,
+                totalPages: null,
+              },
+            ],
+            basicMenuEntries: [],
+          },
+        ],
+        loading: false,
+      });
+
+      renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.queryByLabelText('ページ 1')).toBeNull();
+      });
+    });
+
+    it('前回セッションがない場合は教本エントリが空', () => {
+      usePracticeLogStore.setState({ sessions: [], loading: false });
+
+      renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+
+      expect(screen.queryByLabelText('ページ 1')).toBeNull();
     });
   });
 });

@@ -13,6 +13,7 @@ import {
   practiceLogSchema,
   today,
 } from '@/forms/practice-log';
+import { usePracticeLogStore } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
 type Props = {
@@ -28,7 +29,13 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   ref,
 ) {
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
+  const sessions = usePracticeLogStore((s) => s.sessions);
   const [showPicker, setShowPicker] = useState(false);
+
+  const textbookIds = new Set(textbooks.map((t) => t.id));
+  const lastTextbookEntries = (sessions[0]?.textbookEntries ?? [])
+    .filter((e) => textbookIds.has(e.textbookId))
+    .map((e) => ({ textbookId: e.textbookId, currentPage: e.currentPage }));
 
   const {
     control,
@@ -42,13 +49,18 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       practicedAt: today(),
       longToneMinutes: undefined,
       tonguingMinutes: undefined,
-      tonguingTempoBpm: undefined,
+      tonguingTempoBpms: [],
       memo: '',
-      textbookEntries: [],
+      textbookEntries: lastTextbookEntries,
     },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'textbookEntries' });
+  const {
+    fields: bpmFields,
+    append: appendBpm,
+    remove: removeBpm,
+  } = useFieldArray({ control, name: 'tonguingTempoBpms' });
   const watchedEntries = watch('textbookEntries') ?? [];
   const watchedLongTone = watch('longToneMinutes');
   const watchedTonguing = useWatch({ control, name: 'tonguingMinutes' });
@@ -139,29 +151,47 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           })}
 
           {watchedTonguing !== undefined && (
-            <Controller
-              control={control}
-              name="tonguingTempoBpm"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <YStack gap="$1">
-                  <Paragraph color="$color11" fontSize="$3">
-                    テンポ（BPM）任意
-                  </Paragraph>
-                  <Input
-                    value={value !== undefined ? String(value) : ''}
-                    onChangeText={(t) => {
-                      const n = Number(t);
-                      onChange(t === '' || isNaN(n) ? undefined : n);
-                    }}
-                    onBlur={onBlur}
-                    placeholder="例: 120"
-                    keyboardType="numeric"
-                    aria-label="タンギング テンポ (BPM)"
-                  />
-                  <FieldError message={errors.tonguingTempoBpm?.message} />
+            <YStack gap="$2">
+              <Paragraph color="$color11" fontSize="$3">
+                テンポ（BPM）任意
+              </Paragraph>
+              {bpmFields.map((field, index) => (
+                <YStack key={field.id} gap="$1">
+                  <XStack gap="$2" items="center">
+                    <Controller
+                      control={control}
+                      name={`tonguingTempoBpms.${index}.bpm`}
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <Input
+                          flex={1}
+                          value={value !== undefined ? String(value) : ''}
+                          onChangeText={(t) => {
+                            const n = Number(t);
+                            onChange(t === '' || isNaN(n) ? undefined : n);
+                          }}
+                          onBlur={onBlur}
+                          placeholder="例: 120"
+                          keyboardType="numeric"
+                          aria-label={`BPM ${index + 1}`}
+                        />
+                      )}
+                    />
+                    <Button
+                      size="$2"
+                      theme="red"
+                      onPress={() => removeBpm(index)}
+                      aria-label={`BPM ${index + 1} を削除`}
+                    >
+                      ✕
+                    </Button>
+                  </XStack>
+                  <FieldError message={errors.tonguingTempoBpms?.[index]?.bpm?.message} />
                 </YStack>
-              )}
-            />
+              ))}
+              <Button onPress={() => appendBpm({} as { bpm: number })} aria-label="テンポを追加">
+                ＋ テンポを追加
+              </Button>
+            </YStack>
           )}
 
           {totalMinutes > 0 && (
