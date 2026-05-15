@@ -32,7 +32,7 @@ export function PracticeChart({ sessions, month }: Props) {
   const todayDay = Number(todayStr.slice(8, 10));
 
   return (
-    <YStack px="$3" pt="$2" pb="$1">
+    <YStack px="$3" pt="$2" pb="$1" aria-label="月別練習グラフ">
       <XStack height={MAX_BAR_HEIGHT} items="flex-end" gap={1}>
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1;

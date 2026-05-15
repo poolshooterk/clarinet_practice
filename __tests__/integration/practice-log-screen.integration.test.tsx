@@ -105,7 +105,7 @@ describe('PracticeLogScreen (integration)', () => {
     expect(screen.getByLabelText('月別練習グラフ')).toBeTruthy();
   });
 
-  it('今月に記録がない場合は PracticeChart が描画されない', async () => {
+  it('今月に記録がない場合は PracticeChart が描画されない', () => {
     usePracticeLogStore.setState({
       sessions: [makeSession('s2', PREV_DATE, 45)],
       loading: false,

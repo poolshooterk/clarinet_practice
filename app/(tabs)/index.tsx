@@ -1,6 +1,6 @@
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, Pressable, View } from 'react-native';
+import { Alert, FlatList, Pressable } from 'react-native';
 import { Paragraph, XStack, YStack } from 'tamagui';
 
 import { PracticeChart } from '@/components/practice-chart';
@@ -89,9 +89,7 @@ export default function PracticeLogScreen() {
               </Pressable>
             </XStack>
             {monthSessions.length > 0 && (
-              <View accessible={true} aria-label="月別練習グラフ">
-                <PracticeChart sessions={monthSessions} month={selectedMonth} />
-              </View>
+              <PracticeChart sessions={monthSessions} month={selectedMonth} />
             )}
             <Pressable
               onPress={() => router.push('/practice-log-form')}
