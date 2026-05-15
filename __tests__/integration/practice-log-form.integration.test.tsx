@@ -185,4 +185,56 @@ describe('PracticeLogForm (integration)', () => {
       textbookEntries: [{ textbookId: TB1_ID, currentPage: 14 }],
     });
   });
+
+  it('タンギングに値を入力すると BPM 入力欄が表示される', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    expect(screen.queryByLabelText('タンギング テンポ (BPM)')).toBeNull();
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
+    await waitFor(() => {
+      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+    });
+  });
+
+  it('タンギングの値を消すと BPM 入力欄が非表示になる', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
+    await waitFor(() => {
+      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+    });
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '');
+    await waitFor(() => {
+      expect(screen.queryByLabelText('タンギング テンポ (BPM)')).toBeNull();
+    });
+  });
+
+  it('BPM に 39 を入力して保存するとバリデーションエラーが表示される', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
+    await waitFor(() => {
+      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+    });
+    fireEvent.changeText(screen.getByLabelText('タンギング テンポ (BPM)'), '39');
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(screen.getByText('40以上の整数を入力してください')).toBeTruthy();
+    });
+  });
+
+  it('BPM を入力して保存すると onSubmit に tonguingTempoBpm が含まれる', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('タンギング'), '15');
+    await waitFor(() => {
+      expect(screen.getByLabelText('タンギング テンポ (BPM)')).toBeTruthy();
+    });
+    fireEvent.changeText(screen.getByLabelText('タンギング テンポ (BPM)'), '120');
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      tonguingMinutes: 15,
+      tonguingTempoBpm: 120,
+    });
+  });
 });

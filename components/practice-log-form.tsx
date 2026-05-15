@@ -42,6 +42,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       practicedAt: today(),
       longToneMinutes: undefined,
       tonguingMinutes: undefined,
+      tonguingTempoBpm: undefined,
       memo: '',
       textbookEntries: [],
     },
@@ -136,6 +137,32 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
               />
             );
           })}
+
+          {watchedTonguing !== undefined && (
+            <Controller
+              control={control}
+              name="tonguingTempoBpm"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <YStack gap="$1">
+                  <Paragraph color="$color11" fontSize="$3">
+                    テンポ（BPM）任意
+                  </Paragraph>
+                  <Input
+                    value={value !== undefined ? String(value) : ''}
+                    onChangeText={(t) => {
+                      const n = Number(t);
+                      onChange(t === '' || isNaN(n) ? undefined : n);
+                    }}
+                    onBlur={onBlur}
+                    placeholder="例: 120"
+                    keyboardType="numeric"
+                    aria-label="タンギング テンポ (BPM)"
+                  />
+                  <FieldError message={errors.tonguingTempoBpm?.message} />
+                </YStack>
+              )}
+            />
+          )}
 
           {totalMinutes > 0 && (
             <Paragraph fontSize="$2" color="$color10">
