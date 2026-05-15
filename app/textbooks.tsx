@@ -1,7 +1,7 @@
 import { Link, router, Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Alert, Modal, Pressable, SectionList, View } from 'react-native';
-import { Button, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui';
+import { useCallback } from 'react';
+import { Alert, Pressable, SectionList, View } from 'react-native';
+import { Paragraph, Spinner, Text, XStack, YStack } from 'tamagui';
 
 import { GENRE_OPTIONS } from '@/forms/textbook';
 import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
@@ -21,10 +21,6 @@ export default function TextbooksScreen() {
   const remove = useTextbookCatalogStore((s) => s.remove);
   const progress = useTextbookProgressStore((s) => s.progress);
   const fetchAllProgress = useTextbookProgressStore((s) => s.fetchAll);
-  const upsert = useTextbookProgressStore((s) => s.upsert);
-
-  const [modalTextbook, setModalTextbook] = useState<Textbook | null>(null);
-  const [modalPage, setModalPage] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -43,29 +39,6 @@ export default function TextbooksScreen() {
       { text: 'キャンセル', style: 'cancel' },
       { text: '削除', style: 'destructive', onPress: () => remove(textbook.id) },
     ]);
-  };
-
-  const handleRowPress = (textbook: Textbook) => {
-    if (!textbook.totalPages) {
-      Alert.alert('総ページ数が未設定です', '教本の編集画面で総ページ数を設定してください');
-      return;
-    }
-    setModalPage(String(progress[textbook.id] ?? 0));
-    setModalTextbook(textbook);
-  };
-
-  const handleModalSave = async () => {
-    if (!modalTextbook) return;
-    const page = Number(modalPage);
-    if (
-      isNaN(page) ||
-      !Number.isInteger(page) ||
-      page < 0 ||
-      (modalTextbook.totalPages !== null && page > modalTextbook.totalPages)
-    )
-      return;
-    await upsert(modalTextbook.id, page);
-    setModalTextbook(null);
   };
 
   return (
@@ -101,121 +74,76 @@ export default function TextbooksScreen() {
             </Paragraph>
           )}
           renderItem={({ item }) => (
-            <XStack
-              bg="$color2"
-              borderWidth={1}
-              borderColor="$borderColor"
-              rounded="$4"
-              mb="$2"
-              overflow="hidden"
-              items="center"
+            <Pressable
+              onPress={() => router.push(`/textbook-form?id=${item.id}`)}
+              onLongPress={() => handleLongPress(item)}
+              style={{ marginBottom: 8 }}
+              aria-label={`${item.title}を編集`}
             >
-              <Pressable
-                onPress={() => handleRowPress(item)}
-                onLongPress={() => handleLongPress(item)}
-                style={{ flex: 1, padding: 12 }}
-                aria-label={`${item.title}の進捗を更新`}
+              <XStack
+                bg="$color2"
+                borderWidth={1}
+                borderColor="$borderColor"
+                rounded="$4"
+                overflow="hidden"
+                items="center"
+                p="$3"
               >
-                <XStack items="center" justify="space-between">
-                  <Paragraph fontWeight="bold" flex={1}>
-                    {item.title}
-                  </Paragraph>
-                  {item.difficulty && (
-                    <Text
-                      fontSize={11}
-                      px="$2"
-                      py="$1"
-                      rounded="$2"
-                      style={{ backgroundColor: DIFFICULTY_COLORS[item.difficulty] ?? '#ccc' }}
-                      color="$color1"
-                    >
-                      {item.difficulty}
-                    </Text>
+                <YStack flex={1} gap="$1">
+                  <XStack items="center" justify="space-between">
+                    <Paragraph fontWeight="bold" flex={1}>
+                      {item.title}
+                    </Paragraph>
+                    {item.difficulty && (
+                      <Text
+                        fontSize={11}
+                        px="$2"
+                        py="$1"
+                        rounded="$2"
+                        style={{
+                          backgroundColor: DIFFICULTY_COLORS[item.difficulty] ?? '#ccc',
+                        }}
+                        color="$color1"
+                      >
+                        {item.difficulty}
+                      </Text>
+                    )}
+                  </XStack>
+                  {item.publisher && (
+                    <Paragraph size="$2" color="$color10">
+                      {item.publisher}
+                    </Paragraph>
                   )}
-                </XStack>
-                {item.publisher && (
-                  <Paragraph size="$2" color="$color10">
-                    {item.publisher}
-                  </Paragraph>
-                )}
-                {item.totalPages && (
-                  <XStack items="center" gap="$2" mt="$1">
-                    <View
-                      style={{
-                        flex: 1,
-                        height: 6,
-                        backgroundColor: '#e0e0e0',
-                        borderRadius: 3,
-                      }}
-                    >
+                  {item.totalPages && (
+                    <XStack items="center" gap="$2" mt="$1">
                       <View
                         style={{
-                          width: `${Math.min(100, Math.round(((progress[item.id] ?? 0) / item.totalPages) * 100))}%`,
+                          flex: 1,
                           height: 6,
-                          backgroundColor: '#4a9eff',
+                          backgroundColor: '#e0e0e0',
                           borderRadius: 3,
                         }}
-                      />
-                    </View>
-                    <Text fontSize={11} color="$color10">
-                      {progress[item.id] ?? 0} / {item.totalPages}
-                    </Text>
-                  </XStack>
-                )}
-              </Pressable>
-              <Pressable
-                onPress={() => router.push(`/textbook-form?id=${item.id}`)}
-                style={{ paddingHorizontal: 12, paddingVertical: 8 }}
-                aria-label={`${item.title}を編集`}
-              >
-                <Text color="$color10" fontSize={20}>
-                  ›
-                </Text>
-              </Pressable>
-            </XStack>
+                      >
+                        <View
+                          style={{
+                            width: `${Math.min(100, Math.round(((progress[item.id] ?? 0) / item.totalPages) * 100))}%`,
+                            height: 6,
+                            backgroundColor: '#4a9eff',
+                            borderRadius: 3,
+                          }}
+                        />
+                      </View>
+                      <Text fontSize={11} color="$color10">
+                        {progress[item.id] ?? 0} / {item.totalPages}
+                      </Text>
+                    </XStack>
+                  )}
+                </YStack>
+              </XStack>
+            </Pressable>
           )}
         />
       )}
-
-      <Modal
-        visible={modalTextbook !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalTextbook(null)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            justifyContent: 'center',
-            padding: 24,
-          }}
-        >
-          <YStack bg="$background" rounded="$4" p="$4" gap="$3">
-            <Paragraph fontWeight="bold" numberOfLines={1}>
-              {modalTextbook?.title}
-            </Paragraph>
-            <XStack items="center" gap="$2">
-              <Input
-                value={modalPage}
-                onChangeText={setModalPage}
-                keyboardType="numeric"
-                style={{ width: 80, textAlign: 'center' }}
-                aria-label="現在ページ"
-              />
-              <Paragraph color="$color10">/ {modalTextbook?.totalPages} ページ</Paragraph>
-            </XStack>
-            <XStack gap="$2">
-              <Button flex={1} variant="outlined" onPress={() => setModalTextbook(null)}>
-                キャンセル
-              </Button>
-              <Button flex={1} theme="blue" onPress={handleModalSave}>
-                保存
-              </Button>
-            </XStack>
-          </YStack>
-        </View>
-      </Modal>
     </>
   );
 }
