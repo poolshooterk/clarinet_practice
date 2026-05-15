@@ -36,6 +36,21 @@ npx jest -t '<text>'       # describe / it 名 (部分一致) で絞る (例: -t
 npx jest --watch <pattern> # 上記を watch モードで
 ```
 
+## ビジュアルコンパニオン (WSL2 環境)
+
+`brainstorming` スキルのビジュアル画面を WSL2 から Windows ブラウザで開く手順:
+
+```bash
+# WSL2 の IP を取得してサーバーを起動する
+WSL_IP=$(ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+~/.claude/skills/brainstorming/scripts/start-server.sh \
+  --project-dir /home/kasahara/expo/clarinet_practice \
+  --host 0.0.0.0 \
+  --url-host "$WSL_IP"
+```
+
+起動後に表示される `url` (例: `http://172.x.x.x:PORT`) を Windows ブラウザで開く。`localhost` では接続できないため必ず WSL2 IP を使うこと。
+
 ## 開発ワークフロー (新機能)
 
 新機能追加・大きな変更をする際は、以下の 4 フェーズを順番に踏む。各フェーズは対応する superpowers スキルを Skill ツール経由で呼び出す。バグ修正・リファクタリングなど単発の小さな変更はこのフローに縛られず直接実装してよい。
