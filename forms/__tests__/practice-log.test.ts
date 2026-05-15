@@ -126,6 +126,63 @@ describe('practiceLogSchema', () => {
     });
   });
 
+  describe('tonguingTempoBpm', () => {
+    it('省略可能', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('40 は有効', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpm: 40,
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('240 は有効', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpm: 240,
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('39 はエラー', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpm: 39,
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0].message).toBe('40以上の整数を入力してください');
+    });
+
+    it('241 はエラー', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpm: 241,
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0].message).toBe('240以下の整数を入力してください');
+    });
+
+    it('小数はエラー', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-12',
+        tonguingTempoBpm: 120.5,
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('textbookEntries', () => {
     it('UUID でない textbookId はエラー', () => {
       const result = practiceLogSchema.safeParse({

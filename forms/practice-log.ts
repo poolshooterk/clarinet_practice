@@ -16,6 +16,12 @@ export const practiceLogSchema = z.object({
   practicedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください'),
   longToneMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   tonguingMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  tonguingTempoBpm: z
+    .number()
+    .int()
+    .min(40, '40以上の整数を入力してください')
+    .max(240, '240以下の整数を入力してください')
+    .optional(),
   memo: z.string().optional(),
   textbookEntries: z.array(textbookEntrySchema),
 });
