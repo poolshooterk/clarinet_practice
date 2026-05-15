@@ -2,13 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { type Difficulty, type TextbookInput } from '@/forms/textbook';
+import { type Difficulty, type Genre, type TextbookInput } from '@/forms/textbook';
 import { supabase } from '@/lib/supabase';
 
 export type Textbook = {
   id: string;
   title: string;
   publisher: string | null;
+  genre: Genre;
   difficulty: Difficulty | null;
   totalPages: number | null;
 };
@@ -39,6 +40,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
             id: row.id,
             title: row.title,
             publisher: row.publisher ?? null,
+            genre: row.genre as Genre,
             difficulty: (row.difficulty as Difficulty) ?? null,
             totalPages: (row.total_pages as number) ?? null,
           })),
@@ -51,6 +53,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
           .insert({
             title: input.title,
             publisher: input.publisher || null,
+            genre: input.genre,
             difficulty: input.difficulty ?? null,
             total_pages: input.totalPages ?? null,
           })
@@ -64,6 +67,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
               id: data.id,
               title: data.title,
               publisher: data.publisher ?? null,
+              genre: data.genre as Genre,
               difficulty: (data.difficulty as Difficulty) ?? null,
               totalPages: (data.total_pages as number) ?? null,
             },
@@ -77,6 +81,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
           .update({
             title: input.title,
             publisher: input.publisher || null,
+            genre: input.genre,
             difficulty: input.difficulty ?? null,
             total_pages: input.totalPages ?? null,
           })
@@ -89,6 +94,7 @@ export const useTextbookCatalogStore = create<TextbookCatalogState>()(
                   ...t,
                   title: input.title,
                   publisher: input.publisher || null,
+                  genre: input.genre,
                   difficulty: input.difficulty ?? null,
                   totalPages: input.totalPages ?? null,
                 }

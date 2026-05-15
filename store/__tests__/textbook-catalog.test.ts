@@ -15,10 +15,18 @@ const rows = [
     id: 'tb-1',
     title: 'ローズ 32のエチュード',
     publisher: '全音楽譜出版社',
+    genre: 'エチュード',
     difficulty: '中級',
     total_pages: 32,
   },
-  { id: 'tb-2', title: 'クローゼ 教則本', publisher: null, difficulty: '上級', total_pages: null },
+  {
+    id: 'tb-2',
+    title: 'クローゼ 教則本',
+    publisher: null,
+    genre: 'エチュード',
+    difficulty: '上級',
+    total_pages: null,
+  },
 ];
 
 describe('useTextbookCatalogStore', () => {
@@ -44,6 +52,7 @@ describe('useTextbookCatalogStore', () => {
       id: 'tb-1',
       title: 'ローズ 32のエチュード',
       publisher: '全音楽譜出版社',
+      genre: 'エチュード',
       difficulty: '中級',
       totalPages: 32,
     });
@@ -56,6 +65,7 @@ describe('useTextbookCatalogStore', () => {
         id: r.id,
         title: r.title,
         publisher: r.publisher ?? null,
+        genre: r.genre as 'エチュード',
         difficulty: r.difficulty as '中級' | '上級',
         totalPages: r.total_pages ?? null,
       })),
@@ -79,6 +89,7 @@ describe('useTextbookCatalogStore', () => {
               id: 'tb-new',
               title: '新しい教本',
               publisher: null,
+              genre: 'スケール',
               difficulty: null,
               total_pages: 80,
             },
@@ -87,19 +98,29 @@ describe('useTextbookCatalogStore', () => {
         }),
       }),
     });
-    await useTextbookCatalogStore
-      .getState()
-      .add({ title: '新しい教本', genre: 'エチュード', totalPages: 80 });
+    await useTextbookCatalogStore.getState().add({
+      title: '新しい教本',
+      genre: 'スケール',
+      totalPages: 80,
+    });
     const { textbooks } = useTextbookCatalogStore.getState();
     const added = textbooks.find((t) => t.title === '新しい教本');
     expect(added).toBeDefined();
     expect(added?.totalPages).toBe(80);
+    expect(added?.genre).toBe('スケール');
   });
 
-  it('update で該当教本の totalPages が更新される', async () => {
+  it('update で該当教本の title / genre / totalPages が更新される', async () => {
     useTextbookCatalogStore.setState({
       textbooks: [
-        { id: 'tb-1', title: '旧タイトル', publisher: null, difficulty: null, totalPages: null },
+        {
+          id: 'tb-1',
+          title: '旧タイトル',
+          publisher: null,
+          genre: 'その他',
+          difficulty: null,
+          totalPages: null,
+        },
       ],
       loading: false,
     });
@@ -110,16 +131,24 @@ describe('useTextbookCatalogStore', () => {
     });
     await useTextbookCatalogStore
       .getState()
-      .update('tb-1', { title: '新タイトル', genre: 'エチュード', totalPages: 60 });
+      .update('tb-1', { title: '新タイトル', genre: 'ソナタ', totalPages: 60 });
     const t = useTextbookCatalogStore.getState().textbooks.find((x) => x.id === 'tb-1');
     expect(t?.title).toBe('新タイトル');
     expect(t?.totalPages).toBe(60);
+    expect(t?.genre).toBe('ソナタ');
   });
 
   it('remove で該当教本が削除される', async () => {
     useTextbookCatalogStore.setState({
       textbooks: [
-        { id: 'tb-1', title: 'ローズ', publisher: null, difficulty: null, totalPages: null },
+        {
+          id: 'tb-1',
+          title: 'ローズ',
+          publisher: null,
+          genre: 'エチュード',
+          difficulty: null,
+          totalPages: null,
+        },
       ],
       loading: false,
     });
