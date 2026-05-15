@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { forwardRef, useImperativeHandle, useState } from 'react';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { Platform, ScrollView } from 'react-native';
 import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 
@@ -51,7 +51,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   const { fields, append, remove } = useFieldArray({ control, name: 'textbookEntries' });
   const watchedEntries = watch('textbookEntries') ?? [];
   const watchedLongTone = watch('longToneMinutes');
-  const watchedTonguing = watch('tonguingMinutes');
+  const watchedTonguing = useWatch({ control, name: 'tonguingMinutes' });
   const totalMinutes = (watchedLongTone ?? 0) + (watchedTonguing ?? 0);
 
   const submitForm = handleSubmit(onSubmit);
