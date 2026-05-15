@@ -55,8 +55,8 @@ describe('usePracticeLogStore', () => {
                 },
               ],
               practice_session_basic_menus: [
-                { menu_type: 'long_tone', duration_minutes: 15, tempo_bpm: null },
-                { menu_type: 'tonguing', duration_minutes: 10, tempo_bpm: null },
+                { menu_type: 'long_tone', duration_minutes: 15, tempo_bpms: null },
+                { menu_type: 'tonguing', duration_minutes: 10, tempo_bpms: null },
               ],
             },
           ],
@@ -82,8 +82,8 @@ describe('usePracticeLogStore', () => {
       totalPages: 32,
     });
     expect(sessions[0].basicMenuEntries).toEqual([
-      { menuType: 'long_tone', durationMinutes: 15, tempoBpm: null },
-      { menuType: 'tonguing', durationMinutes: 10, tempoBpm: null },
+      { menuType: 'long_tone', durationMinutes: 15, tempoBpms: [] },
+      { menuType: 'tonguing', durationMinutes: 10, tempoBpms: [] },
     ]);
   });
 
@@ -152,8 +152,8 @@ describe('usePracticeLogStore', () => {
     expect(sessions[0].practicedAt).toBe('2026-05-12');
     expect(sessions[0].durationMinutes).toBe(25);
     expect(sessions[0].basicMenuEntries).toEqual([
-      { menuType: 'long_tone', durationMinutes: 15, tempoBpm: null },
-      { menuType: 'tonguing', durationMinutes: 10, tempoBpm: null },
+      { menuType: 'long_tone', durationMinutes: 15, tempoBpms: [] },
+      { menuType: 'tonguing', durationMinutes: 10, tempoBpms: [] },
     ]);
     expect(sessions[0].textbookEntries[0]).toMatchObject({
       textbookId: 'tb-1',
@@ -165,7 +165,7 @@ describe('usePracticeLogStore', () => {
     expect(mockProgress().getState().upsert).toHaveBeenCalledWith('tb-1', 14);
   });
 
-  it('add で tonguingTempoBpm を渡すと basicMenuEntries に tempoBpm が入る', async () => {
+  it('add で tonguingTempoBpms を渡すと basicMenuEntries に tempoBpms が入る', async () => {
     mockSupabase().auth.getUser.mockResolvedValueOnce({
       data: { user: { id: 'user-1' } },
     });
@@ -183,13 +183,41 @@ describe('usePracticeLogStore', () => {
     await usePracticeLogStore.getState().add({
       practicedAt: '2026-05-12',
       tonguingMinutes: 15,
-      tonguingTempoBpm: 120,
+      tonguingTempoBpms: [{ bpm: 80 }, { bpm: 120 }],
       textbookEntries: [],
     });
 
     const sessions = usePracticeLogStore.getState().sessions;
     expect(sessions[0].basicMenuEntries).toEqual([
-      { menuType: 'tonguing', durationMinutes: 15, tempoBpm: 120 },
+      { menuType: 'tonguing', durationMinutes: 15, tempoBpms: [80, 120] },
+    ]);
+  });
+
+  it('add で tonguingTempoBpms が空のとき tempoBpms が空配列になる', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockResolvedValue({ error: null }),
+    });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-12',
+      tonguingMinutes: 15,
+      tonguingTempoBpms: [],
+      textbookEntries: [],
+    });
+
+    const sessions = usePracticeLogStore.getState().sessions;
+    expect(sessions[0].basicMenuEntries).toEqual([
+      { menuType: 'tonguing', durationMinutes: 15, tempoBpms: [] },
     ]);
   });
 
