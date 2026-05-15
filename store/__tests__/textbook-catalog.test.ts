@@ -87,7 +87,9 @@ describe('useTextbookCatalogStore', () => {
         }),
       }),
     });
-    await useTextbookCatalogStore.getState().add({ title: '新しい教本', totalPages: 80 });
+    await useTextbookCatalogStore
+      .getState()
+      .add({ title: '新しい教本', genre: 'エチュード', totalPages: 80 });
     const { textbooks } = useTextbookCatalogStore.getState();
     const added = textbooks.find((t) => t.title === '新しい教本');
     expect(added).toBeDefined();
@@ -108,7 +110,7 @@ describe('useTextbookCatalogStore', () => {
     });
     await useTextbookCatalogStore
       .getState()
-      .update('tb-1', { title: '新タイトル', totalPages: 60 });
+      .update('tb-1', { title: '新タイトル', genre: 'エチュード', totalPages: 60 });
     const t = useTextbookCatalogStore.getState().textbooks.find((x) => x.id === 'tb-1');
     expect(t?.title).toBe('新タイトル');
     expect(t?.totalPages).toBe(60);

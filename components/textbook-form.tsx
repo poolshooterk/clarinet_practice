@@ -11,7 +11,7 @@ const defaultOnSubmit = (_values: TextbookInput) => {
 };
 
 type Props = {
-  defaultValues?: TextbookInput;
+  defaultValues?: Partial<TextbookInput>;
   onSubmit?: (values: TextbookInput) => void | Promise<void>;
   onDelete?: () => void;
 };
@@ -24,11 +24,13 @@ export function TextbookForm({ defaultValues, onSubmit = defaultOnSubmit, onDele
   } = useForm<TextbookInput>({
     resolver: zodResolver(textbookSchema),
     mode: 'onTouched',
-    defaultValues: defaultValues ?? {
+    defaultValues: {
       title: '',
       publisher: '',
+      genre: undefined,
       difficulty: undefined,
       totalPages: undefined,
+      ...defaultValues,
     },
   });
 

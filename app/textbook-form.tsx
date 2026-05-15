@@ -14,7 +14,7 @@ export default function TextbookFormScreen() {
 
   const existing = id ? textbooks.find((t) => t.id === id) : undefined;
 
-  const defaultValues: TextbookInput | undefined = existing
+  const defaultValues: Partial<TextbookInput> | undefined = existing
     ? {
         title: existing.title,
         publisher: existing.publisher ?? undefined,

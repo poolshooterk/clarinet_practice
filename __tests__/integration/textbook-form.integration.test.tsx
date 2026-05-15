@@ -16,7 +16,9 @@ describe('TextbookForm (integration)', () => {
 
   it('教本名と難易度を入力して保存すると onSubmit が正しい値で呼ばれる', async () => {
     const onSubmit = jest.fn();
-    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
+    renderWithProviders(
+      <TextbookForm onSubmit={onSubmit} defaultValues={{ title: '', genre: 'エチュード' }} />,
+    );
     fireEvent.changeText(screen.getByLabelText('教本名'), 'ローズ 32のエチュード');
     fireEvent.changeText(screen.getByLabelText('出版社'), '全音楽譜出版社');
     fireEvent.press(screen.getByLabelText('難易度 中級'));
@@ -56,7 +58,9 @@ describe('TextbookForm (integration)', () => {
 
   it('totalPages を入力して保存すると onSubmit に数値が渡される', async () => {
     const onSubmit = jest.fn();
-    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
+    renderWithProviders(
+      <TextbookForm onSubmit={onSubmit} defaultValues={{ title: '', genre: 'エチュード' }} />,
+    );
     fireEvent.changeText(screen.getByLabelText('教本名'), 'ローズ 32のエチュード');
     fireEvent.changeText(screen.getByLabelText('総ページ数'), '100');
     fireEvent.press(screen.getByText('保存'));
