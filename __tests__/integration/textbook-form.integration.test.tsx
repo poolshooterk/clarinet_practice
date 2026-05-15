@@ -14,13 +14,12 @@ describe('TextbookForm (integration)', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('教本名と難易度を入力して保存すると onSubmit が正しい値で呼ばれる', async () => {
+  it('教本名・ジャンル・難易度を入力して保存すると onSubmit が正しい値で呼ばれる', async () => {
     const onSubmit = jest.fn();
-    renderWithProviders(
-      <TextbookForm onSubmit={onSubmit} defaultValues={{ title: '', genre: 'エチュード' }} />,
-    );
+    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
     fireEvent.changeText(screen.getByLabelText('教本名'), 'ローズ 32のエチュード');
     fireEvent.changeText(screen.getByLabelText('出版社'), '全音楽譜出版社');
+    fireEvent.press(screen.getByLabelText('ジャンル エチュード'));
     fireEvent.press(screen.getByLabelText('難易度 中級'));
     fireEvent.press(screen.getByText('保存'));
     await waitFor(() => {
@@ -29,6 +28,7 @@ describe('TextbookForm (integration)', () => {
     expect(onSubmit.mock.calls[0][0]).toMatchObject({
       title: 'ローズ 32のエチュード',
       publisher: '全音楽譜出版社',
+      genre: 'エチュード',
       difficulty: '中級',
     });
   });
@@ -49,7 +49,12 @@ describe('TextbookForm (integration)', () => {
   it('defaultValues が渡されるとフォームに初期値が表示される', () => {
     renderWithProviders(
       <TextbookForm
-        defaultValues={{ title: 'クローゼ 教則本', publisher: '音楽之友社', difficulty: '上級' }}
+        defaultValues={{
+          title: 'クローゼ 教則本',
+          publisher: '音楽之友社',
+          genre: 'エチュード',
+          difficulty: '上級',
+        }}
       />,
     );
     expect(screen.getByLabelText('教本名').props.value).toBe('クローゼ 教則本');
@@ -58,10 +63,9 @@ describe('TextbookForm (integration)', () => {
 
   it('totalPages を入力して保存すると onSubmit に数値が渡される', async () => {
     const onSubmit = jest.fn();
-    renderWithProviders(
-      <TextbookForm onSubmit={onSubmit} defaultValues={{ title: '', genre: 'エチュード' }} />,
-    );
+    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
     fireEvent.changeText(screen.getByLabelText('教本名'), 'ローズ 32のエチュード');
+    fireEvent.press(screen.getByLabelText('ジャンル エチュード'));
     fireEvent.changeText(screen.getByLabelText('総ページ数'), '100');
     fireEvent.press(screen.getByText('保存'));
     await waitFor(() => {
@@ -74,6 +78,7 @@ describe('TextbookForm (integration)', () => {
     const onSubmit = jest.fn();
     renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
     fireEvent.changeText(screen.getByLabelText('教本名'), 'テスト教本');
+    fireEvent.press(screen.getByLabelText('ジャンル エチュード'));
     fireEvent.changeText(screen.getByLabelText('総ページ数'), '0');
     fireEvent.press(screen.getByText('保存'));
     await waitFor(() => {
@@ -83,7 +88,32 @@ describe('TextbookForm (integration)', () => {
   });
 
   it('defaultValues に totalPages が含まれるとフォームに表示される', () => {
-    renderWithProviders(<TextbookForm defaultValues={{ title: 'テスト', totalPages: 80 }} />);
+    renderWithProviders(
+      <TextbookForm defaultValues={{ title: 'テスト', genre: 'スケール', totalPages: 80 }} />,
+    );
     expect(screen.getByLabelText('総ページ数').props.value).toBe('80');
+  });
+
+  it('ジャンルを未選択で保存するとバリデーションエラーが表示される', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('教本名'), 'ローズ 32のエチュード');
+    fireEvent.press(screen.getByText('保存'));
+    await waitFor(() => {
+      expect(screen.getByText('ジャンルを選択してください')).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('ジャンルボタンをタップすると選択状態になり保存が通る', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<TextbookForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('教本名'), 'ローズ 32のエチュード');
+    fireEvent.press(screen.getByLabelText('ジャンル エチュード'));
+    fireEvent.press(screen.getByText('保存'));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ genre: 'エチュード' });
   });
 });

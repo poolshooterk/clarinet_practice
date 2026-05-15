@@ -4,14 +4,19 @@ import { Alert } from 'react-native';
 import { Button, Input, Paragraph, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
-import { DIFFICULTY_OPTIONS, type TextbookInput, textbookSchema } from '@/forms/textbook';
+import {
+  DIFFICULTY_OPTIONS,
+  GENRE_OPTIONS,
+  type TextbookInput,
+  textbookSchema,
+} from '@/forms/textbook';
 
 const defaultOnSubmit = (_values: TextbookInput) => {
   Alert.alert('保存しました');
 };
 
 type Props = {
-  defaultValues?: Partial<TextbookInput>;
+  defaultValues?: TextbookInput;
   onSubmit?: (values: TextbookInput) => void | Promise<void>;
   onDelete?: () => void;
 };
@@ -24,13 +29,12 @@ export function TextbookForm({ defaultValues, onSubmit = defaultOnSubmit, onDele
   } = useForm<TextbookInput>({
     resolver: zodResolver(textbookSchema),
     mode: 'onTouched',
-    defaultValues: {
+    defaultValues: defaultValues ?? {
       title: '',
       publisher: '',
       genre: undefined,
       difficulty: undefined,
       totalPages: undefined,
-      ...defaultValues,
     },
   });
 
@@ -50,6 +54,31 @@ export function TextbookForm({ defaultValues, onSubmit = defaultOnSubmit, onDele
               aria-label="教本名"
             />
             <FieldError message={errors.title?.message} />
+          </YStack>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="genre"
+        render={({ field: { onChange, value } }) => (
+          <YStack gap="$2">
+            <Paragraph color="$color12">ジャンル *</Paragraph>
+            <XStack flexWrap="wrap" gap="$2">
+              {GENRE_OPTIONS.map((opt) => (
+                <Button
+                  key={opt}
+                  size="$2"
+                  theme={value === opt ? 'blue' : undefined}
+                  variant={value === opt ? undefined : 'outlined'}
+                  onPress={() => onChange(opt)}
+                  aria-label={`ジャンル ${opt}`}
+                >
+                  {opt}
+                </Button>
+              ))}
+            </XStack>
+            <FieldError message={errors.genre?.message} />
           </YStack>
         )}
       />

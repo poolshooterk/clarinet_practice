@@ -14,10 +14,11 @@ export default function TextbookFormScreen() {
 
   const existing = id ? textbooks.find((t) => t.id === id) : undefined;
 
-  const defaultValues: Partial<TextbookInput> | undefined = existing
+  const defaultValues: TextbookInput | undefined = existing
     ? {
         title: existing.title,
         publisher: existing.publisher ?? undefined,
+        genre: existing.genre,
         difficulty: existing.difficulty ?? undefined,
         totalPages: existing.totalPages ?? undefined,
       }
