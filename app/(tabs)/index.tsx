@@ -96,11 +96,19 @@ export default function PracticeLogScreen() {
               ))}
               {item.basicMenuEntries.length > 0 && (
                 <XStack gap="$3" mt="$1" flexWrap="wrap">
-                  {item.basicMenuEntries.map((entry) => (
-                    <Paragraph key={entry.menuType} fontSize="$2" color="$color10">
-                      {`${BASIC_MENUS.find((m) => m.type === entry.menuType)?.label ?? entry.menuType}: ${entry.durationMinutes}分`}
-                    </Paragraph>
-                  ))}
+                  {item.basicMenuEntries.map((entry) => {
+                    const label =
+                      BASIC_MENUS.find((m) => m.type === entry.menuType)?.label ?? entry.menuType;
+                    const suffix =
+                      entry.menuType === 'tonguing' && entry.tempoBpm != null
+                        ? ` ♩=${entry.tempoBpm}`
+                        : '';
+                    return (
+                      <Paragraph key={entry.menuType} fontSize="$2" color="$color10">
+                        {`${label}: ${entry.durationMinutes}分${suffix}`}
+                      </Paragraph>
+                    );
+                  })}
                 </XStack>
               )}
             </YStack>
