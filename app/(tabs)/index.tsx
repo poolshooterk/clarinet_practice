@@ -146,8 +146,8 @@ export default function PracticeLogScreen() {
                     const label =
                       BASIC_MENUS.find((m) => m.type === entry.menuType)?.label ?? entry.menuType;
                     const suffix =
-                      entry.menuType === 'tonguing' && entry.tempoBpm != null
-                        ? ` ♩=${entry.tempoBpm}`
+                      entry.menuType === 'tonguing' && entry.tempoBpms.length > 0
+                        ? ` ♩=${entry.tempoBpms.join(', ')}`
                         : '';
                     return (
                       <Paragraph key={entry.menuType} fontSize="$2" color="$color10">
