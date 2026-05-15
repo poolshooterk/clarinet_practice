@@ -1,8 +1,9 @@
 import { Link, router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, View } from 'react-native';
+import { Alert, Modal, Pressable, SectionList, View } from 'react-native';
 import { Button, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui';
 
+import { GENRE_OPTIONS } from '@/forms/textbook';
 import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTextbookProgressStore } from '@/store/textbook-progress';
 
@@ -31,6 +32,11 @@ export default function TextbooksScreen() {
       fetchAllProgress();
     }, [fetchAll, fetchAllProgress]),
   );
+
+  const sections = GENRE_OPTIONS.map((genre) => ({
+    title: genre,
+    data: textbooks.filter((t) => t.genre === genre),
+  })).filter((s) => s.data.length > 0);
 
   const handleLongPress = (textbook: Textbook) => {
     Alert.alert('教本を削除', `「${textbook.title}」を削除しますか？`, [
@@ -80,8 +86,8 @@ export default function TextbooksScreen() {
           <Spinner />
         </YStack>
       ) : (
-        <FlatList
-          data={textbooks}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16 }}
           ListEmptyComponent={
@@ -89,6 +95,11 @@ export default function TextbooksScreen() {
               <Paragraph color="$color10">教本が登録されていません</Paragraph>
             </YStack>
           }
+          renderSectionHeader={({ section: { title } }) => (
+            <Paragraph fontWeight="bold" color="$color10" mb="$1" mt="$2">
+              {title}
+            </Paragraph>
+          )}
           renderItem={({ item }) => (
             <XStack
               bg="$color2"
