@@ -51,6 +51,7 @@ describe('usePracticeLogStore', () => {
                 {
                   textbook_id: 'tb-1',
                   current_page: 14,
+                  duration_minutes: null,
                   textbooks: { title: 'ローズ 32のエチュード', total_pages: 32 },
                 },
               ],
@@ -80,6 +81,7 @@ describe('usePracticeLogStore', () => {
       textbookTitle: 'ローズ 32のエチュード',
       currentPage: 14,
       totalPages: 32,
+      durationMinutes: null,
     });
     expect(sessions[0].basicMenuEntries).toEqual([
       { menuType: 'long_tone', durationMinutes: 15, tempoBpms: [] },
@@ -160,6 +162,7 @@ describe('usePracticeLogStore', () => {
       textbookTitle: 'ローズ 32のエチュード',
       currentPage: 14,
       totalPages: 32,
+      durationMinutes: null,
     });
     expect(sessions[1].id).toBe('old');
     expect(mockProgress().getState().upsert).toHaveBeenCalledWith('tb-1', 14);

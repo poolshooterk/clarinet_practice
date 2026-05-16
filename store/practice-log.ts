@@ -10,6 +10,7 @@ type TextbookEntry = {
   textbookTitle: string;
   currentPage: number;
   totalPages: number | null;
+  durationMinutes: number | null;
 };
 
 type BasicMenuEntry = {
@@ -35,6 +36,7 @@ type SessionRow = {
   practice_session_textbooks: {
     textbook_id: string;
     current_page: number;
+    duration_minutes: number | null;
     textbooks: { title: string; total_pages: number | null } | null;
   }[];
   practice_session_basic_menus: {
@@ -65,7 +67,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .from('practice_sessions')
       .select(
         'id, practiced_at, duration_minutes, memo, ' +
-          'practice_session_textbooks ( textbook_id, current_page, textbooks ( title, total_pages ) ), ' +
+          'practice_session_textbooks ( textbook_id, current_page, duration_minutes, textbooks ( title, total_pages ) ), ' +
           'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms )',
       )
       .order('practiced_at', { ascending: false });
@@ -85,6 +87,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           textbookTitle: entry.textbooks?.title ?? '',
           currentPage: entry.current_page,
           totalPages: entry.textbooks?.total_pages ?? null,
+          durationMinutes: entry.duration_minutes ?? null,
         })),
         basicMenuEntries: (row.practice_session_basic_menus ?? []).map((m) => ({
           menuType: m.menu_type,
@@ -121,6 +124,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           session_id: sessionId,
           textbook_id: entry.textbookId,
           current_page: entry.currentPage,
+          duration_minutes: entry.durationMinutes ?? null,
         })),
       );
       if (entriesError) {
@@ -181,6 +185,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           textbookTitle: tb?.title ?? '',
           currentPage: entry.currentPage,
           totalPages: tb?.totalPages ?? null,
+          durationMinutes: entry.durationMinutes ?? null,
         };
       }),
       basicMenuEntries: basicMenuRows.map((r) => ({
