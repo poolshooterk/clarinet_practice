@@ -1,6 +1,6 @@
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, Pressable } from 'react-native';
+import { FlatList, Pressable } from 'react-native';
 import { Paragraph, XStack, YStack } from 'tamagui';
 
 import { PracticeChart } from '@/components/practice-chart';
@@ -28,7 +28,6 @@ export default function PracticeLogScreen() {
   const sessions = usePracticeLogStore((s) => s.sessions);
   const loading = usePracticeLogStore((s) => s.loading);
   const fetchAll = usePracticeLogStore((s) => s.fetchAll);
-  const remove = usePracticeLogStore((s) => s.remove);
 
   const currentMonth = today().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -60,13 +59,6 @@ export default function PracticeLogScreen() {
     const d = new Date(y, m, 1);
     setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
-
-  const handleLongPress = (id: string) => {
-    Alert.alert('練習記録を削除', 'この記録を削除しますか？', [
-      { text: 'キャンセル', style: 'cancel' },
-      { text: '削除', style: 'destructive', onPress: () => remove(id) },
-    ]);
-  };
 
   return (
     <>
@@ -127,7 +119,7 @@ export default function PracticeLogScreen() {
           ) : null
         }
         renderItem={({ item }) => (
-          <Pressable onLongPress={() => handleLongPress(item.id)}>
+          <Pressable onPress={() => router.push(`/practice-log-form?id=${item.id}`)}>
             <YStack
               mx="$3"
               mb="$2"
