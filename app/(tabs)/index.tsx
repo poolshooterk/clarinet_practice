@@ -137,6 +137,11 @@ export default function PracticeLogScreen() {
               {item.textbookEntries.map((entry) => (
                 <XStack key={entry.textbookId} gap="$2" items="center">
                   <Paragraph fontSize="$2">{entry.textbookTitle}</Paragraph>
+                  {entry.durationMinutes != null && (
+                    <Paragraph fontSize="$2" color="$color10">
+                      {`${entry.durationMinutes}分`}
+                    </Paragraph>
+                  )}
                   <Paragraph fontSize="$2" color="$blue9" ml="auto">
                     {`p.${entry.currentPage}`}
                   </Paragraph>
