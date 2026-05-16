@@ -6,6 +6,7 @@ import { Platform, ScrollView } from 'react-native';
 import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
+import { TimerControl } from '@/components/timer-control';
 import {
   BASIC_MENUS,
   formatDate,
@@ -15,6 +16,7 @@ import {
 } from '@/forms/practice-log';
 import { usePracticeLogStore } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
+import { useTimerStore } from '@/store/timer';
 
 type Props = {
   onSubmit: (data: PracticeLogInput) => void | Promise<void>;
@@ -41,6 +43,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<PracticeLogInput>({
     resolver: zodResolver(practiceLogSchema),
@@ -66,8 +69,31 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   const watchedTonguing = useWatch({ control, name: 'tonguingMinutes' });
   const totalMinutes = (watchedLongTone ?? 0) + (watchedTonguing ?? 0);
 
-  const submitForm = handleSubmit(onSubmit);
-  useImperativeHandle(ref, () => ({ submit: submitForm }));
+  const resetAll = useTimerStore((s) => s.resetAll);
+
+  const submitForm = handleSubmit(async (data) => {
+    await onSubmit(data);
+    resetAll();
+  });
+
+  useImperativeHandle(ref, () => ({
+    submit: () => {
+      const timerState = useTimerStore.getState();
+      if (timerState.timers['long_tone']?.status === 'running') {
+        setValue('longToneMinutes', timerState.stop('long_tone'));
+      }
+      if (timerState.timers['tonguing']?.status === 'running') {
+        setValue('tonguingMinutes', timerState.stop('tonguing'));
+      }
+      fields.forEach((field, index) => {
+        const key = `textbook-${field.id}`;
+        if (timerState.timers[key]?.status === 'running') {
+          setValue(`textbookEntries.${index}.durationMinutes`, timerState.stop(key));
+        }
+      });
+      submitForm();
+    },
+  }));
 
   return (
     <ScrollView>
@@ -122,16 +148,21 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           {BASIC_MENUS.map(({ type, label }) => {
             const fieldName = type === 'long_tone' ? 'longToneMinutes' : 'tonguingMinutes';
             const ariaLabel = type === 'long_tone' ? 'ロングトーン' : 'タンギング';
+            const timerKey = type === 'long_tone' ? 'long_tone' : 'tonguing';
             return (
-              <Controller
-                key={type}
-                control={control}
-                name={fieldName}
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <YStack gap="$1">
-                    <Paragraph color="$color11" fontSize="$3">
-                      {label}（分）任意
-                    </Paragraph>
+              <YStack key={type} gap="$1">
+                <Paragraph color="$color11" fontSize="$3">
+                  {label}（分）任意
+                </Paragraph>
+                <TimerControl
+                  timerKey={timerKey}
+                  label={label}
+                  onStop={(minutes) => setValue(fieldName, minutes)}
+                />
+                <Controller
+                  control={control}
+                  name={fieldName}
+                  render={({ field: { onChange, onBlur, value } }) => (
                     <Input
                       value={value !== undefined ? String(value) : ''}
                       onChangeText={(t) => {
@@ -143,10 +174,10 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                       keyboardType="numeric"
                       aria-label={ariaLabel}
                     />
-                    <FieldError message={errors[fieldName]?.message} />
-                  </YStack>
-                )}
-              />
+                  )}
+                />
+                <FieldError message={errors[fieldName]?.message} />
+              </YStack>
             );
           })}
 
@@ -316,6 +347,38 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                   </XStack>
                   <FieldError message={errors.textbookEntries?.[index]?.currentPage?.message} />
                 </YStack>
+
+                {/* 教本練習時間 */}
+                <TimerControl
+                  timerKey={`textbook-${field.id}`}
+                  label={`教本 ${index + 1}`}
+                  onStop={(minutes) =>
+                    setValue(`textbookEntries.${index}.durationMinutes`, minutes)
+                  }
+                />
+                <Controller
+                  control={control}
+                  name={`textbookEntries.${index}.durationMinutes`}
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <YStack gap="$1">
+                      <Paragraph fontSize="$2" color="$color10">
+                        練習時間（分）任意
+                      </Paragraph>
+                      <Input
+                        value={value !== undefined ? String(value) : ''}
+                        onChangeText={(t) => {
+                          const n = Number(t);
+                          onChange(t === '' || isNaN(n) ? undefined : n);
+                        }}
+                        onBlur={onBlur}
+                        placeholder="例: 15"
+                        keyboardType="numeric"
+                        aria-label={`教本練習時間 ${index + 1}`}
+                      />
+                    </YStack>
+                  )}
+                />
+                <FieldError message={errors.textbookEntries?.[index]?.durationMinutes?.message} />
               </YStack>
             );
           })}
