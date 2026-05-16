@@ -58,6 +58,7 @@ export const instrumentItemSchema = z.object({
   modelName: z.string().min(1),
   purchasePrice: z.number().optional(),
   startDate: startDateSchema,
+  photoUri: z.string().optional(),
 });
 
 export const equipmentItemSchema = z.object({

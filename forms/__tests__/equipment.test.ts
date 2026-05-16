@@ -175,3 +175,18 @@ describe('clarinetEquipmentSchema', () => {
     }
   });
 });
+
+describe('clarinetEquipmentSchema / instrument.photoUri', () => {
+  it('photoUri が省略されてもバリデーションが通る', () => {
+    const result = clarinetEquipmentSchema.safeParse(validEquipment);
+    expect(result.success).toBe(true);
+  });
+
+  it('photoUri が文字列であればバリデーションが通る', () => {
+    const result = clarinetEquipmentSchema.safeParse({
+      ...validEquipment,
+      instrument: { ...validInstrument, photoUri: '/path/to/photo.jpg' },
+    });
+    expect(result.success).toBe(true);
+  });
+});
