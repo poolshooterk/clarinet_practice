@@ -17,6 +17,13 @@ function formatMonthLabel(month: string): string {
   return `${y}年${Number(m)}月`;
 }
 
+function formatTimeLabel(basic: number, textbook: number): string | null {
+  const parts: string[] = [];
+  if (basic > 0) parts.push(`基礎練習: ${basic}分`);
+  if (textbook > 0) parts.push(`教本: ${textbook}分`);
+  return parts.length > 0 ? parts.join(' / ') : null;
+}
+
 export default function PracticeLogScreen() {
   const sessions = usePracticeLogStore((s) => s.sessions);
   const loading = usePracticeLogStore((s) => s.loading);
@@ -79,13 +86,10 @@ export default function PracticeLogScreen() {
                 <Paragraph fontWeight="bold">{formatMonthLabel(selectedMonth)}</Paragraph>
                 <Paragraph fontSize="$2" color="$color10">
                   {(() => {
-                    if (monthTotals.basic === 0 && monthTotals.textbook === 0) {
-                      return `${monthSessions.length}回 / 練習時間未記録`;
-                    }
-                    const parts: string[] = [`${monthSessions.length}回`];
-                    if (monthTotals.basic > 0) parts.push(`基礎練習: ${monthTotals.basic}分`);
-                    if (monthTotals.textbook > 0) parts.push(`教本: ${monthTotals.textbook}分`);
-                    return parts.join(' / ');
+                    const label = formatTimeLabel(monthTotals.basic, monthTotals.textbook);
+                    return label
+                      ? `${monthSessions.length}回 / ${label}`
+                      : `${monthSessions.length}回 / 練習時間未記録`;
                   })()}
                 </Paragraph>
               </YStack>
@@ -139,12 +143,10 @@ export default function PracticeLogScreen() {
                 </Paragraph>
                 {(() => {
                   const { basic, textbook } = calcSessionTime(item);
-                  const parts: string[] = [];
-                  if (basic > 0) parts.push(`基礎練習: ${basic}分`);
-                  if (textbook > 0) parts.push(`教本: ${textbook}分`);
-                  return parts.length > 0 ? (
+                  const label = formatTimeLabel(basic, textbook);
+                  return label ? (
                     <Paragraph fontSize="$2" color="$color10">
-                      {parts.join(' / ')}
+                      {label}
                     </Paragraph>
                   ) : null;
                 })()}
