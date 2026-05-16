@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { type PracticeLogInput } from '@/forms/practice-log';
+import { BASIC_GENRES, type PracticeLogInput } from '@/forms/practice-log';
 import { supabase } from '@/lib/supabase';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTextbookProgressStore } from '@/store/textbook-progress';
@@ -28,6 +28,19 @@ export type PracticeSession = {
   textbookEntries: TextbookEntry[];
   basicMenuEntries: BasicMenuEntry[];
 };
+
+export function calcSessionTime(session: PracticeSession): { basic: number; textbook: number } {
+  const basicTextbook = session.textbookEntries
+    .filter((e) => (BASIC_GENRES as readonly string[]).includes(e.genre))
+    .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0);
+  const textbookOnly = session.textbookEntries
+    .filter((e) => !(BASIC_GENRES as readonly string[]).includes(e.genre))
+    .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0);
+  return {
+    basic: (session.durationMinutes ?? 0) + basicTextbook,
+    textbook: textbookOnly,
+  };
+}
 
 type SessionRow = {
   id: string;

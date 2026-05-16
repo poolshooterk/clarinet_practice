@@ -1,4 +1,4 @@
-import { usePracticeLogStore } from '@/store/practice-log';
+import { calcSessionTime, type PracticeSession, usePracticeLogStore } from '@/store/practice-log';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -357,5 +357,120 @@ describe('usePracticeLogStore', () => {
     const sessions = usePracticeLogStore.getState().sessions;
     expect(sessions).toHaveLength(1);
     expect(sessions[0].id).toBe('session-2');
+  });
+});
+
+describe('calcSessionTime', () => {
+  const base: PracticeSession = {
+    id: 's1',
+    practicedAt: '2026-05-16',
+    durationMinutes: null,
+    memo: null,
+    textbookEntries: [],
+    basicMenuEntries: [],
+  };
+
+  it('基礎練習もなく教本もなければ両方 0 になる', () => {
+    expect(calcSessionTime(base)).toEqual({ basic: 0, textbook: 0 });
+  });
+
+  it('durationMinutes だけある場合は basic に加算される', () => {
+    expect(calcSessionTime({ ...base, durationMinutes: 20 })).toEqual({ basic: 20, textbook: 0 });
+  });
+
+  it('スケール教本の durationMinutes は basic に加算される', () => {
+    const session: PracticeSession = {
+      ...base,
+      durationMinutes: 20,
+      textbookEntries: [
+        {
+          textbookId: 'tb-1',
+          textbookTitle: 'スケール教本',
+          currentPage: 5,
+          totalPages: null,
+          genre: 'スケール',
+          durationMinutes: 15,
+        },
+      ],
+    };
+    expect(calcSessionTime(session)).toEqual({ basic: 35, textbook: 0 });
+  });
+
+  it('エチュード教本の durationMinutes は basic に加算される', () => {
+    const session: PracticeSession = {
+      ...base,
+      textbookEntries: [
+        {
+          textbookId: 'tb-2',
+          textbookTitle: 'エチュード教本',
+          currentPage: 10,
+          totalPages: null,
+          genre: 'エチュード',
+          durationMinutes: 10,
+        },
+      ],
+    };
+    expect(calcSessionTime(session)).toEqual({ basic: 10, textbook: 0 });
+  });
+
+  it('ソナタ教本の durationMinutes は textbook に加算される', () => {
+    const session: PracticeSession = {
+      ...base,
+      durationMinutes: 20,
+      textbookEntries: [
+        {
+          textbookId: 'tb-3',
+          textbookTitle: 'ソナタ',
+          currentPage: 1,
+          totalPages: null,
+          genre: 'ソナタ',
+          durationMinutes: 25,
+        },
+      ],
+    };
+    expect(calcSessionTime(session)).toEqual({ basic: 20, textbook: 25 });
+  });
+
+  it('混在する場合: basic と textbook が正しく分類される', () => {
+    const session: PracticeSession = {
+      ...base,
+      durationMinutes: 15,
+      textbookEntries: [
+        {
+          textbookId: 'tb-1',
+          textbookTitle: 'スケール',
+          currentPage: 5,
+          totalPages: null,
+          genre: 'スケール',
+          durationMinutes: 10,
+        },
+        {
+          textbookId: 'tb-2',
+          textbookTitle: 'コンチェルト',
+          currentPage: 8,
+          totalPages: null,
+          genre: 'コンチェルト',
+          durationMinutes: 20,
+        },
+      ],
+    };
+    expect(calcSessionTime(session)).toEqual({ basic: 25, textbook: 20 });
+  });
+
+  it('durationMinutes が null の教本エントリは 0 として扱う', () => {
+    const session: PracticeSession = {
+      ...base,
+      textbookEntries: [
+        {
+          textbookId: 'tb-1',
+          textbookTitle: 'スケール',
+          currentPage: 5,
+          totalPages: null,
+          genre: 'スケール',
+          durationMinutes: null,
+        },
+      ],
+    };
+    expect(calcSessionTime(session)).toEqual({ basic: 0, textbook: 0 });
   });
 });

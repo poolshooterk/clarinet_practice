@@ -7,6 +7,8 @@ export const BASIC_MENUS = [
 
 export type BasicMenuType = (typeof BASIC_MENUS)[number]['type'];
 
+export const BASIC_GENRES = ['スケール', 'エチュード'] as const;
+
 const textbookEntrySchema = z.object({
   textbookId: z.string().uuid('教本を選択してください'),
   currentPage: z.number().int().min(0, '0以上の整数を入力してください'),
