@@ -227,7 +227,11 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .eq('id', id);
     if (sessionError) return;
 
-    await supabase.from('practice_session_textbooks').delete().eq('session_id', id);
+    const { error: deleteTextbooksError } = await supabase
+      .from('practice_session_textbooks')
+      .delete()
+      .eq('session_id', id);
+    if (deleteTextbooksError) return;
     if (input.textbookEntries.length > 0) {
       const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
         input.textbookEntries.map((entry) => ({
@@ -243,7 +247,11 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       }
     }
 
-    await supabase.from('practice_session_basic_menus').delete().eq('session_id', id);
+    const { error: deleteBasicMenusError } = await supabase
+      .from('practice_session_basic_menus')
+      .delete()
+      .eq('session_id', id);
+    if (deleteBasicMenusError) return;
     const basicMenuRows = [
       ...(input.longToneMinutes != null
         ? [
