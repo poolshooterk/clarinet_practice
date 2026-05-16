@@ -125,33 +125,48 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
   const photoUri = watch('instrument.photoUri');
 
   const savePhoto = async (tempUri: string) => {
+    if (photoUri) {
+      try {
+        new File(photoUri).delete();
+      } catch {}
+    }
     const src = new File(tempUri);
-    const dest = new File(Paths.document, src.name);
+    const ext = src.name.includes('.') ? src.name.slice(src.name.lastIndexOf('.')) : '';
+    const uniqueName = `photo_${Date.now()}${ext}`;
+    const dest = new File(Paths.document, uniqueName);
     src.copy(dest);
     setValue('instrument.photoUri', dest.uri, { shouldValidate: true });
   };
 
   const handleCamera = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('カメラへのアクセスが必要です', 'システム設定で許可してください');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (!result.canceled) {
-      await savePhoto(result.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('カメラへのアクセスが必要です', 'システム設定で許可してください');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+      if (!result.canceled) {
+        await savePhoto(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert('エラー', '写真の保存に失敗しました');
     }
   };
 
   const handleLibrary = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('写真ライブラリへのアクセスが必要です', 'システム設定で許可してください');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
-    if (!result.canceled) {
-      await savePhoto(result.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('写真ライブラリへのアクセスが必要です', 'システム設定で許可してください');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+      if (!result.canceled) {
+        await savePhoto(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert('エラー', '写真の保存に失敗しました');
     }
   };
 
@@ -303,9 +318,14 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
                       size="$2"
                       theme="red"
                       variant="outlined"
-                      onPress={() =>
-                        setValue('instrument.photoUri', undefined, { shouldValidate: true })
-                      }
+                      onPress={() => {
+                        if (photoUri) {
+                          try {
+                            new File(photoUri).delete();
+                          } catch {}
+                        }
+                        setValue('instrument.photoUri', undefined, { shouldValidate: true });
+                      }}
                       aria-label="写真を削除"
                     >
                       ✕ 削除
