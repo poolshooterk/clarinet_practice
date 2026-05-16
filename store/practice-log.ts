@@ -10,6 +10,7 @@ type TextbookEntry = {
   textbookTitle: string;
   currentPage: number;
   totalPages: number | null;
+  genre: string;
   durationMinutes: number | null;
 };
 
@@ -37,7 +38,7 @@ type SessionRow = {
     textbook_id: string;
     current_page: number;
     duration_minutes: number | null;
-    textbooks: { title: string; total_pages: number | null } | null;
+    textbooks: { title: string; total_pages: number | null; genre: string } | null;
   }[];
   practice_session_basic_menus: {
     menu_type: string;
@@ -67,7 +68,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .from('practice_sessions')
       .select(
         'id, practiced_at, duration_minutes, memo, ' +
-          'practice_session_textbooks ( textbook_id, current_page, duration_minutes, textbooks ( title, total_pages ) ), ' +
+          'practice_session_textbooks ( textbook_id, current_page, duration_minutes, textbooks ( title, total_pages, genre ) ), ' +
           'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms )',
       )
       .order('practiced_at', { ascending: false });
@@ -87,6 +88,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           textbookTitle: entry.textbooks?.title ?? '',
           currentPage: entry.current_page,
           totalPages: entry.textbooks?.total_pages ?? null,
+          genre: entry.textbooks?.genre ?? 'その他',
           durationMinutes: entry.duration_minutes ?? null,
         })),
         basicMenuEntries: (row.practice_session_basic_menus ?? []).map((m) => ({
@@ -185,6 +187,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           textbookTitle: tb?.title ?? '',
           currentPage: entry.currentPage,
           totalPages: tb?.totalPages ?? null,
+          genre: tb?.genre ?? 'その他',
           durationMinutes: entry.durationMinutes ?? null,
         };
       }),

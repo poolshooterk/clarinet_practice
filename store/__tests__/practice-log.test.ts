@@ -52,7 +52,11 @@ describe('usePracticeLogStore', () => {
                   textbook_id: 'tb-1',
                   current_page: 14,
                   duration_minutes: null,
-                  textbooks: { title: 'ローズ 32のエチュード', total_pages: 32 },
+                  textbooks: {
+                    title: 'ローズ 32のエチュード',
+                    total_pages: 32,
+                    genre: 'エチュード',
+                  },
                 },
               ],
               practice_session_basic_menus: [
@@ -81,6 +85,7 @@ describe('usePracticeLogStore', () => {
       textbookTitle: 'ローズ 32のエチュード',
       currentPage: 14,
       totalPages: 32,
+      genre: 'エチュード',
       durationMinutes: null,
     });
     expect(sessions[0].basicMenuEntries).toEqual([
@@ -116,6 +121,7 @@ describe('usePracticeLogStore', () => {
           id: 'tb-1',
           title: 'ローズ 32のエチュード',
           publisher: null,
+          genre: 'エチュード',
           difficulty: null,
           totalPages: 32,
         },
@@ -162,6 +168,7 @@ describe('usePracticeLogStore', () => {
       textbookTitle: 'ローズ 32のエチュード',
       currentPage: 14,
       totalPages: 32,
+      genre: 'エチュード',
       durationMinutes: null,
     });
     expect(sessions[1].id).toBe('old');
