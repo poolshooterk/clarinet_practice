@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import React from 'react';
 
-import { PracticeLogForm } from '@/components/practice-log-form';
+import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
+import { type PracticeLogInput } from '@/forms/practice-log';
 import { usePracticeLogStore } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { renderWithProviders, screen } from '@/test-utils/render';
@@ -341,6 +343,57 @@ describe('PracticeLogForm (integration)', () => {
       renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
 
       expect(screen.queryByLabelText('ページ 1')).toBeNull();
+    });
+  });
+});
+
+describe('PracticeLogForm with initialValues (編集モード)', () => {
+  const initialValues: PracticeLogInput = {
+    practicedAt: '2026-01-15',
+    longToneMinutes: 20,
+    tonguingMinutes: 10,
+    tonguingTempoBpms: [{ bpm: 100 }],
+    memo: 'テストメモ',
+    textbookEntries: [],
+  };
+
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    usePracticeLogStore.setState({ sessions: [], loading: false });
+    useTextbookCatalogStore.setState({ textbooks: [], loading: false });
+    jest.clearAllMocks();
+  });
+
+  it('initialValues でフィールドが初期化される', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} initialValues={initialValues} />);
+
+    expect(screen.getByDisplayValue('2026-01-15')).toBeTruthy();
+    expect(screen.getByDisplayValue('20')).toBeTruthy();
+    expect(screen.getByDisplayValue('10')).toBeTruthy();
+    expect(screen.getByDisplayValue('テストメモ')).toBeTruthy();
+  });
+
+  it('initialValues を保存すると onSubmit が呼ばれる', async () => {
+    const onSubmit = jest.fn();
+    const ref = React.createRef<PracticeLogFormRef>();
+    renderWithProviders(
+      <PracticeLogForm ref={ref} onSubmit={onSubmit} initialValues={initialValues} />,
+    );
+
+    await act(async () => {
+      ref.current?.submit();
+    });
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          practicedAt: '2026-01-15',
+          longToneMinutes: 20,
+          tonguingMinutes: 10,
+          memo: 'テストメモ',
+        }),
+      );
     });
   });
 });
