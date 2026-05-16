@@ -8,6 +8,7 @@ import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 import { FieldError } from '@/components/form/field-error';
 import { TimerControl } from '@/components/timer-control';
 import {
+  BASIC_GENRES,
   BASIC_MENUS,
   formatDate,
   type PracticeLogInput,
@@ -67,7 +68,22 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   const watchedEntries = watch('textbookEntries') ?? [];
   const watchedLongTone = watch('longToneMinutes');
   const watchedTonguing = useWatch({ control, name: 'tonguingMinutes' });
-  const totalMinutes = (watchedLongTone ?? 0) + (watchedTonguing ?? 0);
+  const formBasicMinutes =
+    (watchedLongTone ?? 0) +
+    (watchedTonguing ?? 0) +
+    watchedEntries.reduce((acc, e) => {
+      const tb = textbooks.find((t) => t.id === e.textbookId);
+      return tb && (BASIC_GENRES as readonly string[]).includes(tb.genre)
+        ? acc + (e.durationMinutes ?? 0)
+        : acc;
+    }, 0);
+
+  const formTextbookMinutes = watchedEntries.reduce((acc, e) => {
+    const tb = textbooks.find((t) => t.id === e.textbookId);
+    return tb && !(BASIC_GENRES as readonly string[]).includes(tb.genre)
+      ? acc + (e.durationMinutes ?? 0)
+      : acc;
+  }, 0);
 
   const resetAll = useTimerStore((s) => s.resetAll);
 
@@ -225,9 +241,14 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
             </YStack>
           )}
 
-          {totalMinutes > 0 && (
+          {(formBasicMinutes > 0 || formTextbookMinutes > 0) && (
             <Paragraph fontSize="$2" color="$color10">
-              合計: {totalMinutes}分
+              {[
+                formBasicMinutes > 0 && `基礎: ${formBasicMinutes}分`,
+                formTextbookMinutes > 0 && `教本: ${formTextbookMinutes}分`,
+              ]
+                .filter(Boolean)
+                .join(' / ')}
             </Paragraph>
           )}
         </YStack>
