@@ -94,6 +94,41 @@ describe('usePracticeLogStore', () => {
     ]);
   });
 
+  it('fetchAll で textbooks.genre が null のとき「その他」に正規化される', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      select: jest.fn().mockReturnValue({
+        order: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'session-1',
+              practiced_at: '2026-05-12',
+              duration_minutes: null,
+              memo: null,
+              practice_session_textbooks: [
+                {
+                  textbook_id: 'tb-1',
+                  current_page: 5,
+                  duration_minutes: null,
+                  textbooks: { title: 'テスト教本', total_pages: null, genre: null },
+                },
+              ],
+              practice_session_basic_menus: [],
+            },
+          ],
+          error: null,
+        }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().fetchAll();
+
+    const sessions = usePracticeLogStore.getState().sessions;
+    expect(sessions[0].textbookEntries[0].genre).toBe('その他');
+  });
+
   it('fetchAll でユーザーが未ログインのとき sessions を変更せず from を呼ばない', async () => {
     usePracticeLogStore.setState({ sessions: [] });
     mockSupabase().auth.getUser.mockResolvedValueOnce({ data: { user: null } });
@@ -263,6 +298,31 @@ describe('usePracticeLogStore', () => {
 
     expect(mockSupabase().from).not.toHaveBeenCalled();
     expect(usePracticeLogStore.getState().sessions).toEqual([]);
+  });
+
+  it('add でカタログに存在しない textbookId の genre は「その他」になる', async () => {
+    mockCatalog().getState.mockReturnValue({ textbooks: [] });
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockResolvedValue({ error: null }),
+    });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-12',
+      textbookEntries: [{ textbookId: 'unknown-tb', currentPage: 1 }],
+    });
+
+    const sessions = usePracticeLogStore.getState().sessions;
+    expect(sessions[0].textbookEntries[0].genre).toBe('その他');
   });
 
   it('remove で対象セッションが削除される', async () => {
