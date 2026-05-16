@@ -235,6 +235,44 @@ describe('practiceLogSchema', () => {
       });
       expect(result.success).toBe(false);
     });
+
+    describe('textbookEntries[].durationMinutes', () => {
+      it('省略可能', () => {
+        const result = practiceLogSchema.safeParse({
+          practicedAt: '2026-05-12',
+          textbookEntries: [{ textbookId: '123e4567-e89b-12d3-a456-426614174001', currentPage: 5 }],
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('1 は有効', () => {
+        const result = practiceLogSchema.safeParse({
+          practicedAt: '2026-05-12',
+          textbookEntries: [
+            {
+              textbookId: '123e4567-e89b-12d3-a456-426614174001',
+              currentPage: 5,
+              durationMinutes: 1,
+            },
+          ],
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('0 はエラー', () => {
+        const result = practiceLogSchema.safeParse({
+          practicedAt: '2026-05-12',
+          textbookEntries: [
+            {
+              textbookId: '123e4567-e89b-12d3-a456-426614174001',
+              currentPage: 5,
+              durationMinutes: 0,
+            },
+          ],
+        });
+        expect(result.success).toBe(false);
+      });
+    });
   });
 
   describe('BASIC_MENUS', () => {

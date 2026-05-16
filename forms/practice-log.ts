@@ -10,6 +10,7 @@ export type BasicMenuType = (typeof BASIC_MENUS)[number]['type'];
 const textbookEntrySchema = z.object({
   textbookId: z.string().uuid('教本を選択してください'),
   currentPage: z.number().int().min(0, '0以上の整数を入力してください'),
+  durationMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
 });
 
 const tonguingBpmEntrySchema = z.object({
