@@ -358,6 +358,142 @@ describe('usePracticeLogStore', () => {
     expect(sessions).toHaveLength(1);
     expect(sessions[0].id).toBe('session-2');
   });
+
+  describe('update', () => {
+    const existingSession: PracticeSession = {
+      id: 'session-1',
+      practicedAt: '2026-05-10',
+      durationMinutes: 20,
+      memo: null,
+      textbookEntries: [],
+      basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
+    };
+
+    beforeEach(() => {
+      usePracticeLogStore.setState({
+        sessions: [
+          existingSession,
+          {
+            id: 'session-2',
+            practicedAt: '2026-05-09',
+            durationMinutes: null,
+            memo: null,
+            textbookEntries: [],
+            basicMenuEntries: [],
+          },
+        ],
+        loading: false,
+      });
+      mockCatalog().getState.mockReturnValue({ textbooks: [] });
+    });
+
+    it('基礎練習のみの更新でセッションが差し替えられる', async () => {
+      // UPDATE practice_sessions
+      mockSupabase().from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      });
+      // DELETE practice_session_textbooks
+      mockSupabase().from.mockReturnValueOnce({
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      });
+      // DELETE practice_session_basic_menus
+      mockSupabase().from.mockReturnValueOnce({
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      });
+      // INSERT practice_session_basic_menus
+      mockSupabase().from.mockReturnValueOnce({
+        insert: jest.fn().mockResolvedValue({ error: null }),
+      });
+
+      await usePracticeLogStore.getState().update('session-1', {
+        practicedAt: '2026-05-10',
+        longToneMinutes: 30,
+        tonguingMinutes: undefined,
+        tonguingTempoBpms: [],
+        memo: 'updated',
+        textbookEntries: [],
+      });
+
+      const sessions = usePracticeLogStore.getState().sessions;
+      expect(sessions).toHaveLength(2);
+      expect(sessions[0]).toMatchObject({
+        id: 'session-1',
+        practicedAt: '2026-05-10',
+        durationMinutes: 30,
+        memo: 'updated',
+        basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 30, tempoBpms: [] }],
+        textbookEntries: [],
+      });
+      expect(sessions[1].id).toBe('session-2');
+    });
+
+    it('practice_sessions の UPDATE が失敗するとストアを変更しない', async () => {
+      mockSupabase().from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: { message: 'DB error' } }),
+        }),
+      });
+
+      await usePracticeLogStore.getState().update('session-1', {
+        practicedAt: '2026-05-10',
+        longToneMinutes: 30,
+        textbookEntries: [],
+      });
+
+      expect(usePracticeLogStore.getState().sessions[0].durationMinutes).toBe(20);
+    });
+
+    it('教本エントリあり: textbooks DELETE + INSERT + upsert が呼ばれる', async () => {
+      mockCatalog().getState.mockReturnValue({
+        textbooks: [
+          {
+            id: 'tb-1',
+            title: 'スケール',
+            publisher: null,
+            genre: 'スケール',
+            difficulty: null,
+            totalPages: null,
+          },
+        ],
+      });
+      // UPDATE practice_sessions
+      mockSupabase().from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+      });
+      // DELETE practice_session_textbooks
+      mockSupabase().from.mockReturnValueOnce({
+        delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+      });
+      // INSERT practice_session_textbooks
+      mockSupabase().from.mockReturnValueOnce({
+        insert: jest.fn().mockResolvedValue({ error: null }),
+      });
+      // DELETE practice_session_basic_menus
+      mockSupabase().from.mockReturnValueOnce({
+        delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+      });
+
+      await usePracticeLogStore.getState().update('session-1', {
+        practicedAt: '2026-05-10',
+        textbookEntries: [{ textbookId: 'tb-1', currentPage: 5, durationMinutes: 10 }],
+      });
+
+      expect(mockProgress().getState().upsert).toHaveBeenCalledWith('tb-1', 5);
+      const updated = usePracticeLogStore.getState().sessions[0];
+      expect(updated.textbookEntries[0]).toMatchObject({
+        textbookId: 'tb-1',
+        genre: 'スケール',
+        currentPage: 5,
+        durationMinutes: 10,
+      });
+    });
+  });
 });
 
 describe('calcSessionTime', () => {

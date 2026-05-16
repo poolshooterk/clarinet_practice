@@ -65,6 +65,7 @@ type PracticeLogState = {
   loading: boolean;
   fetchAll: () => Promise<void>;
   add: (input: PracticeLogInput) => Promise<void>;
+  update: (id: string, input: PracticeLogInput) => Promise<void>;
   remove: (id: string) => Promise<void>;
 };
 
@@ -211,6 +212,93 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       })),
     };
     set({ sessions: [newSession, ...get().sessions] });
+  },
+
+  update: async (id: string, input: PracticeLogInput) => {
+    const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
+
+    const { error: sessionError } = await supabase
+      .from('practice_sessions')
+      .update({
+        practiced_at: input.practicedAt,
+        duration_minutes: totalDuration > 0 ? totalDuration : null,
+        memo: input.memo || null,
+      })
+      .eq('id', id);
+    if (sessionError) return;
+
+    await supabase.from('practice_session_textbooks').delete().eq('session_id', id);
+    if (input.textbookEntries.length > 0) {
+      const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
+        input.textbookEntries.map((entry) => ({
+          session_id: id,
+          textbook_id: entry.textbookId,
+          current_page: entry.currentPage,
+          duration_minutes: entry.durationMinutes ?? null,
+        })),
+      );
+      if (entriesError) return;
+      for (const entry of input.textbookEntries) {
+        await useTextbookProgressStore.getState().upsert(entry.textbookId, entry.currentPage);
+      }
+    }
+
+    await supabase.from('practice_session_basic_menus').delete().eq('session_id', id);
+    const basicMenuRows = [
+      ...(input.longToneMinutes != null
+        ? [
+            {
+              session_id: id,
+              menu_type: 'long_tone' as const,
+              duration_minutes: input.longToneMinutes,
+              tempo_bpms: null as number[] | null,
+            },
+          ]
+        : []),
+      ...(input.tonguingMinutes != null
+        ? [
+            {
+              session_id: id,
+              menu_type: 'tonguing' as const,
+              duration_minutes: input.tonguingMinutes,
+              tempo_bpms: input.tonguingTempoBpms?.length
+                ? input.tonguingTempoBpms.map((e) => e.bpm)
+                : null,
+            },
+          ]
+        : []),
+    ];
+    if (basicMenuRows.length > 0) {
+      const { error: basicError } = await supabase
+        .from('practice_session_basic_menus')
+        .insert(basicMenuRows);
+      if (basicError) return;
+    }
+
+    const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
+    const updatedSession: PracticeSession = {
+      id,
+      practicedAt: input.practicedAt,
+      durationMinutes: totalDuration > 0 ? totalDuration : null,
+      memo: input.memo || null,
+      textbookEntries: input.textbookEntries.map((entry) => {
+        const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
+        return {
+          textbookId: entry.textbookId,
+          textbookTitle: tb?.title ?? '',
+          currentPage: entry.currentPage,
+          totalPages: tb?.totalPages ?? null,
+          genre: tb?.genre ?? 'その他',
+          durationMinutes: entry.durationMinutes ?? null,
+        };
+      }),
+      basicMenuEntries: basicMenuRows.map((r) => ({
+        menuType: r.menu_type,
+        durationMinutes: r.duration_minutes,
+        tempoBpms: r.tempo_bpms ?? [],
+      })),
+    };
+    set({ sessions: get().sessions.map((s) => (s.id === id ? updatedSession : s)) });
   },
 
   remove: async (id: string) => {
