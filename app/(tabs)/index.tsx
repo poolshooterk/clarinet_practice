@@ -5,7 +5,7 @@ import { Paragraph, XStack, YStack } from 'tamagui';
 
 import { PracticeChart } from '@/components/practice-chart';
 import { BASIC_MENUS, today } from '@/forms/practice-log';
-import { usePracticeLogStore } from '@/store/practice-log';
+import { calcSessionTime, usePracticeLogStore } from '@/store/practice-log';
 
 function dayOfWeek(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -33,7 +33,13 @@ export default function PracticeLogScreen() {
   );
 
   const monthSessions = sessions.filter((s) => s.practicedAt.startsWith(selectedMonth));
-  const totalMinutes = monthSessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+  const monthTotals = monthSessions.reduce(
+    (acc, s) => {
+      const { basic, textbook } = calcSessionTime(s);
+      return { basic: acc.basic + basic, textbook: acc.textbook + textbook };
+    },
+    { basic: 0, textbook: 0 },
+  );
 
   function prevMonth() {
     const [y, m] = selectedMonth.split('-').map(Number);
@@ -72,7 +78,15 @@ export default function PracticeLogScreen() {
               <YStack items="center" gap="$1">
                 <Paragraph fontWeight="bold">{formatMonthLabel(selectedMonth)}</Paragraph>
                 <Paragraph fontSize="$2" color="$color10">
-                  {`${monthSessions.length}回 / 計${totalMinutes}分`}
+                  {(() => {
+                    if (monthTotals.basic === 0 && monthTotals.textbook === 0) {
+                      return `${monthSessions.length}回 / 練習時間未記録`;
+                    }
+                    const parts: string[] = [`${monthSessions.length}回`];
+                    if (monthTotals.basic > 0) parts.push(`基礎練習: ${monthTotals.basic}分`);
+                    if (monthTotals.textbook > 0) parts.push(`教本: ${monthTotals.textbook}分`);
+                    return parts.join(' / ');
+                  })()}
                 </Paragraph>
               </YStack>
               <Pressable
@@ -123,11 +137,17 @@ export default function PracticeLogScreen() {
                 <Paragraph fontWeight="bold">
                   {`${item.practicedAt}（${dayOfWeek(item.practicedAt)}）`}
                 </Paragraph>
-                {item.durationMinutes != null && (
-                  <Paragraph fontSize="$2" color="$color10">
-                    {`${item.durationMinutes}分`}
-                  </Paragraph>
-                )}
+                {(() => {
+                  const { basic, textbook } = calcSessionTime(item);
+                  const parts: string[] = [];
+                  if (basic > 0) parts.push(`基礎練習: ${basic}分`);
+                  if (textbook > 0) parts.push(`教本: ${textbook}分`);
+                  return parts.length > 0 ? (
+                    <Paragraph fontSize="$2" color="$color10">
+                      {parts.join(' / ')}
+                    </Paragraph>
+                  ) : null;
+                })()}
               </XStack>
               {item.memo ? (
                 <Paragraph fontSize="$2" color="$color11" numberOfLines={1} mb="$1">
