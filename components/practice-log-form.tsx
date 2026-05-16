@@ -21,6 +21,7 @@ import { useTimerStore } from '@/store/timer';
 
 type Props = {
   onSubmit: (data: PracticeLogInput) => void | Promise<void>;
+  initialValues?: PracticeLogInput;
 };
 
 export type PracticeLogFormRef = {
@@ -28,7 +29,7 @@ export type PracticeLogFormRef = {
 };
 
 export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function PracticeLogForm(
-  { onSubmit },
+  { onSubmit, initialValues },
   ref,
 ) {
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
@@ -49,7 +50,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   } = useForm<PracticeLogInput>({
     resolver: zodResolver(practiceLogSchema),
     mode: 'onTouched',
-    defaultValues: {
+    defaultValues: initialValues ?? {
       practicedAt: today(),
       longToneMinutes: undefined,
       tonguingMinutes: undefined,
