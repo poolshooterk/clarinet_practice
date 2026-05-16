@@ -1,9 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { File, Paths } from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, Platform, ScrollView } from 'react-native';
+import { ActionSheetIOS, Alert, Image, Platform, Pressable, ScrollView } from 'react-native';
 import { Button, Card, Input, Paragraph, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
@@ -120,6 +122,59 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
 
   const instrumentValue = watch('instrument');
   const instrumentUsagePeriod = calcUsagePeriod(instrumentValue?.startDate ?? '');
+  const photoUri = watch('instrument.photoUri');
+
+  const savePhoto = async (tempUri: string) => {
+    const src = new File(tempUri);
+    const dest = new File(Paths.document, src.name);
+    src.copy(dest);
+    setValue('instrument.photoUri', dest.uri, { shouldValidate: true });
+  };
+
+  const handleCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('カメラへのアクセスが必要です', 'システム設定で許可してください');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (!result.canceled) {
+      await savePhoto(result.assets[0].uri);
+    }
+  };
+
+  const handleLibrary = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('写真ライブラリへのアクセスが必要です', 'システム設定で許可してください');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+    if (!result.canceled) {
+      await savePhoto(result.assets[0].uri);
+    }
+  };
+
+  const showPhotoOptions = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['キャンセル', 'カメラで撮影', 'ライブラリから選択'],
+          cancelButtonIndex: 0,
+        },
+        (index) => {
+          if (index === 1) handleCamera();
+          if (index === 2) handleLibrary();
+        },
+      );
+    } else {
+      Alert.alert('写真を選択', undefined, [
+        { text: 'キャンセル', style: 'cancel' },
+        { text: 'カメラで撮影', onPress: handleCamera },
+        { text: 'ライブラリから選択', onPress: handleLibrary },
+      ]);
+    }
+  };
 
   const handleSave = (values: ClarinetEquipment) => {
     setEquipment(values);
@@ -229,6 +284,57 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
               </YStack>
             )}
           />
+
+          {Platform.OS !== 'web' && (
+            <YStack gap="$2">
+              <Paragraph color="$color12">楽器の写真（任意）</Paragraph>
+              {photoUri ? (
+                <XStack gap="$3" items="center" p="$3" bg="$color2" rounded="$3">
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={{ width: 72, height: 72, borderRadius: 8 }}
+                    accessibilityLabel="楽器の写真"
+                  />
+                  <YStack flex={1} gap="$2">
+                    <Button size="$2" onPress={showPhotoOptions} aria-label="写真を変更">
+                      写真を変更
+                    </Button>
+                    <Button
+                      size="$2"
+                      theme="red"
+                      variant="outlined"
+                      onPress={() =>
+                        setValue('instrument.photoUri', undefined, { shouldValidate: true })
+                      }
+                      aria-label="写真を削除"
+                    >
+                      ✕ 削除
+                    </Button>
+                  </YStack>
+                </XStack>
+              ) : (
+                <Pressable onPress={showPhotoOptions} aria-label="楽器の写真を追加">
+                  <XStack
+                    gap="$3"
+                    items="center"
+                    p="$3"
+                    bg="$color2"
+                    rounded="$3"
+                    borderWidth={1}
+                    borderColor="$borderColor"
+                  >
+                    <Paragraph fontSize="$6">📷</Paragraph>
+                    <YStack>
+                      <Paragraph fontWeight="bold">楽器の写真を追加</Paragraph>
+                      <Paragraph fontSize="$2" color="$color10">
+                        タップして撮影またはライブラリから選択
+                      </Paragraph>
+                    </YStack>
+                  </XStack>
+                </Pressable>
+              )}
+            </YStack>
+          )}
         </Card>
 
         {OTHER_SECTIONS.map((section) => (
