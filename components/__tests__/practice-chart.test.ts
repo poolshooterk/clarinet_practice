@@ -10,6 +10,7 @@ function makeSession(
     id,
     practicedAt,
     durationMinutes,
+    otherMinutes: null,
     memo: null,
     textbookEntries: [],
     basicMenuEntries: [],

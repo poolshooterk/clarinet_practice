@@ -17,10 +17,10 @@ function formatMonthLabel(month: string): string {
   return `${y}年${Number(m)}月`;
 }
 
-function formatTimeLabel(basic: number, textbook: number): string | null {
+function formatTimeLabel(basic: number, nonBasic: number): string | null {
   const parts: string[] = [];
   if (basic > 0) parts.push(`基礎練習: ${basic}分`);
-  if (textbook > 0) parts.push(`教本: ${textbook}分`);
+  if (nonBasic > 0) parts.push(`基礎練習以外: ${nonBasic}分`);
   return parts.length > 0 ? parts.join(' / ') : null;
 }
 
@@ -41,10 +41,10 @@ export default function PracticeLogScreen() {
   const monthSessions = sessions.filter((s) => s.practicedAt.startsWith(selectedMonth));
   const monthTotals = monthSessions.reduce(
     (acc, s) => {
-      const { basic, textbook } = calcSessionTime(s);
-      return { basic: acc.basic + basic, textbook: acc.textbook + textbook };
+      const { basic, nonBasic } = calcSessionTime(s);
+      return { basic: acc.basic + basic, nonBasic: acc.nonBasic + nonBasic };
     },
-    { basic: 0, textbook: 0 },
+    { basic: 0, nonBasic: 0 },
   );
 
   function prevMonth() {
@@ -78,7 +78,7 @@ export default function PracticeLogScreen() {
                 <Paragraph fontWeight="bold">{formatMonthLabel(selectedMonth)}</Paragraph>
                 <Paragraph fontSize="$2" color="$color10">
                   {(() => {
-                    const label = formatTimeLabel(monthTotals.basic, monthTotals.textbook);
+                    const label = formatTimeLabel(monthTotals.basic, monthTotals.nonBasic);
                     return label
                       ? `${monthSessions.length}回 / ${label}`
                       : `${monthSessions.length}回 / 練習時間未記録`;
@@ -134,8 +134,8 @@ export default function PracticeLogScreen() {
                   {`${item.practicedAt}（${dayOfWeek(item.practicedAt)}）`}
                 </Paragraph>
                 {(() => {
-                  const { basic, textbook } = calcSessionTime(item);
-                  const label = formatTimeLabel(basic, textbook);
+                  const { basic, nonBasic } = calcSessionTime(item);
+                  const label = formatTimeLabel(basic, nonBasic);
                   return label ? (
                     <Paragraph fontSize="$2" color="$color10">
                       {label}
@@ -148,12 +148,22 @@ export default function PracticeLogScreen() {
                   {item.memo}
                 </Paragraph>
               ) : null}
+              {item.otherMinutes != null && (
+                <Paragraph fontSize="$2" color="$color10">
+                  {`その他: ${item.otherMinutes}分`}
+                </Paragraph>
+              )}
               {item.textbookEntries.map((entry) => (
                 <XStack key={entry.textbookId} gap="$2" items="center">
                   <Paragraph fontSize="$2">{entry.textbookTitle}</Paragraph>
                   {entry.durationMinutes != null && (
                     <Paragraph fontSize="$2" color="$color10">
                       {`${entry.durationMinutes}分`}
+                    </Paragraph>
+                  )}
+                  {entry.tempoBpm != null && (
+                    <Paragraph fontSize="$2" color="$color10">
+                      {`♩=${entry.tempoBpm}`}
                     </Paragraph>
                   )}
                   <Paragraph fontSize="$2" color="$blue9" ml="auto">
