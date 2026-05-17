@@ -1,7 +1,7 @@
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { TamaguiProvider } from 'tamagui';
+import { TamaguiProvider, Theme } from 'tamagui';
 
 import { supabase } from '@/lib/supabase';
 import { tamaguiConfig } from '@/tamagui.config';
@@ -21,7 +21,9 @@ export default function RootLayout() {
 
   return (
     <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme ?? 'light'}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Theme name="blue">
+        <Stack screenOptions={{ headerShown: false }} />
+      </Theme>
     </TamaguiProvider>
   );
 }
