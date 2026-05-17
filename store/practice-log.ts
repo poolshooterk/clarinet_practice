@@ -31,6 +31,8 @@ export type PracticeSession = {
   practicedAt: string;
   durationMinutes: number | null;
   otherMinutes: number | null;
+  otherMemo: string | null;
+  totalMinutes: number | null;
   memo: string | null;
   textbookEntries: TextbookEntry[];
   basicMenuEntries: BasicMenuEntry[];
@@ -54,6 +56,8 @@ type SessionRow = {
   practiced_at: string;
   duration_minutes: number | null;
   other_minutes: number | null;
+  other_memo: string | null;
+  total_minutes: number | null;
   memo: string | null;
   practice_session_textbooks: {
     textbook_id: string;
@@ -90,7 +94,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data, error } = await supabase
       .from('practice_sessions')
       .select(
-        'id, practiced_at, duration_minutes, other_minutes, memo, ' +
+        'id, practiced_at, duration_minutes, other_minutes, other_memo, total_minutes, memo, ' +
           'practice_session_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title, total_pages, genre ) ), ' +
           'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms )',
       )
@@ -106,6 +110,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         practicedAt: row.practiced_at,
         durationMinutes: row.duration_minutes ?? null,
         otherMinutes: row.other_minutes ?? null,
+        otherMemo: row.other_memo ?? null,
+        totalMinutes: row.total_minutes ?? null,
         memo: row.memo ?? null,
         textbookEntries: (row.practice_session_textbooks ?? []).map((entry) => ({
           textbookId: entry.textbook_id,
@@ -131,6 +137,23 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
 
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
+    // total_minutes 計算のため先に取得（関数末尾の取得を削除）
+    const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
+    const basicTextbookMinutes = input.textbookEntries
+      .filter((e) => {
+        const tb = catalogTextbooks.find((t) => t.id === e.textbookId);
+        return tb != null && (BASIC_GENRES as readonly string[]).includes(tb.genre);
+      })
+      .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0);
+    const nonBasicMinutes =
+      input.textbookEntries
+        .filter((e) => {
+          const tb = catalogTextbooks.find((t) => t.id === e.textbookId);
+          return tb == null || !(BASIC_GENRES as readonly string[]).includes(tb.genre);
+        })
+        .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0) + (input.otherMinutes ?? 0);
+    const totalMinutesValue = totalDuration + basicTextbookMinutes + nonBasicMinutes || null;
+
     const { data: session, error: sessionError } = await supabase
       .from('practice_sessions')
       .insert({
@@ -138,6 +161,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         practiced_at: input.practicedAt,
         duration_minutes: totalDuration > 0 ? totalDuration : null,
         other_minutes: input.otherMinutes ?? null,
+        other_memo: input.otherMemo || null,
+        total_minutes: totalMinutesValue,
         memo: input.memo || null,
       })
       .select()
@@ -204,12 +229,13 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       }
     }
 
-    const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
     const newSession: PracticeSession = {
       id: sessionId,
       practicedAt: input.practicedAt,
       durationMinutes: totalDuration > 0 ? totalDuration : null,
       otherMinutes: input.otherMinutes ?? null,
+      otherMemo: input.otherMemo || null,
+      totalMinutes: totalMinutesValue,
       memo: input.memo || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
@@ -236,12 +262,31 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
   update: async (id: string, input: PracticeLogInput) => {
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
+    // total_minutes 計算のため先に取得
+    const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
+    const basicTextbookMinutes = input.textbookEntries
+      .filter((e) => {
+        const tb = catalogTextbooks.find((t) => t.id === e.textbookId);
+        return tb != null && (BASIC_GENRES as readonly string[]).includes(tb.genre);
+      })
+      .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0);
+    const nonBasicMinutes =
+      input.textbookEntries
+        .filter((e) => {
+          const tb = catalogTextbooks.find((t) => t.id === e.textbookId);
+          return tb == null || !(BASIC_GENRES as readonly string[]).includes(tb.genre);
+        })
+        .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0) + (input.otherMinutes ?? 0);
+    const totalMinutesValue = totalDuration + basicTextbookMinutes + nonBasicMinutes || null;
+
     const { error: sessionError } = await supabase
       .from('practice_sessions')
       .update({
         practiced_at: input.practicedAt,
         duration_minutes: totalDuration > 0 ? totalDuration : null,
         other_minutes: input.otherMinutes ?? null,
+        other_memo: input.otherMemo || null,
+        total_minutes: totalMinutesValue,
         memo: input.memo || null,
       })
       .eq('id', id);
@@ -307,12 +352,13 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       if (basicError) return;
     }
 
-    const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
     const updatedSession: PracticeSession = {
       id,
       practicedAt: input.practicedAt,
       durationMinutes: totalDuration > 0 ? totalDuration : null,
       otherMinutes: input.otherMinutes ?? null,
+      otherMemo: input.otherMemo || null,
+      totalMinutes: totalMinutesValue,
       memo: input.memo || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);

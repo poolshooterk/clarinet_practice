@@ -147,6 +147,8 @@ describe('usePracticeLogStore', () => {
       practicedAt: '2026-05-11',
       durationMinutes: null,
       otherMinutes: null,
+      otherMemo: null,
+      totalMinutes: null,
       memo: null,
       textbookEntries: [],
       basicMenuEntries: [],
@@ -399,6 +401,56 @@ describe('usePracticeLogStore', () => {
     );
   });
 
+  it('add で total_minutes が longToneMinutes + otherMinutes の合計になる', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    const sessionInsertMock = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+      }),
+    });
+    mockSupabase().from.mockReturnValueOnce({ insert: sessionInsertMock });
+    // practice_session_basic_menus insert (long_tone)
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockResolvedValue({ error: null }),
+    });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-17',
+      longToneMinutes: 10,
+      otherMinutes: 20,
+      textbookEntries: [],
+    });
+
+    // basic = 10 (long_tone), nonBasic = 20 (otherMinutes) → total = 30
+    expect(sessionInsertMock).toHaveBeenCalledWith(expect.objectContaining({ total_minutes: 30 }));
+    expect(usePracticeLogStore.getState().sessions[0].totalMinutes).toBe(30);
+  });
+
+  it('add で otherMemo を渡すと sessions[0].otherMemo に反映される', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    const sessionInsertMock = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+      }),
+    });
+    mockSupabase().from.mockReturnValueOnce({ insert: sessionInsertMock });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-17',
+      otherMemo: '曲の通し練習',
+      textbookEntries: [],
+    });
+
+    expect(sessionInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ other_memo: '曲の通し練習' }),
+    );
+    expect(usePracticeLogStore.getState().sessions[0].otherMemo).toBe('曲の通し練習');
+  });
+
   it('add でカタログに存在しない textbookId の genre は「その他」になる', async () => {
     mockCatalog().getState.mockReturnValue({ textbooks: [] });
     mockSupabase().auth.getUser.mockResolvedValueOnce({
@@ -432,6 +484,8 @@ describe('usePracticeLogStore', () => {
           practicedAt: '2026-05-12',
           durationMinutes: null,
           otherMinutes: null,
+          otherMemo: null,
+          totalMinutes: null,
           memo: null,
           textbookEntries: [],
           basicMenuEntries: [],
@@ -441,6 +495,8 @@ describe('usePracticeLogStore', () => {
           practicedAt: '2026-05-11',
           durationMinutes: null,
           otherMinutes: null,
+          otherMemo: null,
+          totalMinutes: null,
           memo: null,
           textbookEntries: [],
           basicMenuEntries: [],
@@ -466,6 +522,8 @@ describe('usePracticeLogStore', () => {
       practicedAt: '2026-05-10',
       durationMinutes: 20,
       otherMinutes: null,
+      otherMemo: null,
+      totalMinutes: null,
       memo: null,
       textbookEntries: [],
       basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
@@ -480,6 +538,8 @@ describe('usePracticeLogStore', () => {
             practicedAt: '2026-05-09',
             durationMinutes: null,
             otherMinutes: null,
+            otherMemo: null,
+            totalMinutes: null,
             memo: null,
             textbookEntries: [],
             basicMenuEntries: [],
@@ -605,6 +665,8 @@ describe('calcSessionTime', () => {
     practicedAt: '2026-05-16',
     durationMinutes: null,
     otherMinutes: null,
+    otherMemo: null,
+    totalMinutes: null,
     memo: null,
     textbookEntries: [],
     basicMenuEntries: [],

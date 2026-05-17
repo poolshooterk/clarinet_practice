@@ -384,6 +384,8 @@ describe('PracticeLogForm (integration)', () => {
             practicedAt: '2026-05-14',
             durationMinutes: 20,
             otherMinutes: null,
+            otherMemo: null,
+            totalMinutes: null,
             memo: null,
             textbookEntries: [
               {
@@ -418,6 +420,8 @@ describe('PracticeLogForm (integration)', () => {
             practicedAt: '2026-05-14',
             durationMinutes: 20,
             otherMinutes: null,
+            otherMemo: null,
+            totalMinutes: null,
             memo: null,
             textbookEntries: [
               {

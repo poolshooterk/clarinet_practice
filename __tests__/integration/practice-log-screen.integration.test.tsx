@@ -37,6 +37,8 @@ const makeSession = (id: string, practicedAt: string, durationMinutes: number | 
   practicedAt,
   durationMinutes,
   otherMinutes: null,
+  otherMemo: null,
+  totalMinutes: null,
   memo: null,
   textbookEntries: [],
   basicMenuEntries: [],
