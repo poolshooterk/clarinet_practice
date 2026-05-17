@@ -30,6 +30,7 @@ export const practiceLogSchema = z.object({
   tonguingMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   tonguingTempoBpms: z.array(tonguingBpmEntrySchema).optional(),
   otherMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  otherMemo: z.string().optional(),
   memo: z.string().optional(),
   textbookEntries: z.array(textbookEntrySchema),
 });
