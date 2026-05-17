@@ -29,11 +29,13 @@ export default function PracticeLogFormScreen() {
           editingSession.basicMenuEntries
             .find((m) => m.menuType === 'tonguing')
             ?.tempoBpms.map((bpm) => ({ bpm })) ?? [],
+        otherMinutes: editingSession.otherMinutes ?? undefined,
         memo: editingSession.memo ?? '',
         textbookEntries: editingSession.textbookEntries.map((e) => ({
           textbookId: e.textbookId,
           currentPage: e.currentPage,
           durationMinutes: e.durationMinutes ?? undefined,
+          tempoBpms: e.tempoBpm != null ? [{ bpm: e.tempoBpm }] : [],
         })),
       }
     : undefined;

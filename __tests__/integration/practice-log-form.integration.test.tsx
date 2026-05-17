@@ -88,6 +88,7 @@ jest.mock('tamagui', () => {
 });
 
 const TB1_ID = '123e4567-e89b-12d3-a456-426614174001';
+const SCALE_TB_ID = '123e4567-e89b-12d3-a456-426614174003';
 
 describe('PracticeLogForm (integration)', () => {
   beforeEach(async () => {
@@ -110,6 +111,14 @@ describe('PracticeLogForm (integration)', () => {
           genre: 'その他',
           difficulty: null,
           totalPages: 120,
+        },
+        {
+          id: SCALE_TB_ID,
+          title: 'スケール練習',
+          publisher: null,
+          genre: 'スケール',
+          difficulty: null,
+          totalPages: null,
         },
       ],
       loading: false,
@@ -273,6 +282,99 @@ describe('PracticeLogForm (integration)', () => {
     });
   });
 
+  it('メモ入力欄は日付入力の直後に表示される', () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    const memo = screen.getByLabelText('メモ');
+    const date = screen.getByLabelText('日付');
+    expect(memo).toBeTruthy();
+    expect(date).toBeTruthy();
+  });
+
+  it('その他に値を入力して保存すると onSubmit に otherMinutes が含まれる', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('その他'), '20');
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ otherMinutes: 20 });
+  });
+
+  it('その他に 0 を入力して保存するとバリデーションエラーが表示される', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+    fireEvent.changeText(screen.getByLabelText('その他'), '0');
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(screen.getAllByText('1以上の整数を入力してください').length).toBeGreaterThanOrEqual(1);
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('スケール教本を選択するとテンポ追加ボタンが表示される', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    fireEvent.press(screen.getByLabelText('教本を追加'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('教本を選択 1')).toBeTruthy();
+    });
+    expect(screen.queryByLabelText('スケールテンポを追加 1')).toBeNull();
+
+    const trigger = screen.getByLabelText('教本を選択 1');
+    await act(async () => {
+      await trigger.props.onValueChange?.(SCALE_TB_ID);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('スケールテンポを追加 1')).toBeTruthy();
+    });
+  });
+
+  it('スケール教本のテンポを複数追加して保存すると tempoBpms に値が含まれる', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+    fireEvent.press(screen.getByLabelText('教本を追加'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('教本を選択 1')).toBeTruthy();
+    });
+    const trigger = screen.getByLabelText('教本を選択 1');
+    await act(async () => {
+      await trigger.props.onValueChange?.(SCALE_TB_ID);
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('スケールテンポを追加 1')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText('スケールテンポを追加 1'));
+    fireEvent.press(screen.getByLabelText('スケールテンポを追加 1'));
+    fireEvent.changeText(screen.getByLabelText('スケールBPM 1-1'), '80');
+    fireEvent.changeText(screen.getByLabelText('スケールBPM 1-2'), '100');
+    fireEvent.changeText(screen.getByLabelText('ページ 1'), '5');
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmit.mock.calls[0][0].textbookEntries[0].tempoBpms).toEqual([
+      { bpm: 80 },
+      { bpm: 100 },
+    ]);
+  });
+
+  it('スケール以外の教本にはテンポ追加ボタンが表示されない', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+    fireEvent.press(screen.getByLabelText('教本を追加'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('教本を選択 1')).toBeTruthy();
+    });
+    const trigger = screen.getByLabelText('教本を選択 1');
+    await act(async () => {
+      await trigger.props.onValueChange?.(TB1_ID);
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('ページ 1')).toBeTruthy();
+    });
+    expect(screen.queryByLabelText('スケールテンポを追加 1')).toBeNull();
+  });
+
   describe('教本デフォルト値', () => {
     it('前回セッションの教本が初期値として表示される', async () => {
       usePracticeLogStore.setState({
@@ -353,6 +455,7 @@ describe('PracticeLogForm with initialValues (編集モード)', () => {
     longToneMinutes: 20,
     tonguingMinutes: 10,
     tonguingTempoBpms: [{ bpm: 100 }],
+    otherMinutes: 15,
     memo: 'テストメモ',
     textbookEntries: [],
   };
@@ -372,6 +475,7 @@ describe('PracticeLogForm with initialValues (編集モード)', () => {
     expect(screen.getByDisplayValue('20')).toBeTruthy();
     expect(screen.getByDisplayValue('10')).toBeTruthy();
     expect(screen.getByDisplayValue('テストメモ')).toBeTruthy();
+    expect(screen.getByDisplayValue('15')).toBeTruthy(); // otherMinutes
   });
 
   it('initialValues を保存すると onSubmit が呼ばれる', async () => {

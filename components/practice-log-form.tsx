@@ -1,7 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { forwardRef, useImperativeHandle, useState } from 'react';
-import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
+import {
+  type Control,
+  Controller,
+  type FieldErrors,
+  useFieldArray,
+  useForm,
+  type UseFormSetValue,
+  useWatch,
+} from 'react-hook-form';
 import { Platform, ScrollView } from 'react-native';
 import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 
@@ -16,7 +24,7 @@ import {
   today,
 } from '@/forms/practice-log';
 import { usePracticeLogStore } from '@/store/practice-log';
-import { useTextbookCatalogStore } from '@/store/textbook-catalog';
+import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTimerStore } from '@/store/timer';
 
 type Props = {
@@ -27,6 +35,211 @@ type Props = {
 export type PracticeLogFormRef = {
   submit: () => void;
 };
+
+type TextbookEntryRowProps = {
+  index: number;
+  fieldId: string;
+  control: Control<PracticeLogInput>;
+  errors: FieldErrors<PracticeLogInput>;
+  textbooks: Textbook[];
+  watchedEntries: PracticeLogInput['textbookEntries'];
+  onRemove: () => void;
+  setValue: UseFormSetValue<PracticeLogInput>;
+};
+
+function TextbookEntryRow({
+  index,
+  fieldId,
+  control,
+  errors,
+  textbooks,
+  watchedEntries,
+  onRemove,
+  setValue,
+}: TextbookEntryRowProps) {
+  const {
+    fields: bpmFields,
+    append: appendBpm,
+    remove: removeBpm,
+  } = useFieldArray({
+    control,
+    name: `textbookEntries.${index}.tempoBpms` as `textbookEntries.0.tempoBpms`,
+  });
+
+  const otherSelectedIds = new Set(
+    watchedEntries
+      .filter((_, i) => i !== index)
+      .map((e) => e.textbookId)
+      .filter(Boolean),
+  );
+  const selectedTextbookId = watchedEntries[index]?.textbookId;
+  const selectedTextbook = textbooks.find((tb) => tb.id === selectedTextbookId);
+  const isScale = selectedTextbook?.genre === 'スケール';
+
+  return (
+    <YStack gap="$2" p="$3" bg="$color2" rounded="$3">
+      <XStack gap="$2" items="center">
+        <Controller
+          control={control}
+          name={`textbookEntries.${index}.textbookId`}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <YStack flex={1} gap="$1">
+              <Select value={value} onValueChange={onChange}>
+                <Select.Trigger flex={1} onBlur={onBlur} aria-label={`教本を選択 ${index + 1}`}>
+                  <Select.Value placeholder="教本を選択" />
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.ScrollUpButton />
+                  <Select.Viewport>
+                    {textbooks.map((tb, i) => (
+                      <Select.Item
+                        key={tb.id}
+                        index={i}
+                        value={tb.id}
+                        disabled={otherSelectedIds.has(tb.id)}
+                      >
+                        <Select.ItemText>{tb.title}</Select.ItemText>
+                      </Select.Item>
+                    ))}
+                  </Select.Viewport>
+                  <Select.ScrollDownButton />
+                </Select.Content>
+              </Select>
+              <FieldError message={errors.textbookEntries?.[index]?.textbookId?.message} />
+            </YStack>
+          )}
+        />
+        <Button
+          size="$2"
+          theme="red"
+          onPress={onRemove}
+          aria-label={`エントリ ${index + 1} を削除`}
+        >
+          ✕
+        </Button>
+      </XStack>
+
+      <YStack gap="$1">
+        <XStack gap="$2" items="center">
+          <Paragraph fontSize="$2" color="$color10">
+            現在ページ:
+          </Paragraph>
+          <Controller
+            control={control}
+            name={`textbookEntries.${index}.currentPage`}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <XStack gap="$2" items="center">
+                <Input
+                  width={64}
+                  value={value !== undefined ? String(value) : ''}
+                  onChangeText={(t) => {
+                    const n = Number(t);
+                    onChange(t === '' || isNaN(n) ? undefined : n);
+                  }}
+                  onBlur={onBlur}
+                  keyboardType="numeric"
+                  aria-label={`ページ ${index + 1}`}
+                />
+                {selectedTextbook?.totalPages != null && (
+                  <Paragraph fontSize="$2" color="$color10">
+                    / {selectedTextbook.totalPages}
+                  </Paragraph>
+                )}
+              </XStack>
+            )}
+          />
+        </XStack>
+        <FieldError message={errors.textbookEntries?.[index]?.currentPage?.message} />
+      </YStack>
+
+      <TimerControl
+        timerKey={`textbook-${fieldId}`}
+        label={`教本 ${index + 1}`}
+        onStop={(minutes) => setValue(`textbookEntries.${index}.durationMinutes`, minutes)}
+      />
+      <Controller
+        control={control}
+        name={`textbookEntries.${index}.durationMinutes`}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <YStack gap="$1">
+            <Paragraph fontSize="$2" color="$color10">
+              練習時間（分）任意
+            </Paragraph>
+            <Input
+              value={value !== undefined ? String(value) : ''}
+              onChangeText={(t) => {
+                const n = Number(t);
+                onChange(t === '' || isNaN(n) ? undefined : n);
+              }}
+              onBlur={onBlur}
+              placeholder="例: 15"
+              keyboardType="numeric"
+              aria-label={`教本練習時間 ${index + 1}`}
+            />
+          </YStack>
+        )}
+      />
+      <FieldError message={errors.textbookEntries?.[index]?.durationMinutes?.message} />
+
+      {isScale && (
+        <YStack gap="$2">
+          <Paragraph color="$color11" fontSize="$3">
+            テンポ（BPM）任意
+          </Paragraph>
+          {bpmFields.map((bpmField, bpmIndex) => (
+            <YStack key={bpmField.id} gap="$1">
+              <XStack gap="$2" items="center">
+                <Controller
+                  control={control}
+                  name={
+                    `textbookEntries.${index}.tempoBpms.${bpmIndex}.bpm` as `textbookEntries.0.tempoBpms.0.bpm`
+                  }
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      flex={1}
+                      value={value !== undefined ? String(value) : ''}
+                      onChangeText={(t) => {
+                        const n = Number(t);
+                        onChange(t === '' || isNaN(n) ? undefined : n);
+                      }}
+                      onBlur={onBlur}
+                      placeholder="例: 120"
+                      keyboardType="numeric"
+                      aria-label={`スケールBPM ${index + 1}-${bpmIndex + 1}`}
+                    />
+                  )}
+                />
+                <Button
+                  size="$2"
+                  theme="red"
+                  onPress={() => removeBpm(bpmIndex)}
+                  aria-label={`スケールBPM ${index + 1}-${bpmIndex + 1} を削除`}
+                >
+                  ✕
+                </Button>
+              </XStack>
+              <FieldError
+                message={
+                  (
+                    errors.textbookEntries?.[index]?.tempoBpms as
+                      | { bpm?: { message?: string } }[]
+                      | undefined
+                  )?.[bpmIndex]?.bpm?.message
+                }
+              />
+            </YStack>
+          ))}
+          <Button
+            onPress={() => appendBpm({} as { bpm: number })}
+            aria-label={`スケールテンポを追加 ${index + 1}`}
+          >
+            ＋ テンポを追加
+          </Button>
+        </YStack>
+      )}
+    </YStack>
+  );
+}
 
 export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function PracticeLogForm(
   { onSubmit, initialValues },
@@ -55,6 +268,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       longToneMinutes: undefined,
       tonguingMinutes: undefined,
       tonguingTempoBpms: [],
+      otherMinutes: undefined,
       memo: '',
       textbookEntries: lastTextbookEntries,
     },
@@ -69,6 +283,8 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   const watchedEntries = watch('textbookEntries') ?? [];
   const watchedLongTone = watch('longToneMinutes');
   const watchedTonguing = useWatch({ control, name: 'tonguingMinutes' });
+  const watchedOther = watch('otherMinutes');
+
   const formBasicMinutes =
     (watchedLongTone ?? 0) +
     (watchedTonguing ?? 0) +
@@ -86,6 +302,8 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       : acc;
   }, 0);
 
+  const formNonBasicMinutes = formTextbookMinutes + (watchedOther ?? 0);
+
   const resetAll = useTimerStore((s) => s.resetAll);
 
   const submitForm = handleSubmit(async (data) => {
@@ -101,6 +319,9 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       }
       if (timerState.timers['tonguing']?.status === 'running') {
         setValue('tonguingMinutes', timerState.stop('tonguing'));
+      }
+      if (timerState.timers['other']?.status === 'running') {
+        setValue('otherMinutes', timerState.stop('other'));
       }
       fields.forEach((field, index) => {
         const key = `textbook-${field.id}`;
@@ -154,6 +375,26 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                 />
               )}
               <FieldError message={errors.practicedAt?.message} />
+            </YStack>
+          )}
+        />
+
+        {/* メモ */}
+        <Controller
+          control={control}
+          name="memo"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <YStack gap="$1">
+              <Paragraph color="$color12">メモ 任意</Paragraph>
+              <Input
+                value={value ?? ''}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder="自由記入"
+                multiline
+                numberOfLines={3}
+                aria-label="メモ"
+              />
             </YStack>
           )}
         />
@@ -242,11 +483,11 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
             </YStack>
           )}
 
-          {(formBasicMinutes > 0 || formTextbookMinutes > 0) && (
+          {(formBasicMinutes > 0 || formNonBasicMinutes > 0) && (
             <Paragraph fontSize="$2" color="$color10">
               {[
                 formBasicMinutes > 0 && `基礎: ${formBasicMinutes}分`,
-                formTextbookMinutes > 0 && `教本: ${formTextbookMinutes}分`,
+                formNonBasicMinutes > 0 && `基礎練習以外: ${formNonBasicMinutes}分`,
               ]
                 .filter(Boolean)
                 .join(' / ')}
@@ -254,156 +495,23 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           )}
         </YStack>
 
-        {/* メモ */}
-        <Controller
-          control={control}
-          name="memo"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <YStack gap="$1">
-              <Paragraph color="$color12">メモ 任意</Paragraph>
-              <Input
-                value={value ?? ''}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder="自由記入"
-                multiline
-                numberOfLines={3}
-                aria-label="メモ"
-              />
-            </YStack>
-          )}
-        />
-
         {/* 教本の進捗 */}
         <YStack gap="$2">
           <Paragraph color="$color12">教本の進捗</Paragraph>
 
-          {fields.map((field, index) => {
-            const otherSelectedIds = new Set(
-              watchedEntries
-                .filter((_, i) => i !== index)
-                .map((e) => e.textbookId)
-                .filter(Boolean),
-            );
-            const selectedTextbookId = watchedEntries[index]?.textbookId;
-            const selectedTextbook = textbooks.find((tb) => tb.id === selectedTextbookId);
-
-            return (
-              <YStack key={field.id} gap="$2" p="$3" bg="$color2" rounded="$3">
-                <XStack gap="$2" items="center">
-                  <Controller
-                    control={control}
-                    name={`textbookEntries.${index}.textbookId`}
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <YStack flex={1} gap="$1">
-                        <Select value={value} onValueChange={onChange}>
-                          <Select.Trigger
-                            flex={1}
-                            onBlur={onBlur}
-                            aria-label={`教本を選択 ${index + 1}`}
-                          >
-                            <Select.Value placeholder="教本を選択" />
-                          </Select.Trigger>
-                          <Select.Content>
-                            <Select.ScrollUpButton />
-                            <Select.Viewport>
-                              {textbooks.map((tb, i) => (
-                                <Select.Item
-                                  key={tb.id}
-                                  index={i}
-                                  value={tb.id}
-                                  disabled={otherSelectedIds.has(tb.id)}
-                                >
-                                  <Select.ItemText>{tb.title}</Select.ItemText>
-                                </Select.Item>
-                              ))}
-                            </Select.Viewport>
-                            <Select.ScrollDownButton />
-                          </Select.Content>
-                        </Select>
-                        <FieldError
-                          message={errors.textbookEntries?.[index]?.textbookId?.message}
-                        />
-                      </YStack>
-                    )}
-                  />
-                  <Button
-                    size="$2"
-                    theme="red"
-                    onPress={() => remove(index)}
-                    aria-label={`エントリ ${index + 1} を削除`}
-                  >
-                    ✕
-                  </Button>
-                </XStack>
-
-                <YStack gap="$1">
-                  <XStack gap="$2" items="center">
-                    <Paragraph fontSize="$2" color="$color10">
-                      現在ページ:
-                    </Paragraph>
-                    <Controller
-                      control={control}
-                      name={`textbookEntries.${index}.currentPage`}
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <XStack gap="$2" items="center">
-                          <Input
-                            width={64}
-                            value={value !== undefined ? String(value) : ''}
-                            onChangeText={(t) => {
-                              const n = Number(t);
-                              onChange(t === '' || isNaN(n) ? undefined : n);
-                            }}
-                            onBlur={onBlur}
-                            keyboardType="numeric"
-                            aria-label={`ページ ${index + 1}`}
-                          />
-                          {selectedTextbook?.totalPages != null && (
-                            <Paragraph fontSize="$2" color="$color10">
-                              / {selectedTextbook.totalPages}
-                            </Paragraph>
-                          )}
-                        </XStack>
-                      )}
-                    />
-                  </XStack>
-                  <FieldError message={errors.textbookEntries?.[index]?.currentPage?.message} />
-                </YStack>
-
-                {/* 教本練習時間 */}
-                <TimerControl
-                  timerKey={`textbook-${field.id}`}
-                  label={`教本 ${index + 1}`}
-                  onStop={(minutes) =>
-                    setValue(`textbookEntries.${index}.durationMinutes`, minutes)
-                  }
-                />
-                <Controller
-                  control={control}
-                  name={`textbookEntries.${index}.durationMinutes`}
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <YStack gap="$1">
-                      <Paragraph fontSize="$2" color="$color10">
-                        練習時間（分）任意
-                      </Paragraph>
-                      <Input
-                        value={value !== undefined ? String(value) : ''}
-                        onChangeText={(t) => {
-                          const n = Number(t);
-                          onChange(t === '' || isNaN(n) ? undefined : n);
-                        }}
-                        onBlur={onBlur}
-                        placeholder="例: 15"
-                        keyboardType="numeric"
-                        aria-label={`教本練習時間 ${index + 1}`}
-                      />
-                    </YStack>
-                  )}
-                />
-                <FieldError message={errors.textbookEntries?.[index]?.durationMinutes?.message} />
-              </YStack>
-            );
-          })}
+          {fields.map((field, index) => (
+            <TextbookEntryRow
+              key={field.id}
+              index={index}
+              fieldId={field.id}
+              control={control}
+              errors={errors}
+              textbooks={textbooks}
+              watchedEntries={watchedEntries}
+              onRemove={() => remove(index)}
+              setValue={setValue}
+            />
+          ))}
 
           <Button
             onPress={() => append({ textbookId: '', currentPage: 0 })}
@@ -411,6 +519,37 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           >
             ＋ 教本を追加
           </Button>
+        </YStack>
+
+        {/* その他 */}
+        <YStack gap="$2">
+          <Paragraph color="$color12">その他</Paragraph>
+          <Paragraph color="$color11" fontSize="$3">
+            練習時間（分）任意
+          </Paragraph>
+          <TimerControl
+            timerKey="other"
+            label="その他"
+            onStop={(minutes) => setValue('otherMinutes', minutes)}
+          />
+          <Controller
+            control={control}
+            name="otherMinutes"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                value={value !== undefined ? String(value) : ''}
+                onChangeText={(t) => {
+                  const n = Number(t);
+                  onChange(t === '' || isNaN(n) ? undefined : n);
+                }}
+                onBlur={onBlur}
+                placeholder="例: 20"
+                keyboardType="numeric"
+                aria-label="その他"
+              />
+            )}
+          />
+          <FieldError message={errors.otherMinutes?.message} />
         </YStack>
 
         <Button theme="blue" onPress={submitForm} disabled={isSubmitting} aria-label="保存">
