@@ -134,9 +134,8 @@ export default function PracticeLogScreen() {
                   {`${item.practicedAt}（${dayOfWeek(item.practicedAt)}）`}
                 </Paragraph>
                 {(() => {
-                  const total =
-                    item.totalMinutes ??
-                    calcSessionTime(item).basic + calcSessionTime(item).nonBasic;
+                  const sessionTime = calcSessionTime(item);
+                  const total = item.totalMinutes ?? sessionTime.basic + sessionTime.nonBasic;
                   return total > 0 ? (
                     <Paragraph fontSize="$2" color="$blue9" fontWeight="bold">
                       {`合計: ${total}分`}
