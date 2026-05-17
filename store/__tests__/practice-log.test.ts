@@ -52,6 +52,7 @@ describe('usePracticeLogStore', () => {
                   textbook_id: 'tb-1',
                   current_page: 14,
                   duration_minutes: null,
+                  tempo_bpm: null,
                   textbooks: {
                     title: 'ローズ 32のエチュード',
                     total_pages: 32,
@@ -112,6 +113,7 @@ describe('usePracticeLogStore', () => {
                   textbook_id: 'tb-1',
                   current_page: 5,
                   duration_minutes: null,
+                  tempo_bpm: null,
                   textbooks: { title: 'テスト教本', total_pages: null, genre: null },
                 },
               ],
@@ -144,6 +146,7 @@ describe('usePracticeLogStore', () => {
       id: 'old',
       practicedAt: '2026-05-11',
       durationMinutes: null,
+      otherMinutes: null,
       memo: null,
       textbookEntries: [],
       basicMenuEntries: [],
@@ -198,6 +201,7 @@ describe('usePracticeLogStore', () => {
       { menuType: 'long_tone', durationMinutes: 15, tempoBpms: [] },
       { menuType: 'tonguing', durationMinutes: 10, tempoBpms: [] },
     ]);
+    expect(sessions[0].otherMinutes).toBeNull();
     expect(sessions[0].textbookEntries[0]).toMatchObject({
       textbookId: 'tb-1',
       textbookTitle: 'ローズ 32のエチュード',
@@ -300,6 +304,101 @@ describe('usePracticeLogStore', () => {
     expect(usePracticeLogStore.getState().sessions).toEqual([]);
   });
 
+  it('add で otherMinutes を渡すと sessions[0].otherMinutes に反映される', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-17',
+      otherMinutes: 30,
+      textbookEntries: [],
+    });
+
+    expect(usePracticeLogStore.getState().sessions[0].otherMinutes).toBe(30);
+  });
+
+  it('add でスケール教本の tempoBpms から max が tempo_bpm に格納される', async () => {
+    mockCatalog().getState.mockReturnValue({
+      textbooks: [
+        {
+          id: 'tb-scale',
+          title: 'スケール練習',
+          publisher: null,
+          genre: 'スケール',
+          difficulty: null,
+          totalPages: null,
+        },
+      ],
+    });
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+    const textbooksInsertMock = jest.fn().mockResolvedValue({ error: null });
+    mockSupabase().from.mockReturnValueOnce({ insert: textbooksInsertMock });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-17',
+      textbookEntries: [
+        {
+          textbookId: 'tb-scale',
+          currentPage: 5,
+          tempoBpms: [{ bpm: 60 }, { bpm: 80 }, { bpm: 100 }],
+        },
+      ],
+    });
+
+    expect(textbooksInsertMock).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ tempo_bpm: 100 })]),
+    );
+    expect(usePracticeLogStore.getState().sessions[0].textbookEntries[0].tempoBpm).toBe(100);
+  });
+
+  it('add で tempoBpms が空の場合 tempo_bpm は null になる', async () => {
+    mockCatalog().getState.mockReturnValue({ textbooks: [] });
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+    const textbooksInsertMock = jest.fn().mockResolvedValue({ error: null });
+    mockSupabase().from.mockReturnValueOnce({ insert: textbooksInsertMock });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-17',
+      textbookEntries: [
+        {
+          textbookId: '123e4567-e89b-12d3-a456-426614174001',
+          currentPage: 5,
+          tempoBpms: [],
+        },
+      ],
+    });
+
+    expect(textbooksInsertMock).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ tempo_bpm: null })]),
+    );
+  });
+
   it('add でカタログに存在しない textbookId の genre は「その他」になる', async () => {
     mockCatalog().getState.mockReturnValue({ textbooks: [] });
     mockSupabase().auth.getUser.mockResolvedValueOnce({
@@ -332,6 +431,7 @@ describe('usePracticeLogStore', () => {
           id: 'session-1',
           practicedAt: '2026-05-12',
           durationMinutes: null,
+          otherMinutes: null,
           memo: null,
           textbookEntries: [],
           basicMenuEntries: [],
@@ -340,6 +440,7 @@ describe('usePracticeLogStore', () => {
           id: 'session-2',
           practicedAt: '2026-05-11',
           durationMinutes: null,
+          otherMinutes: null,
           memo: null,
           textbookEntries: [],
           basicMenuEntries: [],
@@ -364,6 +465,7 @@ describe('usePracticeLogStore', () => {
       id: 'session-1',
       practicedAt: '2026-05-10',
       durationMinutes: 20,
+      otherMinutes: null,
       memo: null,
       textbookEntries: [],
       basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
@@ -377,6 +479,7 @@ describe('usePracticeLogStore', () => {
             id: 'session-2',
             practicedAt: '2026-05-09',
             durationMinutes: null,
+            otherMinutes: null,
             memo: null,
             textbookEntries: [],
             basicMenuEntries: [],
@@ -501,17 +604,18 @@ describe('calcSessionTime', () => {
     id: 's1',
     practicedAt: '2026-05-16',
     durationMinutes: null,
+    otherMinutes: null,
     memo: null,
     textbookEntries: [],
     basicMenuEntries: [],
   };
 
   it('基礎練習もなく教本もなければ両方 0 になる', () => {
-    expect(calcSessionTime(base)).toEqual({ basic: 0, textbook: 0 });
+    expect(calcSessionTime(base)).toEqual({ basic: 0, nonBasic: 0 });
   });
 
   it('durationMinutes だけある場合は basic に加算される', () => {
-    expect(calcSessionTime({ ...base, durationMinutes: 20 })).toEqual({ basic: 20, textbook: 0 });
+    expect(calcSessionTime({ ...base, durationMinutes: 20 })).toEqual({ basic: 20, nonBasic: 0 });
   });
 
   it('スケール教本の durationMinutes は basic に加算される', () => {
@@ -526,10 +630,11 @@ describe('calcSessionTime', () => {
           totalPages: null,
           genre: 'スケール',
           durationMinutes: 15,
+          tempoBpm: null,
         },
       ],
     };
-    expect(calcSessionTime(session)).toEqual({ basic: 35, textbook: 0 });
+    expect(calcSessionTime(session)).toEqual({ basic: 35, nonBasic: 0 });
   });
 
   it('エチュード教本の durationMinutes は basic に加算される', () => {
@@ -543,13 +648,14 @@ describe('calcSessionTime', () => {
           totalPages: null,
           genre: 'エチュード',
           durationMinutes: 10,
+          tempoBpm: null,
         },
       ],
     };
-    expect(calcSessionTime(session)).toEqual({ basic: 10, textbook: 0 });
+    expect(calcSessionTime(session)).toEqual({ basic: 10, nonBasic: 0 });
   });
 
-  it('ソナタ教本の durationMinutes は textbook に加算される', () => {
+  it('ソナタ教本の durationMinutes は nonBasic に加算される', () => {
     const session: PracticeSession = {
       ...base,
       durationMinutes: 20,
@@ -561,13 +667,14 @@ describe('calcSessionTime', () => {
           totalPages: null,
           genre: 'ソナタ',
           durationMinutes: 25,
+          tempoBpm: null,
         },
       ],
     };
-    expect(calcSessionTime(session)).toEqual({ basic: 20, textbook: 25 });
+    expect(calcSessionTime(session)).toEqual({ basic: 20, nonBasic: 25 });
   });
 
-  it('混在する場合: basic と textbook が正しく分類される', () => {
+  it('混在する場合: basic と nonBasic が正しく分類される', () => {
     const session: PracticeSession = {
       ...base,
       durationMinutes: 15,
@@ -579,6 +686,7 @@ describe('calcSessionTime', () => {
           totalPages: null,
           genre: 'スケール',
           durationMinutes: 10,
+          tempoBpm: null,
         },
         {
           textbookId: 'tb-2',
@@ -587,10 +695,11 @@ describe('calcSessionTime', () => {
           totalPages: null,
           genre: 'コンチェルト',
           durationMinutes: 20,
+          tempoBpm: null,
         },
       ],
     };
-    expect(calcSessionTime(session)).toEqual({ basic: 25, textbook: 20 });
+    expect(calcSessionTime(session)).toEqual({ basic: 25, nonBasic: 20 });
   });
 
   it('durationMinutes が null の教本エントリは 0 として扱う', () => {
@@ -604,9 +713,33 @@ describe('calcSessionTime', () => {
           totalPages: null,
           genre: 'スケール',
           durationMinutes: null,
+          tempoBpm: null,
         },
       ],
     };
-    expect(calcSessionTime(session)).toEqual({ basic: 0, textbook: 0 });
+    expect(calcSessionTime(session)).toEqual({ basic: 0, nonBasic: 0 });
+  });
+
+  it('otherMinutes がある場合は nonBasic に加算される', () => {
+    expect(calcSessionTime({ ...base, otherMinutes: 20 })).toEqual({ basic: 0, nonBasic: 20 });
+  });
+
+  it('textbookOnly と otherMinutes が両方ある場合は nonBasic に合算される', () => {
+    const session: PracticeSession = {
+      ...base,
+      otherMinutes: 10,
+      textbookEntries: [
+        {
+          textbookId: 'tb-3',
+          textbookTitle: 'ソナタ',
+          currentPage: 1,
+          totalPages: null,
+          genre: 'ソナタ',
+          durationMinutes: 25,
+          tempoBpm: null,
+        },
+      ],
+    };
+    expect(calcSessionTime(session)).toEqual({ basic: 0, nonBasic: 35 });
   });
 });

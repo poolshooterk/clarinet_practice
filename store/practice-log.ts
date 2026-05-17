@@ -12,6 +12,7 @@ type TextbookEntry = {
   totalPages: number | null;
   genre: string;
   durationMinutes: number | null;
+  tempoBpm: number | null;
 };
 
 type BasicMenuEntry = {
@@ -24,12 +25,13 @@ export type PracticeSession = {
   id: string;
   practicedAt: string;
   durationMinutes: number | null;
+  otherMinutes: number | null;
   memo: string | null;
   textbookEntries: TextbookEntry[];
   basicMenuEntries: BasicMenuEntry[];
 };
 
-export function calcSessionTime(session: PracticeSession): { basic: number; textbook: number } {
+export function calcSessionTime(session: PracticeSession): { basic: number; nonBasic: number } {
   const basicTextbook = session.textbookEntries
     .filter((e) => (BASIC_GENRES as readonly string[]).includes(e.genre))
     .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0);
@@ -38,7 +40,7 @@ export function calcSessionTime(session: PracticeSession): { basic: number; text
     .reduce((acc, e) => acc + (e.durationMinutes ?? 0), 0);
   return {
     basic: (session.durationMinutes ?? 0) + basicTextbook,
-    textbook: textbookOnly,
+    nonBasic: textbookOnly + (session.otherMinutes ?? 0),
   };
 }
 
@@ -46,11 +48,13 @@ type SessionRow = {
   id: string;
   practiced_at: string;
   duration_minutes: number | null;
+  other_minutes: number | null;
   memo: string | null;
   practice_session_textbooks: {
     textbook_id: string;
     current_page: number;
     duration_minutes: number | null;
+    tempo_bpm: number | null;
     textbooks: { title: string; total_pages: number | null; genre: string } | null;
   }[];
   practice_session_basic_menus: {
@@ -81,8 +85,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data, error } = await supabase
       .from('practice_sessions')
       .select(
-        'id, practiced_at, duration_minutes, memo, ' +
-          'practice_session_textbooks ( textbook_id, current_page, duration_minutes, textbooks ( title, total_pages, genre ) ), ' +
+        'id, practiced_at, duration_minutes, other_minutes, memo, ' +
+          'practice_session_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title, total_pages, genre ) ), ' +
           'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms )',
       )
       .order('practiced_at', { ascending: false });
@@ -96,6 +100,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         id: row.id,
         practicedAt: row.practiced_at,
         durationMinutes: row.duration_minutes ?? null,
+        otherMinutes: row.other_minutes ?? null,
         memo: row.memo ?? null,
         textbookEntries: (row.practice_session_textbooks ?? []).map((entry) => ({
           textbookId: entry.textbook_id,
@@ -104,6 +109,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           totalPages: entry.textbooks?.total_pages ?? null,
           genre: entry.textbooks?.genre ?? 'その他',
           durationMinutes: entry.duration_minutes ?? null,
+          tempoBpm: entry.tempo_bpm ?? null,
         })),
         basicMenuEntries: (row.practice_session_basic_menus ?? []).map((m) => ({
           menuType: m.menu_type,
@@ -126,6 +132,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         user_id: userData.user.id,
         practiced_at: input.practicedAt,
         duration_minutes: totalDuration > 0 ? totalDuration : null,
+        other_minutes: input.otherMinutes ?? null,
         memo: input.memo || null,
       })
       .select()
@@ -136,12 +143,19 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
 
     if (input.textbookEntries.length > 0) {
       const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
-        input.textbookEntries.map((entry) => ({
-          session_id: sessionId,
-          textbook_id: entry.textbookId,
-          current_page: entry.currentPage,
-          duration_minutes: entry.durationMinutes ?? null,
-        })),
+        input.textbookEntries.map((entry) => {
+          const maxTempo =
+            entry.tempoBpms && entry.tempoBpms.length > 0
+              ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
+              : null;
+          return {
+            session_id: sessionId,
+            textbook_id: entry.textbookId,
+            current_page: entry.currentPage,
+            duration_minutes: entry.durationMinutes ?? null,
+            tempo_bpm: maxTempo,
+          };
+        }),
       );
       if (entriesError) {
         await supabase.from('practice_sessions').delete().eq('id', sessionId);
@@ -193,9 +207,14 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       id: sessionId,
       practicedAt: input.practicedAt,
       durationMinutes: totalDuration > 0 ? totalDuration : null,
+      otherMinutes: input.otherMinutes ?? null,
       memo: input.memo || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
+        const maxTempo =
+          entry.tempoBpms && entry.tempoBpms.length > 0
+            ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
+            : null;
         return {
           textbookId: entry.textbookId,
           textbookTitle: tb?.title ?? '',
@@ -203,6 +222,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           totalPages: tb?.totalPages ?? null,
           genre: tb?.genre ?? 'その他',
           durationMinutes: entry.durationMinutes ?? null,
+          tempoBpm: maxTempo,
         };
       }),
       basicMenuEntries: basicMenuRows.map((r) => ({
@@ -222,6 +242,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .update({
         practiced_at: input.practicedAt,
         duration_minutes: totalDuration > 0 ? totalDuration : null,
+        other_minutes: input.otherMinutes ?? null,
         memo: input.memo || null,
       })
       .eq('id', id);
@@ -234,12 +255,19 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     if (deleteTextbooksError) return;
     if (input.textbookEntries.length > 0) {
       const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
-        input.textbookEntries.map((entry) => ({
-          session_id: id,
-          textbook_id: entry.textbookId,
-          current_page: entry.currentPage,
-          duration_minutes: entry.durationMinutes ?? null,
-        })),
+        input.textbookEntries.map((entry) => {
+          const maxTempo =
+            entry.tempoBpms && entry.tempoBpms.length > 0
+              ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
+              : null;
+          return {
+            session_id: id,
+            textbook_id: entry.textbookId,
+            current_page: entry.currentPage,
+            duration_minutes: entry.durationMinutes ?? null,
+            tempo_bpm: maxTempo,
+          };
+        }),
       );
       if (entriesError) return;
       for (const entry of input.textbookEntries) {
@@ -288,9 +316,14 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       id,
       practicedAt: input.practicedAt,
       durationMinutes: totalDuration > 0 ? totalDuration : null,
+      otherMinutes: input.otherMinutes ?? null,
       memo: input.memo || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
+        const maxTempo =
+          entry.tempoBpms && entry.tempoBpms.length > 0
+            ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
+            : null;
         return {
           textbookId: entry.textbookId,
           textbookTitle: tb?.title ?? '',
@@ -298,6 +331,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           totalPages: tb?.totalPages ?? null,
           genre: tb?.genre ?? 'その他',
           durationMinutes: entry.durationMinutes ?? null,
+          tempoBpm: maxTempo,
         };
       }),
       basicMenuEntries: basicMenuRows.map((r) => ({
