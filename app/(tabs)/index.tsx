@@ -78,9 +78,9 @@ export default function PracticeLogScreen() {
                 <Paragraph fontWeight="bold">{formatMonthLabel(selectedMonth)}</Paragraph>
                 <Paragraph fontSize="$2" color="$color10">
                   {(() => {
-                    const label = formatTimeLabel(monthTotals.basic, monthTotals.nonBasic);
-                    return label
-                      ? `${monthSessions.length}回 / ${label}`
+                    const total = monthTotals.basic + monthTotals.nonBasic;
+                    return total > 0
+                      ? `${monthSessions.length}回 / 合計: ${total}分`
                       : `${monthSessions.length}回 / 練習時間未記録`;
                   })()}
                 </Paragraph>
@@ -134,15 +134,25 @@ export default function PracticeLogScreen() {
                   {`${item.practicedAt}（${dayOfWeek(item.practicedAt)}）`}
                 </Paragraph>
                 {(() => {
-                  const { basic, nonBasic } = calcSessionTime(item);
-                  const label = formatTimeLabel(basic, nonBasic);
-                  return label ? (
-                    <Paragraph fontSize="$2" color="$color10">
-                      {label}
+                  const total =
+                    item.totalMinutes ??
+                    calcSessionTime(item).basic + calcSessionTime(item).nonBasic;
+                  return total > 0 ? (
+                    <Paragraph fontSize="$2" color="$blue9" fontWeight="bold">
+                      {`合計: ${total}分`}
                     </Paragraph>
                   ) : null;
                 })()}
               </XStack>
+              {(() => {
+                const { basic, nonBasic } = calcSessionTime(item);
+                const label = formatTimeLabel(basic, nonBasic);
+                return label ? (
+                  <Paragraph fontSize="$2" color="$color10" mb="$1">
+                    {label}
+                  </Paragraph>
+                ) : null;
+              })()}
               {item.memo ? (
                 <Paragraph fontSize="$2" color="$color11" numberOfLines={1} mb="$1">
                   {item.memo}
@@ -153,6 +163,11 @@ export default function PracticeLogScreen() {
                   {`その他: ${item.otherMinutes}分`}
                 </Paragraph>
               )}
+              {item.otherMemo ? (
+                <Paragraph fontSize="$2" color="$color11" numberOfLines={1}>
+                  {item.otherMemo}
+                </Paragraph>
+              ) : null}
               {item.textbookEntries.map((entry) => (
                 <XStack key={entry.textbookId} gap="$2" items="center">
                   <Paragraph fontSize="$2">{entry.textbookTitle}</Paragraph>
