@@ -457,6 +457,46 @@ describe('PracticeLogForm (integration)', () => {
   });
 });
 
+describe('その他練習内容', () => {
+  beforeEach(() => {
+    usePracticeLogStore.setState({ sessions: [], loading: false });
+    AsyncStorage.clear();
+  });
+
+  it('その他練習内容を入力して送信すると otherMemo が渡る', async () => {
+    const handleSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={handleSubmit} />);
+
+    fireEvent.changeText(screen.getByLabelText('日付'), '2026-05-17');
+    fireEvent.changeText(screen.getByLabelText('その他練習内容'), '曲の通し練習');
+    fireEvent.press(screen.getByLabelText('保存'));
+
+    await waitFor(() => {
+      expect(handleSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ otherMemo: '曲の通し練習' }),
+      );
+    });
+  });
+});
+
+describe('フォームサマリー 合計表示', () => {
+  beforeEach(() => {
+    usePracticeLogStore.setState({ sessions: [], loading: false });
+    AsyncStorage.clear();
+  });
+
+  it('longToneMinutes と otherMinutes を入力すると合計が表示される', async () => {
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+
+    fireEvent.changeText(screen.getByLabelText('ロングトーン'), '20');
+    fireEvent.changeText(screen.getByLabelText('その他'), '10');
+
+    await waitFor(() => {
+      expect(screen.getByText('合計: 30分')).toBeTruthy();
+    });
+  });
+});
+
 describe('PracticeLogForm with initialValues (編集モード)', () => {
   const initialValues: PracticeLogInput = {
     practicedAt: '2026-01-15',

@@ -269,6 +269,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       tonguingMinutes: undefined,
       tonguingTempoBpms: [],
       otherMinutes: undefined,
+      otherMemo: '',
       memo: '',
       textbookEntries: lastTextbookEntries,
     },
@@ -484,14 +485,19 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           )}
 
           {(formBasicMinutes > 0 || formNonBasicMinutes > 0) && (
-            <Paragraph fontSize="$2" color="$color10">
-              {[
-                formBasicMinutes > 0 && `基礎: ${formBasicMinutes}分`,
-                formNonBasicMinutes > 0 && `基礎練習以外: ${formNonBasicMinutes}分`,
-              ]
-                .filter(Boolean)
-                .join(' / ')}
-            </Paragraph>
+            <YStack gap="$1">
+              <Paragraph fontSize="$2" color="$color10">
+                {[
+                  formBasicMinutes > 0 && `基礎: ${formBasicMinutes}分`,
+                  formNonBasicMinutes > 0 && `基礎練習以外: ${formNonBasicMinutes}分`,
+                ]
+                  .filter(Boolean)
+                  .join(' / ')}
+              </Paragraph>
+              <Paragraph fontSize="$2" color="$blue9" fontWeight="bold">
+                {`合計: ${formBasicMinutes + formNonBasicMinutes}分`}
+              </Paragraph>
+            </YStack>
           )}
         </YStack>
 
@@ -550,6 +556,22 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
             )}
           />
           <FieldError message={errors.otherMinutes?.message} />
+          <Paragraph color="$color11" fontSize="$3">
+            練習内容（任意）
+          </Paragraph>
+          <Controller
+            control={control}
+            name="otherMemo"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                value={value ?? ''}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder="例: 曲の通し練習、アンサンブルなど"
+                aria-label="その他練習内容"
+              />
+            )}
+          />
         </YStack>
 
         <Button theme="blue" onPress={submitForm} disabled={isSubmitting} aria-label="保存">
