@@ -124,6 +124,16 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
   const instrumentUsagePeriod = calcUsagePeriod(instrumentValue?.startDate ?? '');
   const photoUri = watch('instrument.photoUri');
 
+  const reedStartDate = watch('reed.startDate');
+  const ligatureStartDate = watch('ligature.startDate');
+  const mouthpieceStartDate = watch('mouthpiece.startDate');
+
+  const sectionUsagePeriods: Record<string, string | null> = {
+    reed: calcUsagePeriod(reedStartDate ?? ''),
+    ligature: calcUsagePeriod(ligatureStartDate ?? ''),
+    mouthpiece: calcUsagePeriod(mouthpieceStartDate ?? ''),
+  };
+
   const savePhoto = async (tempUri: string) => {
     if (photoUri) {
       try {
@@ -446,6 +456,11 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
                     />
                   )}
                   <FieldError message={errors[section.key]?.startDate?.message} />
+                  {sectionUsagePeriods[section.key] && (
+                    <Paragraph color="$color11" size="$2">
+                      使用期間: {sectionUsagePeriods[section.key]}
+                    </Paragraph>
+                  )}
                 </YStack>
               )}
             />
