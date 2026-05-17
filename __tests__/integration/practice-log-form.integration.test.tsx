@@ -383,6 +383,7 @@ describe('PracticeLogForm (integration)', () => {
             id: 'prev-session',
             practicedAt: '2026-05-14',
             durationMinutes: 20,
+            otherMinutes: null,
             memo: null,
             textbookEntries: [
               {
@@ -392,6 +393,7 @@ describe('PracticeLogForm (integration)', () => {
                 totalPages: 32,
                 genre: 'エチュード',
                 durationMinutes: null,
+                tempoBpm: null,
               },
             ],
             basicMenuEntries: [],
@@ -415,6 +417,7 @@ describe('PracticeLogForm (integration)', () => {
             id: 'prev-session',
             practicedAt: '2026-05-14',
             durationMinutes: 20,
+            otherMinutes: null,
             memo: null,
             textbookEntries: [
               {
@@ -424,6 +427,7 @@ describe('PracticeLogForm (integration)', () => {
                 totalPages: null,
                 genre: 'その他',
                 durationMinutes: null,
+                tempoBpm: null,
               },
             ],
             basicMenuEntries: [],
