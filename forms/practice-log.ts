@@ -9,12 +9,6 @@ export type BasicMenuType = (typeof BASIC_MENUS)[number]['type'];
 
 export const BASIC_GENRES = ['スケール', 'エチュード'] as const;
 
-const textbookEntrySchema = z.object({
-  textbookId: z.string().uuid('教本を選択してください'),
-  currentPage: z.number().int().min(0, '0以上の整数を入力してください'),
-  durationMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
-});
-
 const tonguingBpmEntrySchema = z.object({
   bpm: z
     .number()
@@ -23,11 +17,19 @@ const tonguingBpmEntrySchema = z.object({
     .max(240, '240以下の整数を入力してください'),
 });
 
+const textbookEntrySchema = z.object({
+  textbookId: z.string().uuid('教本を選択してください'),
+  currentPage: z.number().int().min(0, '0以上の整数を入力してください'),
+  durationMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  tempoBpms: z.array(tonguingBpmEntrySchema).optional(),
+});
+
 export const practiceLogSchema = z.object({
   practicedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください'),
   longToneMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   tonguingMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   tonguingTempoBpms: z.array(tonguingBpmEntrySchema).optional(),
+  otherMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   memo: z.string().optional(),
   textbookEntries: z.array(textbookEntrySchema),
 });
