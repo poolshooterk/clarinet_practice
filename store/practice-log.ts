@@ -5,6 +5,11 @@ import { supabase } from '@/lib/supabase';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTextbookProgressStore } from '@/store/textbook-progress';
 
+function computeMaxTempo(tempoBpms: { bpm: number }[] | undefined): number | null {
+  if (!tempoBpms || tempoBpms.length === 0) return null;
+  return Math.max(...tempoBpms.map((e) => e.bpm));
+}
+
 type TextbookEntry = {
   textbookId: string;
   textbookTitle: string;
@@ -144,10 +149,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     if (input.textbookEntries.length > 0) {
       const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
         input.textbookEntries.map((entry) => {
-          const maxTempo =
-            entry.tempoBpms && entry.tempoBpms.length > 0
-              ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
-              : null;
+          const maxTempo = computeMaxTempo(entry.tempoBpms);
           return {
             session_id: sessionId,
             textbook_id: entry.textbookId,
@@ -211,10 +213,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       memo: input.memo || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
-        const maxTempo =
-          entry.tempoBpms && entry.tempoBpms.length > 0
-            ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
-            : null;
+        const maxTempo = computeMaxTempo(entry.tempoBpms);
         return {
           textbookId: entry.textbookId,
           textbookTitle: tb?.title ?? '',
@@ -256,10 +255,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     if (input.textbookEntries.length > 0) {
       const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
         input.textbookEntries.map((entry) => {
-          const maxTempo =
-            entry.tempoBpms && entry.tempoBpms.length > 0
-              ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
-              : null;
+          const maxTempo = computeMaxTempo(entry.tempoBpms);
           return {
             session_id: id,
             textbook_id: entry.textbookId,
@@ -320,10 +316,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       memo: input.memo || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
-        const maxTempo =
-          entry.tempoBpms && entry.tempoBpms.length > 0
-            ? Math.max(...entry.tempoBpms.map((e) => e.bpm))
-            : null;
+        const maxTempo = computeMaxTempo(entry.tempoBpms);
         return {
           textbookId: entry.textbookId,
           textbookTitle: tb?.title ?? '',
