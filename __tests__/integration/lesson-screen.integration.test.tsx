@@ -12,6 +12,16 @@ jest.mock('expo-router', () => ({
   useFocusEffect: () => {},
 }));
 
+jest.mock('@/lib/recording', () => ({
+  startRecording: jest.fn(),
+  stopRecording: jest.fn(),
+  finalizeRecording: jest.fn().mockResolvedValue(undefined),
+  deleteRecording: jest.fn().mockResolvedValue(undefined),
+  getRecordingUri: jest.fn((id: string) => `file:///recordings/${id}.m4a`),
+  createSound: jest.fn(),
+  loadRecordedIds: jest.fn().mockResolvedValue(new Set()),
+}));
+
 describe('LessonScreen (integration)', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
