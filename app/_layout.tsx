@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { Linking, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { TamaguiProvider } from 'tamagui';
 
 import { supabase } from '@/lib/supabase';
@@ -22,26 +22,6 @@ export default function RootLayout() {
       }
     });
     return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    async function handleDeepLink(url: string) {
-      const fragment = url.split('#')[1];
-      if (!fragment) return;
-      const params = new URLSearchParams(fragment);
-      if (params.get('type') !== 'recovery') return;
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      if (accessToken && refreshToken) {
-        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      }
-    }
-
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink(url);
-    });
-    const sub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
-    return () => sub.remove();
   }, []);
 
   return (
