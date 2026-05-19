@@ -1,8 +1,11 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
 
 import { LessonRecordForm } from '@/components/lesson-record-form';
 import { type LessonRecordInput, splitHeldAt } from '@/forms/lesson-record';
+import { deleteRecording, getRecordingUri } from '@/lib/recording';
 import { useLessonRecordStore } from '@/store/lesson-record';
 
 export default function LessonRecordFormScreen() {
@@ -13,6 +16,16 @@ export default function LessonRecordFormScreen() {
   const remove = useLessonRecordStore((s) => s.remove);
 
   const existing = id ? records.find((r) => r.id === id) : undefined;
+
+  const [existingRecordingUri, setExistingRecordingUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    const uri = getRecordingUri(id);
+    FileSystem.getInfoAsync(uri).then((info) => {
+      if (info.exists) setExistingRecordingUri(uri);
+    });
+  }, [id]);
 
   let defaultValues: LessonRecordInput | undefined;
   if (existing) {
@@ -25,11 +38,16 @@ export default function LessonRecordFormScreen() {
     };
   }
 
-  const handleSave = async (values: LessonRecordInput) => {
+  const handleSave = async (
+    values: LessonRecordInput,
+    tempUri: string | null,
+    shouldDeleteExisting: boolean,
+  ) => {
     if (id) {
-      await update(id, values);
+      await update(id, values, tempUri);
+      if (shouldDeleteExisting) await deleteRecording(id);
     } else {
-      await add(values);
+      await add(values, tempUri);
     }
     router.back();
   };
@@ -60,6 +78,7 @@ export default function LessonRecordFormScreen() {
       <ScrollView>
         <LessonRecordForm
           defaultValues={defaultValues}
+          existingRecordingUri={existingRecordingUri}
           onSubmit={handleSave}
           onDelete={id ? handleDelete : undefined}
         />
