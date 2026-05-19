@@ -29,7 +29,7 @@ function RecordingSectionNative({ existingRecordingUri, onChange }: Props) {
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
-  });
+  }, [onChange]);
 
   useEffect(() => {
     return () => {
