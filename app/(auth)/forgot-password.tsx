@@ -22,7 +22,7 @@ export default function ForgotPassword() {
 
   const onSubmit = async (values: ForgotPasswordValues) => {
     const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: 'clarinets:///reset-password',
+      redirectTo: 'https://xojrksipntfyblvcbrzb.supabase.co/functions/v1/auth-redirect',
     });
     if (error) {
       Alert.alert('エラー', toJaError(error.message));
