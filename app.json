@@ -1,20 +1,22 @@
 {
   "expo": {
-    "name": "expo-template",
-    "slug": "expo-template",
+    "name": "クラリネット練習",
+    "slug": "clarinet-practice",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "expotemplate",
+    "scheme": "clarinets",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.keikei.clarinetpractice",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "練習の録音に使用します"
       }
     },
     "android": {
+      "package": "com.keikei.clarinetpractice",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
