@@ -1,10 +1,12 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { Button, Paragraph, YStack } from 'tamagui';
 
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
 import { type PracticeLogInput } from '@/forms/practice-log';
+import { getRecordingUri } from '@/lib/recording';
 import { usePracticeLogStore } from '@/store/practice-log';
 
 export default function PracticeLogFormScreen() {
@@ -17,6 +19,16 @@ export default function PracticeLogFormScreen() {
   const remove = usePracticeLogStore((s) => s.remove);
 
   const editingSession = id ? sessions.find((s) => s.id === id) : undefined;
+
+  const [existingRecordingUri, setExistingRecordingUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    const uri = getRecordingUri(id);
+    FileSystem.getInfoAsync(uri).then((info) => {
+      if (info.exists) setExistingRecordingUri(uri);
+    });
+  }, [id]);
 
   const initialValues: PracticeLogInput | undefined = editingSession
     ? {
@@ -42,10 +54,11 @@ export default function PracticeLogFormScreen() {
     : undefined;
 
   const handleSubmit = async (data: PracticeLogInput) => {
+    const tempUri = formRef.current?.getTempRecordingUri() ?? null;
     if (id) {
-      await update(id, data);
+      await update(id, data, tempUri);
     } else {
-      await add(data);
+      await add(data, tempUri);
     }
     router.back();
   };
@@ -79,7 +92,12 @@ export default function PracticeLogFormScreen() {
           ),
         }}
       />
-      <PracticeLogForm ref={formRef} onSubmit={handleSubmit} initialValues={initialValues} />
+      <PracticeLogForm
+        ref={formRef}
+        onSubmit={handleSubmit}
+        initialValues={initialValues}
+        existingRecordingUri={existingRecordingUri}
+      />
       {id && (
         <YStack px="$4" pb="$6">
           <Button theme="red" onPress={handleDelete} aria-label="練習記録を削除">
