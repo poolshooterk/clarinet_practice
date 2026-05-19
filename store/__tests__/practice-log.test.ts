@@ -19,6 +19,13 @@ jest.mock('@/store/textbook-progress', () => ({
   },
 }));
 
+jest.mock('@/lib/recording', () => ({
+  finalizeRecording: jest.fn().mockResolvedValue(undefined),
+  deleteRecording: jest.fn().mockResolvedValue(undefined),
+}));
+
+const mockRecording = () => jest.requireMock('@/lib/recording');
+
 const mockSupabase = () => jest.requireMock('@/lib/supabase').supabase;
 const mockCatalog = () => jest.requireMock('@/store/textbook-catalog').useTextbookCatalogStore;
 const mockProgress = () => jest.requireMock('@/store/textbook-progress').useTextbookProgressStore;
@@ -656,6 +663,124 @@ describe('usePracticeLogStore', () => {
         durationMinutes: 10,
       });
     });
+  });
+
+  it('add: tempRecordingUri あり → finalizeRecording がセッションIDで呼ばれる', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().add(
+      {
+        practicedAt: '2026-05-19',
+        longToneMinutes: undefined,
+        tonguingMinutes: undefined,
+        tonguingTempoBpms: [],
+        otherMinutes: undefined,
+        otherMemo: '',
+        memo: '',
+        textbookEntries: [],
+      },
+      'file:///data/recordings/tmp.m4a',
+    );
+
+    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith('new-session');
+  });
+
+  it('add: tempRecordingUri なし → finalizeRecording は呼ばれない', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+        }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-19',
+      longToneMinutes: undefined,
+      tonguingMinutes: undefined,
+      tonguingTempoBpms: [],
+      otherMinutes: undefined,
+      otherMemo: '',
+      memo: '',
+      textbookEntries: [],
+    });
+
+    expect(mockRecording().finalizeRecording).not.toHaveBeenCalled();
+  });
+
+  it('update: tempRecordingUri あり → finalizeRecording がセッションIDで呼ばれる', async () => {
+    mockSupabase()
+      .from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      })
+      .mockReturnValueOnce({
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      })
+      .mockReturnValueOnce({
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      });
+
+    await usePracticeLogStore.getState().update(
+      'session-abc',
+      {
+        practicedAt: '2026-05-19',
+        longToneMinutes: undefined,
+        tonguingMinutes: undefined,
+        tonguingTempoBpms: [],
+        otherMinutes: undefined,
+        otherMemo: '',
+        memo: '',
+        textbookEntries: [],
+      },
+      'file:///data/recordings/tmp.m4a',
+    );
+
+    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith('session-abc');
+  });
+
+  it('remove: deleteRecording がセッションIDで呼ばれる', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        {
+          id: 'session-abc',
+          practicedAt: '2026-05-19',
+          durationMinutes: null,
+          otherMinutes: null,
+          otherMemo: null,
+          totalMinutes: null,
+          memo: null,
+          textbookEntries: [],
+          basicMenuEntries: [],
+        },
+      ],
+    });
+    mockSupabase().from.mockReturnValue({
+      delete: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().remove('session-abc');
+
+    expect(mockRecording().deleteRecording).toHaveBeenCalledWith('session-abc');
   });
 });
 

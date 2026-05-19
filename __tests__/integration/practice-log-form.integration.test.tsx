@@ -21,6 +21,16 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+jest.mock('@/lib/recording', () => ({
+  finalizeRecording: jest.fn().mockResolvedValue(undefined),
+  deleteRecording: jest.fn().mockResolvedValue(undefined),
+  startRecording: jest.fn().mockResolvedValue(undefined),
+  stopRecording: jest.fn().mockResolvedValue('file:///recordings/tmp.m4a'),
+  getRecordingUri: jest.fn().mockReturnValue(null),
+  createSound: jest.fn().mockResolvedValue(undefined),
+  loadRecordedIds: jest.fn().mockResolvedValue(new Set()),
+}));
+
 // Select は Portal を使うため jest 環境では PortalProvider が不足してエラーになる。
 // テスト対象は RHF の Controller 配線であり Select の UI 自体ではないため、
 // onValueChange を直接受け取れるシンプルなコンポーネントに差し替える。

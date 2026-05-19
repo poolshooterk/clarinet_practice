@@ -19,6 +19,16 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
+jest.mock('@/lib/recording', () => ({
+  finalizeRecording: jest.fn().mockResolvedValue(undefined),
+  deleteRecording: jest.fn().mockResolvedValue(undefined),
+  startRecording: jest.fn().mockResolvedValue(undefined),
+  stopRecording: jest.fn().mockResolvedValue('file:///recordings/tmp.m4a'),
+  getRecordingUri: jest.fn().mockReturnValue(null),
+  createSound: jest.fn().mockResolvedValue(undefined),
+  loadRecordedIds: jest.fn().mockResolvedValue(new Set()),
+}));
+
 const THIS_MONTH = today().slice(0, 7);
 const [ty, tm] = THIS_MONTH.split('-').map(Number);
 const prevDate = new Date(ty, tm - 2, 1);

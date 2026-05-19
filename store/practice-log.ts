@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { BASIC_GENRES, type PracticeLogInput } from '@/forms/practice-log';
+import { deleteRecording, finalizeRecording } from '@/lib/recording';
 import { supabase } from '@/lib/supabase';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTextbookProgressStore } from '@/store/textbook-progress';
@@ -77,8 +78,8 @@ type PracticeLogState = {
   sessions: PracticeSession[];
   loading: boolean;
   fetchAll: () => Promise<void>;
-  add: (input: PracticeLogInput) => Promise<void>;
-  update: (id: string, input: PracticeLogInput) => Promise<void>;
+  add: (input: PracticeLogInput, tempRecordingUri?: string | null) => Promise<void>;
+  update: (id: string, input: PracticeLogInput, tempRecordingUri?: string | null) => Promise<void>;
   remove: (id: string) => Promise<void>;
 };
 
@@ -131,7 +132,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     });
   },
 
-  add: async (input: PracticeLogInput) => {
+  add: async (input: PracticeLogInput, tempRecordingUri?: string | null) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return;
 
@@ -256,10 +257,13 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         tempoBpms: r.tempo_bpms ?? [],
       })),
     };
+    if (tempRecordingUri) {
+      await finalizeRecording(sessionId);
+    }
     set({ sessions: [newSession, ...get().sessions] });
   },
 
-  update: async (id: string, input: PracticeLogInput) => {
+  update: async (id: string, input: PracticeLogInput, tempRecordingUri?: string | null) => {
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
     // total_minutes 計算のため先に取得
@@ -379,12 +383,16 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         tempoBpms: r.tempo_bpms ?? [],
       })),
     };
+    if (tempRecordingUri) {
+      await finalizeRecording(id);
+    }
     set({ sessions: get().sessions.map((s) => (s.id === id ? updatedSession : s)) });
   },
 
   remove: async (id: string) => {
     const { error } = await supabase.from('practice_sessions').delete().eq('id', id);
     if (error) return;
+    await deleteRecording(id);
     set({ sessions: get().sessions.filter((s) => s.id !== id) });
   },
 }));
