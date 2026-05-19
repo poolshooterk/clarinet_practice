@@ -21,7 +21,9 @@ export default function ForgotPassword() {
   });
 
   const onSubmit = async (values: ForgotPasswordValues) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email);
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      redirectTo: 'clarinets:///reset-password',
+    });
     if (error) {
       Alert.alert('エラー', toJaError(error.message));
     } else {
