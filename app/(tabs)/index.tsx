@@ -5,6 +5,7 @@ import { Paragraph, XStack, YStack } from 'tamagui';
 
 import { PracticeChart } from '@/components/practice-chart';
 import { BASIC_MENUS, today } from '@/forms/practice-log';
+import { loadRecordedIds } from '@/lib/recording';
 import { calcSessionTime, usePracticeLogStore } from '@/store/practice-log';
 
 function dayOfWeek(dateStr: string): string {
@@ -31,10 +32,12 @@ export default function PracticeLogScreen() {
 
   const currentMonth = today().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [recordedIds, setRecordedIds] = useState<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
       fetchAll();
+      loadRecordedIds().then(setRecordedIds);
     }, [fetchAll]),
   );
 
@@ -133,15 +136,30 @@ export default function PracticeLogScreen() {
                 <Paragraph fontWeight="bold">
                   {`${item.practicedAt}（${dayOfWeek(item.practicedAt)}）`}
                 </Paragraph>
-                {(() => {
-                  const sessionTime = calcSessionTime(item);
-                  const total = item.totalMinutes ?? sessionTime.basic + sessionTime.nonBasic;
-                  return total > 0 ? (
-                    <Paragraph fontSize="$2" color="$blue9" fontWeight="bold">
-                      {`合計: ${total}分`}
+                <XStack gap="$2" items="center">
+                  {recordedIds.has(item.id) && (
+                    <Paragraph
+                      fontSize="$1"
+                      color="$blue9"
+                      bg="$blue3"
+                      px="$1"
+                      rounded="$1"
+                      borderWidth={1}
+                      borderColor="$blue7"
+                    >
+                      ♪
                     </Paragraph>
-                  ) : null;
-                })()}
+                  )}
+                  {(() => {
+                    const sessionTime = calcSessionTime(item);
+                    const total = item.totalMinutes ?? sessionTime.basic + sessionTime.nonBasic;
+                    return total > 0 ? (
+                      <Paragraph fontSize="$2" color="$blue9" fontWeight="bold">
+                        {`合計: ${total}分`}
+                      </Paragraph>
+                    ) : null;
+                  })()}
+                </XStack>
               </XStack>
               {(() => {
                 const { basic, nonBasic } = calcSessionTime(item);
