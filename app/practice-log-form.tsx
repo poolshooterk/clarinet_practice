@@ -6,7 +6,7 @@ import { Button, Paragraph, YStack } from 'tamagui';
 
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
 import { type PracticeLogInput } from '@/forms/practice-log';
-import { getRecordingUri } from '@/lib/recording';
+import { deleteRecording, getRecordingUri } from '@/lib/recording';
 import { usePracticeLogStore } from '@/store/practice-log';
 
 export default function PracticeLogFormScreen() {
@@ -57,6 +57,9 @@ export default function PracticeLogFormScreen() {
     const tempUri = formRef.current?.getTempRecordingUri() ?? null;
     if (id) {
       await update(id, data, tempUri);
+      if (!tempUri && (formRef.current?.shouldDeleteExistingRecording() ?? false)) {
+        await deleteRecording(id);
+      }
     } else {
       await add(data, tempUri);
     }

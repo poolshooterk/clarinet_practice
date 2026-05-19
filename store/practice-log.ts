@@ -258,7 +258,11 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       })),
     };
     if (tempRecordingUri) {
-      await finalizeRecording(sessionId);
+      try {
+        await finalizeRecording(sessionId);
+      } catch {
+        // 録音ファイルの保存に失敗しても練習記録の保存は継続する
+      }
     }
     set({ sessions: [newSession, ...get().sessions] });
   },
@@ -384,7 +388,11 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       })),
     };
     if (tempRecordingUri) {
-      await finalizeRecording(id);
+      try {
+        await finalizeRecording(id);
+      } catch {
+        // 録音ファイルの保存に失敗しても練習記録の保存は継続する
+      }
     }
     set({ sessions: get().sessions.map((s) => (s.id === id ? updatedSession : s)) });
   },

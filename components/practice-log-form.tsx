@@ -38,6 +38,7 @@ type Props = {
 export type PracticeLogFormRef = {
   submit: () => void;
   getTempRecordingUri: () => string | null;
+  shouldDeleteExistingRecording: () => boolean;
 };
 
 type TextbookEntryRowProps = {
@@ -265,6 +266,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [reRecordTriggered, setReRecordTriggered] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -337,6 +339,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
     setDuration(0);
     setTempUri(null);
     setRecState('idle');
+    setReRecordTriggered(true);
   }
 
   function formatSeconds(s: number): string {
@@ -433,6 +436,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       submitForm();
     },
     getTempRecordingUri: () => tempUri,
+    shouldDeleteExistingRecording: () => reRecordTriggered && tempUri === null,
   }));
 
   return (
