@@ -3,6 +3,12 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import { LessonRecordForm } from '@/components/lesson-record-form';
 import { renderWithProviders, screen } from '@/test-utils/render';
 
+jest.mock('@/lib/recording', () => ({
+  startRecording: jest.fn(),
+  stopRecording: jest.fn(),
+  createSound: jest.fn(),
+}));
+
 describe('LessonRecordForm (integration)', () => {
   it('日付が空のまま保存するとバリデーションエラーが表示される', async () => {
     const onSubmit = jest.fn();
@@ -47,6 +53,8 @@ describe('LessonRecordForm (integration)', () => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
     expect(onSubmit.mock.calls[0][0]).toMatchObject({ date: '2026-05-15', time: '14:00' });
+    expect(onSubmit.mock.calls[0][1]).toBeNull();
+    expect(onSubmit.mock.calls[0][2]).toBe(false);
   });
 
   it('アドバイスと気づきを入力して保存すると onSubmit に値が渡される', async () => {
@@ -67,6 +75,8 @@ describe('LessonRecordForm (integration)', () => {
       advice: 'タンギングを軽く',
       notes: '息のスピードが足りない',
     });
+    expect(onSubmit.mock.calls[0][1]).toBeNull();
+    expect(onSubmit.mock.calls[0][2]).toBe(false);
   });
 
   it('defaultValues が渡されるとフォームに初期値が表示される', () => {

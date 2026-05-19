@@ -6,6 +6,7 @@ import { Alert, Platform } from 'react-native';
 import { Button, Input, Paragraph, TextArea, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
+import { RecordingSection } from '@/components/form/recording-section';
 import {
   currentTime,
   formatDate,
@@ -15,19 +16,37 @@ import {
   today,
 } from '@/forms/lesson-record';
 
-const defaultOnSubmit = (_values: LessonRecordInput) => {
+const defaultOnSubmit = (
+  _values: LessonRecordInput,
+  _tempUri: string | null,
+  _shouldDelete: boolean,
+) => {
   Alert.alert('保存しました');
 };
 
 type Props = {
   defaultValues?: LessonRecordInput;
-  onSubmit?: (values: LessonRecordInput) => void | Promise<void>;
+  existingRecordingUri?: string | null;
+  onSubmit?: (
+    values: LessonRecordInput,
+    tempUri: string | null,
+    shouldDeleteExisting: boolean,
+  ) => void | Promise<void>;
   onDelete?: () => void;
 };
 
-export function LessonRecordForm({ defaultValues, onSubmit = defaultOnSubmit, onDelete }: Props) {
+export function LessonRecordForm({
+  defaultValues,
+  existingRecordingUri,
+  onSubmit = defaultOnSubmit,
+  onDelete,
+}: Props) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [recState, setRecState] = useState({
+    tempUri: null as string | null,
+    reRecordTriggered: false,
+  });
 
   const {
     control,
@@ -44,8 +63,17 @@ export function LessonRecordForm({ defaultValues, onSubmit = defaultOnSubmit, on
     },
   });
 
+  async function handleSave(values: LessonRecordInput) {
+    const shouldDelete = recState.reRecordTriggered && recState.tempUri === null;
+    await onSubmit(values, recState.tempUri, shouldDelete);
+  }
+
   return (
     <YStack gap="$4" p="$4">
+      <RecordingSection
+        existingRecordingUri={existingRecordingUri}
+        onChange={(s) => setRecState(s)}
+      />
       <Controller
         control={control}
         name="date"
@@ -148,7 +176,7 @@ export function LessonRecordForm({ defaultValues, onSubmit = defaultOnSubmit, on
         )}
       />
 
-      <Button theme="blue" onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
+      <Button theme="blue" onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
         保存
       </Button>
 
