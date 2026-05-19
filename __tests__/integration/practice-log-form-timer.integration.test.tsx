@@ -5,6 +5,12 @@ import { PracticeLogForm } from '@/components/practice-log-form';
 import { useTimerStore } from '@/store/timer';
 import { renderWithProviders, screen } from '@/test-utils/render';
 
+jest.mock('@/lib/recording', () => ({
+  startRecording: jest.fn(),
+  stopRecording: jest.fn(),
+  createSound: jest.fn(),
+}));
+
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
   router: { back: jest.fn() },
