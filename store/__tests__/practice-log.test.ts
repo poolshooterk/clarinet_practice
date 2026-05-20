@@ -756,6 +756,135 @@ describe('usePracticeLogStore', () => {
     expect(mockRecording().finalizeRecording).toHaveBeenCalledWith('session-abc');
   });
 
+  describe('UNIQUE 制約違反', () => {
+    it('add: practice_sessions の insert が 23505 を返すと { ok: false, reason: "duplicate" } を返す', async () => {
+      mockSupabase().auth.getUser.mockResolvedValueOnce({
+        data: { user: { id: 'user-1' } },
+      });
+      mockSupabase().from.mockReturnValueOnce({
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: null,
+              error: { code: '23505', message: 'duplicate key value' },
+            }),
+          }),
+        }),
+      });
+
+      const result = await usePracticeLogStore.getState().add({
+        practicedAt: '2026-05-20',
+        textbookEntries: [],
+      });
+
+      expect(result).toEqual({ ok: false, reason: 'duplicate' });
+      // 失敗時はストアに追加されない
+      expect(usePracticeLogStore.getState().sessions).toHaveLength(0);
+    });
+
+    it('add: 成功時は { ok: true } を返す', async () => {
+      mockSupabase().auth.getUser.mockResolvedValueOnce({
+        data: { user: { id: 'user-1' } },
+      });
+      mockSupabase().from.mockReturnValueOnce({
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+          }),
+        }),
+      });
+
+      const result = await usePracticeLogStore.getState().add({
+        practicedAt: '2026-05-20',
+        textbookEntries: [],
+      });
+
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('add: 未ログイン時は { ok: false, reason: "unknown" } を返す', async () => {
+      mockSupabase().auth.getUser.mockResolvedValueOnce({ data: { user: null } });
+
+      const result = await usePracticeLogStore.getState().add({
+        practicedAt: '2026-05-20',
+        textbookEntries: [],
+      });
+
+      expect(result).toEqual({ ok: false, reason: 'unknown' });
+    });
+
+    it('update: practice_sessions の UPDATE が 23505 を返すと { ok: false, reason: "duplicate" } を返す', async () => {
+      usePracticeLogStore.setState({
+        sessions: [
+          {
+            id: 'session-1',
+            practicedAt: '2026-05-19',
+            durationMinutes: null,
+            otherMinutes: null,
+            otherMemo: null,
+            totalMinutes: null,
+            memo: null,
+            textbookEntries: [],
+            basicMenuEntries: [],
+          },
+        ],
+      });
+      mockSupabase().from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            error: { code: '23505', message: 'duplicate key value' },
+          }),
+        }),
+      });
+
+      const result = await usePracticeLogStore.getState().update('session-1', {
+        practicedAt: '2026-05-20',
+        textbookEntries: [],
+      });
+
+      expect(result).toEqual({ ok: false, reason: 'duplicate' });
+      // 失敗時はストアが変更されない
+      expect(usePracticeLogStore.getState().sessions[0].practicedAt).toBe('2026-05-19');
+    });
+
+    it('update: 成功時は { ok: true } を返す', async () => {
+      usePracticeLogStore.setState({
+        sessions: [
+          {
+            id: 'session-1',
+            practicedAt: '2026-05-19',
+            durationMinutes: null,
+            otherMinutes: null,
+            otherMemo: null,
+            totalMinutes: null,
+            memo: null,
+            textbookEntries: [],
+            basicMenuEntries: [],
+          },
+        ],
+      });
+      mockSupabase()
+        .from.mockReturnValueOnce({
+          update: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null }),
+          }),
+        })
+        .mockReturnValueOnce({
+          delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+        })
+        .mockReturnValueOnce({
+          delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+        });
+
+      const result = await usePracticeLogStore.getState().update('session-1', {
+        practicedAt: '2026-05-20',
+        textbookEntries: [],
+      });
+
+      expect(result).toEqual({ ok: true });
+    });
+  });
+
   it('remove: deleteRecording がセッションIDで呼ばれる', async () => {
     usePracticeLogStore.setState({
       sessions: [

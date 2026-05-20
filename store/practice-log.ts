@@ -74,12 +74,24 @@ type SessionRow = {
   }[];
 };
 
+export type MutationResult = { ok: true } | { ok: false; reason: 'duplicate' | 'unknown' };
+
+function classifyError(error: { code?: string } | null | undefined): MutationResult {
+  if (!error) return { ok: false, reason: 'unknown' };
+  if (error.code === '23505') return { ok: false, reason: 'duplicate' };
+  return { ok: false, reason: 'unknown' };
+}
+
 type PracticeLogState = {
   sessions: PracticeSession[];
   loading: boolean;
   fetchAll: () => Promise<void>;
-  add: (input: PracticeLogInput, tempRecordingUri?: string | null) => Promise<void>;
-  update: (id: string, input: PracticeLogInput, tempRecordingUri?: string | null) => Promise<void>;
+  add: (input: PracticeLogInput, tempRecordingUri?: string | null) => Promise<MutationResult>;
+  update: (
+    id: string,
+    input: PracticeLogInput,
+    tempRecordingUri?: string | null,
+  ) => Promise<MutationResult>;
   remove: (id: string) => Promise<void>;
 };
 
@@ -134,7 +146,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
 
   add: async (input: PracticeLogInput, tempRecordingUri?: string | null) => {
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
+    if (!userData?.user) return { ok: false, reason: 'unknown' };
 
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
@@ -168,7 +180,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       })
       .select()
       .single();
-    if (sessionError || !session) return;
+    if (sessionError || !session) return classifyError(sessionError);
 
     const sessionId = (session as { id: string }).id;
 
@@ -187,7 +199,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       );
       if (entriesError) {
         await supabase.from('practice_sessions').delete().eq('id', sessionId);
-        return;
+        return { ok: false, reason: 'unknown' };
       }
 
       for (const entry of input.textbookEntries) {
@@ -226,7 +238,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         .insert(basicMenuRows);
       if (basicError) {
         await supabase.from('practice_sessions').delete().eq('id', sessionId);
-        return;
+        return { ok: false, reason: 'unknown' };
       }
     }
 
@@ -265,6 +277,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       }
     }
     set({ sessions: [newSession, ...get().sessions] });
+    return { ok: true };
   },
 
   update: async (id: string, input: PracticeLogInput, tempRecordingUri?: string | null) => {
@@ -298,13 +311,13 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         memo: input.memo || null,
       })
       .eq('id', id);
-    if (sessionError) return;
+    if (sessionError) return classifyError(sessionError);
 
     const { error: deleteTextbooksError } = await supabase
       .from('practice_session_textbooks')
       .delete()
       .eq('session_id', id);
-    if (deleteTextbooksError) return;
+    if (deleteTextbooksError) return { ok: false, reason: 'unknown' };
     if (input.textbookEntries.length > 0) {
       const { error: entriesError } = await supabase.from('practice_session_textbooks').insert(
         input.textbookEntries.map((entry) => {
@@ -318,7 +331,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           };
         }),
       );
-      if (entriesError) return;
+      if (entriesError) return { ok: false, reason: 'unknown' };
       for (const entry of input.textbookEntries) {
         await useTextbookProgressStore.getState().upsert(entry.textbookId, entry.currentPage);
       }
@@ -328,7 +341,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .from('practice_session_basic_menus')
       .delete()
       .eq('session_id', id);
-    if (deleteBasicMenusError) return;
+    if (deleteBasicMenusError) return { ok: false, reason: 'unknown' };
     const basicMenuRows = [
       ...(input.longToneMinutes != null
         ? [
@@ -357,7 +370,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       const { error: basicError } = await supabase
         .from('practice_session_basic_menus')
         .insert(basicMenuRows);
-      if (basicError) return;
+      if (basicError) return { ok: false, reason: 'unknown' };
     }
 
     const updatedSession: PracticeSession = {
@@ -395,6 +408,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       }
     }
     set({ sessions: get().sessions.map((s) => (s.id === id ? updatedSession : s)) });
+    return { ok: true };
   },
 
   remove: async (id: string) => {

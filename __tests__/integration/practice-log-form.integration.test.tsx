@@ -1,10 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { Alert } from 'react-native';
 
+import PracticeLogFormScreen from '@/app/practice-log-form';
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
-import { type PracticeLogInput } from '@/forms/practice-log';
-import { usePracticeLogStore } from '@/store/practice-log';
+import { type PracticeLogInput, today } from '@/forms/practice-log';
+import { type PracticeSession, usePracticeLogStore } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { renderWithProviders, screen } from '@/test-utils/render';
 
@@ -12,6 +15,11 @@ jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
   router: { back: jest.fn() },
   useFocusEffect: () => {},
+  useLocalSearchParams: jest.fn().mockReturnValue({}),
+}));
+
+jest.mock('expo-file-system/legacy', () => ({
+  getInfoAsync: jest.fn().mockResolvedValue({ exists: false }),
 }));
 
 jest.mock('@/lib/supabase', () => ({
@@ -557,5 +565,130 @@ describe('PracticeLogForm with initialValues (編集モード)', () => {
         }),
       );
     });
+  });
+
+  it('initialValues を後から差し替えると reset() でフィールドが置き換わる', async () => {
+    const { rerender } = renderWithProviders(
+      <PracticeLogForm onSubmit={jest.fn()} initialValues={initialValues} />,
+    );
+
+    expect(screen.getByDisplayValue('テストメモ')).toBeTruthy();
+
+    const swapped: PracticeLogInput = {
+      ...initialValues,
+      practicedAt: '2026-03-10',
+      memo: '差し替え後のメモ',
+      otherMinutes: 5,
+    };
+    rerender(<PracticeLogForm onSubmit={jest.fn()} initialValues={swapped} />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('差し替え後のメモ')).toBeTruthy();
+      expect(screen.getByDisplayValue('2026-03-10')).toBeTruthy();
+    });
+  });
+
+  it('日付欄を変更すると onPracticedAtChange に新しい日付が通知される', async () => {
+    const onPracticedAtChange = jest.fn();
+    renderWithProviders(
+      <PracticeLogForm onSubmit={jest.fn()} onPracticedAtChange={onPracticedAtChange} />,
+    );
+
+    fireEvent.changeText(screen.getByLabelText('日付'), '2026-05-20');
+
+    await waitFor(() => {
+      expect(onPracticedAtChange).toHaveBeenCalledWith('2026-05-20');
+    });
+  });
+});
+
+function makeSession(overrides: Partial<PracticeSession>): PracticeSession {
+  return {
+    id: 'session-id',
+    practicedAt: '2026-05-15',
+    durationMinutes: null,
+    otherMinutes: null,
+    otherMemo: null,
+    totalMinutes: null,
+    memo: null,
+    textbookEntries: [],
+    basicMenuEntries: [],
+    ...overrides,
+  };
+}
+
+describe('PracticeLogFormScreen (同日 1 件: 自動切替 / 衝突時 Alert)', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    usePracticeLogStore.setState({ sessions: [], loading: false });
+    useTextbookCatalogStore.setState({ textbooks: [], loading: false });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    (router.back as jest.Mock).mockClear();
+    jest.clearAllMocks();
+  });
+
+  it('mount 時に today へ既存記録があれば編集モードへ自動切替され既存値が反映される', async () => {
+    const todayStr = today();
+    usePracticeLogStore.setState({
+      sessions: [
+        makeSession({
+          id: 'today-session',
+          practicedAt: todayStr,
+          memo: '今日の既存メモ',
+          basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
+        }),
+      ],
+    });
+
+    renderWithProviders(<PracticeLogFormScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('今日の既存メモ')).toBeTruthy();
+    });
+    expect(screen.getByDisplayValue('20')).toBeTruthy();
+    expect(screen.getByLabelText('練習記録を削除')).toBeTruthy();
+  });
+
+  it('日付欄を空き日付 → 既存日付に変えると編集モードへ切替わる', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        makeSession({
+          id: 'may-15',
+          practicedAt: '2026-05-15',
+          memo: '5/15 の既存メモ',
+        }),
+      ],
+    });
+
+    renderWithProviders(<PracticeLogFormScreen />);
+
+    // 初期は新規モード (today に既存なしの想定)
+    expect(screen.queryByLabelText('練習記録を削除')).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText('日付'), '2026-05-15');
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('5/15 の既存メモ')).toBeTruthy();
+    });
+    expect(screen.getByLabelText('練習記録を削除')).toBeTruthy();
+  });
+
+  it('保存時に add が duplicate を返したら Alert が出て router.back は呼ばれない', async () => {
+    const addMock = jest.fn().mockResolvedValue({ ok: false, reason: 'duplicate' });
+    usePracticeLogStore.setState({ sessions: [], add: addMock });
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    renderWithProviders(<PracticeLogFormScreen />);
+    fireEvent.changeText(screen.getByLabelText('日付'), '2026-05-20');
+    fireEvent.changeText(screen.getByLabelText('ロングトーン'), '15');
+    fireEvent.press(screen.getByLabelText('保存'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('保存できません', expect.stringContaining('同じ日付'));
+    });
+    expect(router.back).not.toHaveBeenCalled();
+    expect(addMock).toHaveBeenCalled();
+
+    alertSpy.mockRestore();
   });
 });
