@@ -587,19 +587,6 @@ describe('PracticeLogForm with initialValues (編集モード)', () => {
       expect(screen.getByDisplayValue('2026-03-10')).toBeTruthy();
     });
   });
-
-  it('日付欄を変更すると onPracticedAtChange に新しい日付が通知される', async () => {
-    const onPracticedAtChange = jest.fn();
-    renderWithProviders(
-      <PracticeLogForm onSubmit={jest.fn()} onPracticedAtChange={onPracticedAtChange} />,
-    );
-
-    fireEvent.changeText(screen.getByLabelText('日付'), '2026-05-20');
-
-    await waitFor(() => {
-      expect(onPracticedAtChange).toHaveBeenCalledWith('2026-05-20');
-    });
-  });
 });
 
 function makeSession(overrides: Partial<PracticeSession>): PracticeSession {
@@ -617,7 +604,7 @@ function makeSession(overrides: Partial<PracticeSession>): PracticeSession {
   };
 }
 
-describe('PracticeLogFormScreen (同日 1 件: 自動切替 / 衝突時 Alert)', () => {
+describe('PracticeLogFormScreen (urlId による新規/編集モード分離 + 衝突時 Alert)', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
     usePracticeLogStore.setState({ sessions: [], loading: false });
@@ -627,7 +614,7 @@ describe('PracticeLogFormScreen (同日 1 件: 自動切替 / 衝突時 Alert)',
     jest.clearAllMocks();
   });
 
-  it('mount 時に today へ既存記録があれば編集モードへ自動切替され既存値が反映される', async () => {
+  it('urlId なしで開いたとき、today に既存記録があっても新規モードのまま', async () => {
     const todayStr = today();
     usePracticeLogStore.setState({
       sessions: [
@@ -642,14 +629,13 @@ describe('PracticeLogFormScreen (同日 1 件: 自動切替 / 衝突時 Alert)',
 
     renderWithProviders(<PracticeLogFormScreen />);
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('今日の既存メモ')).toBeTruthy();
-    });
-    expect(screen.getByDisplayValue('20')).toBeTruthy();
-    expect(screen.getByLabelText('練習記録を削除')).toBeTruthy();
+    // 新規モードなので既存セッションの値はフォームに反映されない
+    expect(screen.queryByDisplayValue('今日の既存メモ')).toBeNull();
+    // 削除ボタンも表示されない
+    expect(screen.queryByLabelText('練習記録を削除')).toBeNull();
   });
 
-  it('日付欄を空き日付 → 既存日付に変えると編集モードへ切替わる', async () => {
+  it('urlId なしのまま、日付欄を既存日付に変えても編集モードに切り替わらない', async () => {
     usePracticeLogStore.setState({
       sessions: [
         makeSession({
@@ -662,14 +648,35 @@ describe('PracticeLogFormScreen (同日 1 件: 自動切替 / 衝突時 Alert)',
 
     renderWithProviders(<PracticeLogFormScreen />);
 
-    // 初期は新規モード (today に既存なしの想定)
-    expect(screen.queryByLabelText('練習記録を削除')).toBeNull();
-
     fireEvent.changeText(screen.getByLabelText('日付'), '2026-05-15');
+
+    // 日付が一致しても自動で編集モードにはならない
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('2026-05-15')).toBeTruthy();
+    });
+    expect(screen.queryByDisplayValue('5/15 の既存メモ')).toBeNull();
+    expect(screen.queryByLabelText('練習記録を削除')).toBeNull();
+  });
+
+  it('urlId 指定で開くと該当セッションの値が反映され編集モードになる', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        makeSession({
+          id: 'may-15',
+          practicedAt: '2026-05-15',
+          memo: '5/15 の既存メモ',
+          basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
+        }),
+      ],
+    });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'may-15' });
+
+    renderWithProviders(<PracticeLogFormScreen />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('5/15 の既存メモ')).toBeTruthy();
     });
+    expect(screen.getByDisplayValue('20')).toBeTruthy();
     expect(screen.getByLabelText('練習記録を削除')).toBeTruthy();
   });
 

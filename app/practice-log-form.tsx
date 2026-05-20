@@ -1,13 +1,14 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { Button, Paragraph, YStack } from 'tamagui';
 
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
-import { type PracticeLogInput, today } from '@/forms/practice-log';
+import { type PracticeLogInput } from '@/forms/practice-log';
 import { deleteRecording, getRecordingUri } from '@/lib/recording';
 import { usePracticeLogStore } from '@/store/practice-log';
+import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
 export default function PracticeLogFormScreen() {
   const formRef = useRef<PracticeLogFormRef>(null);
@@ -18,18 +19,19 @@ export default function PracticeLogFormScreen() {
   const update = usePracticeLogStore((s) => s.update);
   const remove = usePracticeLogStore((s) => s.remove);
 
-  // urlId: ルーティングで指定された編集対象。effectiveId: 同日既存検出で透過的に切替わる実効 id
-  const [effectiveId, setEffectiveId] = useState<string | undefined>(urlId);
+  // 新規 vs 編集モードは urlId の有無で 1:1 に確定する。フォーム内での日付変更による
+  // 自動切替は行わない (重複時は DB の UNIQUE 制約 + duplicate Alert で誘導する)
+  const effectiveId = urlId;
 
-  // mount 時 / sessions rehydrate 後 / urlId 変更時に「未指定なら今日に同日既存があるか」を判定
-  useEffect(() => {
-    if (urlId) {
-      setEffectiveId(urlId);
-      return;
-    }
-    const match = sessions.find((s) => s.practicedAt === today());
-    if (match) setEffectiveId(match.id);
-  }, [urlId, sessions]);
+  // フォーカス時に教本カタログと練習記録を再フェッチ。教本カタログが空のまま
+  // Select.Value が render されると、選択中の textbookId (UUID) がそのまま
+  // トリガーに露出するため、画面表示のたびに必ず最新化する。
+  useFocusEffect(
+    useCallback(() => {
+      useTextbookCatalogStore.getState().fetchAll();
+      usePracticeLogStore.getState().fetchAll();
+    }, []),
+  );
 
   const editingSession = useMemo(
     () => (effectiveId ? sessions.find((s) => s.id === effectiveId) : undefined),
@@ -74,21 +76,6 @@ export default function PracticeLogFormScreen() {
           }
         : undefined,
     [editingSession],
-  );
-
-  // フォーム内の日付欄が変わったら、その日付の既存セッションを探し透過的に編集モードへ切替
-  const handlePracticedAtChange = useCallback(
-    (date: string) => {
-      const match = sessions.find((s) => s.practicedAt === date && s.id !== effectiveId);
-      if (match) {
-        setEffectiveId(match.id);
-      } else if (!urlId && effectiveId) {
-        // 新規モードで開いた後、空き日付に戻したら新規モードへ復帰
-        const stillMatches = sessions.some((s) => s.id === effectiveId && s.practicedAt === date);
-        if (!stillMatches) setEffectiveId(undefined);
-      }
-    },
-    [sessions, effectiveId, urlId],
   );
 
   const handleSubmit = async (data: PracticeLogInput) => {
@@ -146,7 +133,6 @@ export default function PracticeLogFormScreen() {
         onSubmit={handleSubmit}
         initialValues={initialValues}
         existingRecordingUri={existingRecordingUri}
-        onPracticedAtChange={handlePracticedAtChange}
       />
       {effectiveId && (
         <YStack px="$4" pb="$6">

@@ -25,7 +25,10 @@ const textbookEntrySchema = z.object({
 });
 
 export const practiceLogSchema = z.object({
-  practicedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください'),
+  practicedAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください')
+    .refine((s) => s <= today(), '未来の日付は入力できません'),
   longToneMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   tonguingMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
   tonguingTempoBpms: z.array(tonguingBpmEntrySchema).optional(),

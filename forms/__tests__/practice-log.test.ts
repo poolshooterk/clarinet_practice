@@ -1,4 +1,4 @@
-import { BASIC_MENUS, practiceLogSchema, today } from '@/forms/practice-log';
+import { BASIC_MENUS, formatDate, practiceLogSchema, today } from '@/forms/practice-log';
 
 describe('practiceLogSchema', () => {
   describe('有効なケース', () => {
@@ -38,6 +38,28 @@ describe('practiceLogSchema', () => {
         textbookEntries: [],
       });
       expect(result.success).toBe(false);
+    });
+
+    it('未来日 (翌日) はエラー', () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      const tomorrow = formatDate(d);
+      const result = practiceLogSchema.safeParse({
+        practicedAt: tomorrow,
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues.find((i) => i.path[0] === 'practicedAt')?.message).toBe(
+        '未来の日付は入力できません',
+      );
+    });
+
+    it('今日の日付は有効', () => {
+      const result = practiceLogSchema.safeParse({
+        practicedAt: today(),
+        textbookEntries: [],
+      });
+      expect(result.success).toBe(true);
     });
   });
 

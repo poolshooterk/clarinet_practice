@@ -32,7 +32,6 @@ type Props = {
   onSubmit: (data: PracticeLogInput) => void | Promise<void>;
   initialValues?: PracticeLogInput;
   existingRecordingUri?: string | null;
-  onPracticedAtChange?: (date: string) => void;
 };
 
 export type PracticeLogFormRef = {
@@ -247,7 +246,7 @@ function TextbookEntryRow({
 }
 
 export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function PracticeLogForm(
-  { onSubmit, initialValues, existingRecordingUri, onPracticedAtChange },
+  { onSubmit, initialValues, existingRecordingUri },
   ref,
 ) {
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
@@ -283,16 +282,10 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
     },
   });
 
-  // 親が effective id 切替に伴い initialValues を差し替えた時にフォームへ反映
+  // 親が initialValues を差し替えた時にフォームへ反映
   useEffect(() => {
     if (initialValues) reset(initialValues);
   }, [initialValues, reset]);
-
-  // 日付欄の変更を親へ通知 (親側で同日既存セッションを検索し編集モードに切替)
-  const watchedPracticedAt = useWatch({ control, name: 'practicedAt' });
-  useEffect(() => {
-    if (watchedPracticedAt) onPracticedAtChange?.(watchedPracticedAt);
-  }, [watchedPracticedAt, onPracticedAtChange]);
 
   const { fields, append, remove } = useFieldArray({ control, name: 'textbookEntries' });
   const {
