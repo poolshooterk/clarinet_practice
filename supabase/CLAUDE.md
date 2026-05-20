@@ -40,7 +40,7 @@ create policy "..." on <table> for delete using (auth.uid() = user_id);
 - `practice_session_basic_menu_tempos` — タンギングテンポ。`tempo_bpm`
 - `practice_session_textbooks` — 教本進捗エントリ。`textbook_id` / `current_page` / `duration_minutes` / `tempo_bpm`
 - `textbooks` — 教本カタログ (カタログストア `store/textbook-catalog.ts` が管理)
-- `instruments` — 所有楽器。`photo_uri` を持つ
+- `user_equipment` — 所有楽器セット (PK = `user_id`、ユーザごとに1行)。`instrument` (`instrument_maker_id` / `instrument_model_id` で `instrument_makers` / `instrument_models` を参照、`instrument_purchase_price` / `instrument_start_date` / `instrument_photo_uri`) + `reed` / `ligature` / `mouthpiece` の `*_name` / `*_start_date` カラムを 1 行に格納。書き込みは `upsert` (`user_id` 衝突時 UPDATE)
 - `instrument_makers` — メーカーマスタ (カタログストア `store/instrument-catalog.ts` が管理)
 - `lesson_records` — レッスン記録
 

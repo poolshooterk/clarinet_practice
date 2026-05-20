@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { EquipmentForm } from '@/components/equipment-form';
@@ -11,16 +10,30 @@ jest.mock('expo-router', () => ({
   useFocusEffect: jest.fn(),
 }));
 
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      order: jest.fn().mockResolvedValue({ data: [], error: null }),
-      insert: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: null, error: null }),
-    })),
-  },
-}));
+jest.mock('@/lib/supabase', () => {
+  const upsert = jest.fn().mockResolvedValue({ error: null });
+  return {
+    supabase: {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }),
+      },
+      from: jest.fn(() => ({
+        // catalog の fetchAll 用 (useFocusEffect モックで通常は呼ばれないが安全側で用意)
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({ data: [], error: null }),
+        // saveEquipment 用
+        upsert,
+        // fetchEquipment 用 (useFocusEffect モックで通常は呼ばれない)
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+      _upsert: upsert,
+    },
+  };
+});
+
+const mockUpsert = () =>
+  (jest.requireMock('@/lib/supabase').supabase as { _upsert: jest.Mock })._upsert;
 
 const sampleCatalog = {
   makers: [
@@ -35,10 +48,15 @@ const sampleCatalog = {
 };
 
 describe('EquipmentForm (integration)', () => {
-  beforeEach(async () => {
-    await AsyncStorage.clear();
-    useEquipmentStore.setState({ equipment: null });
-    useInstrumentCatalogStore.setState({ ...sampleCatalog, loading: false });
+  beforeEach(() => {
+    useEquipmentStore.setState({ equipment: null, loaded: false, loading: false });
+    useInstrumentCatalogStore.setState({
+      makers: sampleCatalog.makers,
+      models: sampleCatalog.models,
+      loading: false,
+    });
+    mockUpsert().mockClear();
+    mockUpsert().mockResolvedValue({ error: null });
   });
 
   it('空送信でバリデーションエラーが表示される（スモーク）', async () => {
@@ -57,7 +75,7 @@ describe('EquipmentForm (integration)', () => {
     });
   });
 
-  it('全項目入力して保存すると onSubmit が正しい値で呼ばれる', async () => {
+  it('全項目入力して保存すると Supabase upsert が呼ばれ onSubmit が値とともに呼ばれる', async () => {
     const onSubmit = jest.fn();
     renderWithProviders(<EquipmentForm onSubmit={onSubmit} />);
 
@@ -89,6 +107,16 @@ describe('EquipmentForm (integration)', () => {
       name: 'Vandoren V12',
       startDate: '2024-01-15',
     });
+
+    expect(mockUpsert()).toHaveBeenCalledTimes(1);
+    expect(mockUpsert().mock.calls[0][0]).toMatchObject({
+      user_id: 'user-1',
+      instrument_maker_id: 'maker-1',
+      instrument_model_id: 'model-1',
+      instrument_start_date: '2020-04-01',
+      reed_name: 'Vandoren V12',
+      reed_start_date: '2024-01-15',
+    });
   }, 15000);
 
   it('ストアに保存済みデータがあればフォームの初期値として表示される', () => {
@@ -105,6 +133,7 @@ describe('EquipmentForm (integration)', () => {
         ligature: { name: 'Vandoren M/O', startDate: '2023-06-10' },
         mouthpiece: { name: 'Vandoren B45', startDate: '2022-03-20' },
       },
+      loaded: true,
     });
     renderWithProviders(<EquipmentForm />);
     expect(screen.getByLabelText('リード名').props.value).toBe('Vandoren V12');

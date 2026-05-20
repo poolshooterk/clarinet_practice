@@ -3,7 +3,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ActionSheetIOS, Alert, Image, Platform, Pressable, ScrollView } from 'react-native';
 import { Button, Card, Input, Paragraph, XStack, YStack } from 'tamagui';
@@ -18,7 +18,6 @@ import {
   parseYmd,
 } from '@/forms/equipment';
 import { useEquipmentStore } from '@/store/equipment';
-import { useInstrumentCatalogStore } from '@/store/instrument-catalog';
 
 type OtherSection = 'reed' | 'ligature' | 'mouthpiece';
 
@@ -91,16 +90,16 @@ type Props = {
 };
 
 export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
-  const setEquipment = useEquipmentStore((s) => s.setEquipment);
+  const fetchEquipment = useEquipmentStore((s) => s.fetchEquipment);
+  const saveEquipment = useEquipmentStore((s) => s.saveEquipment);
   const savedEquipment = useEquipmentStore((s) => s.equipment);
-  const fetchAll = useInstrumentCatalogStore((s) => s.fetchAll);
   const [showPicker, setShowPicker] = useState<OtherSection | null>(null);
   const [showInstrumentPicker, setShowInstrumentPicker] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      fetchAll();
-    }, [fetchAll]),
+      fetchEquipment();
+    }, [fetchEquipment]),
   );
 
   const {
@@ -108,6 +107,7 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ClarinetEquipment>({
     resolver: zodResolver(clarinetEquipmentSchema),
@@ -119,6 +119,16 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
       mouthpiece: emptyItem,
     },
   });
+
+  // 初回 mount 時に savedEquipment が null (= Supabase 非同期 fetch 完了前) だった場合、
+  // fetch 完了後に一度だけ reset で値を反映する。ユーザの編集を上書きしないよう ref で 1 回に制限する。
+  const hasResetRef = useRef(savedEquipment != null);
+  useEffect(() => {
+    if (savedEquipment && !hasResetRef.current) {
+      reset(savedEquipment);
+      hasResetRef.current = true;
+    }
+  }, [savedEquipment, reset]);
 
   const instrumentValue = watch('instrument');
   const instrumentUsagePeriod = calcUsagePeriod(instrumentValue?.startDate ?? '');
@@ -201,9 +211,13 @@ export function EquipmentForm({ onSubmit = defaultOnSubmit }: Props) {
     }
   };
 
-  const handleSave = (values: ClarinetEquipment) => {
-    setEquipment(values);
-    onSubmit(values);
+  const handleSave = async (values: ClarinetEquipment) => {
+    const result = await saveEquipment(values);
+    if (result.ok) {
+      onSubmit(values);
+    } else {
+      Alert.alert('保存に失敗しました', 'もう一度お試しください');
+    }
   };
 
   return (
