@@ -12,3 +12,4 @@
 - ストアが小さいうちはスライス分割やラッパーを作らない (過剰抽象化を避ける)
 - **カタログストア** (`store/instrument-catalog.ts` / `store/textbook-catalog.ts`): 複数機能が参照するルックアップデータを管理する読み取り中心のストア。`persist` でローカルキャッシュし、`useFocusEffect` 経由で `fetchAll` して最新化する。CRUD ストアと区別し、ユーザデータは持たない
 - 単体テストは `store/__tests__/` に配置し、`useFooStore.getState()` を直接叩いて状態遷移を検証する (UI レンダリング不要のため `renderHook` 不使用)。`persist` を使うストアは `jest.setup.ts` の AsyncStorage 公式モックが自動適用されるため追加設定不要
+- **DB 制約違反を呼び出し側に返す CRUD アクション**: 一意制約違反などユーザに通知すべき回復可能エラーは、戻り値を `Promise<{ ok: true } | { ok: false; reason: 'duplicate' | 'unknown' }>` で表現し、画面側で `Alert.alert` 等の UI を出す。Postgres エラーコード `23505` を `'duplicate'` にマップする。参照実装: `store/practice-log.ts` の `MutationResult` 型と `classifyError` ヘルパー (`add` / `update` がこの形を返す)
