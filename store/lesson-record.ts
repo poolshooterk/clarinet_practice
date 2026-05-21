@@ -120,7 +120,11 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
         return;
       }
       for (const entry of input.textbookEntries) {
-        await useTextbookProgressStore.getState().upsert(entry.textbookId, entry.currentPage);
+        try {
+          await useTextbookProgressStore.getState().upsert(entry.textbookId, entry.currentPage);
+        } catch {
+          // 進捗更新失敗はレッスン記録の保存に影響しない
+        }
       }
     }
 
@@ -165,12 +169,16 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
       .eq('id', id);
     if (error) return;
 
-    await supabase.from('lesson_record_textbooks').delete().eq('lesson_record_id', id);
+    const { error: deleteError } = await supabase
+      .from('lesson_record_textbooks')
+      .delete()
+      .eq('lesson_record_id', id);
+    if (deleteError) return;
 
     const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
 
     if (input.textbookEntries.length > 0) {
-      await supabase.from('lesson_record_textbooks').insert(
+      const { error: insertError } = await supabase.from('lesson_record_textbooks').insert(
         input.textbookEntries.map((entry) => ({
           lesson_record_id: id,
           textbook_id: entry.textbookId,
@@ -179,8 +187,13 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
           tempo_bpm: entry.tempoBpm ?? null,
         })),
       );
+      if (insertError) return;
       for (const entry of input.textbookEntries) {
-        await useTextbookProgressStore.getState().upsert(entry.textbookId, entry.currentPage);
+        try {
+          await useTextbookProgressStore.getState().upsert(entry.textbookId, entry.currentPage);
+        } catch {
+          // 進捗更新失敗はレッスン記録の保存に影響しない
+        }
       }
     }
 

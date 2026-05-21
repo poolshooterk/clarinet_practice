@@ -350,6 +350,78 @@ describe('useLessonRecordStore', () => {
     expect(useLessonRecordStore.getState().records[0].advice).toBe('元');
   });
 
+  it('update: DELETE エラー時は records が変わらない', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        {
+          id: 'lr-1',
+          heldAt: '2026-05-15T05:00:00.000Z',
+          advice: '元',
+          notes: null,
+          textbookEntries: [],
+        },
+      ],
+    });
+    // 1st from(): lesson_records update → 成功
+    mockFrom().mockReturnValueOnce({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    // 2nd from(): lesson_record_textbooks delete → 失敗
+    mockFrom().mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: new Error('delete error') }),
+      }),
+    });
+    await useLessonRecordStore.getState().update('lr-1', {
+      date: '2026-05-20',
+      time: '10:00',
+      advice: '変更後',
+      notes: '',
+      textbookEntries: [],
+    });
+    expect(useLessonRecordStore.getState().records[0].advice).toBe('元');
+  });
+
+  it('update: INSERT エラー時は records が変わらない', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        {
+          id: 'lr-1',
+          heldAt: '2026-05-15T05:00:00.000Z',
+          advice: '元',
+          notes: null,
+          textbookEntries: [],
+        },
+      ],
+    });
+    // 1st from(): lesson_records update → 成功
+    mockFrom().mockReturnValueOnce({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    // 2nd from(): lesson_record_textbooks delete → 成功
+    mockFrom().mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    // 3rd from(): lesson_record_textbooks insert → 失敗
+    mockFrom().mockReturnValueOnce({
+      insert: jest.fn().mockResolvedValue({ error: new Error('insert error') }),
+    });
+    await useLessonRecordStore.getState().update('lr-1', {
+      date: '2026-05-20',
+      time: '10:00',
+      advice: '変更後',
+      notes: '',
+      textbookEntries: [{ textbookId: 'tb-1', currentPage: 5 }],
+    });
+    expect(useLessonRecordStore.getState().records[0].advice).toBe('元');
+  });
+
   it('remove で対象 record が削除される', async () => {
     useLessonRecordStore.setState({
       records: [
