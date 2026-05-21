@@ -19,6 +19,20 @@ export default function Settings() {
           <Paragraph color="$color10">›</Paragraph>
         </XStack>
       </Pressable>
+      <Pressable onPress={() => router.push('/accessories')}>
+        <XStack
+          items="center"
+          justify="space-between"
+          p="$4"
+          bg="$color2"
+          rounded="$4"
+          borderWidth={1}
+          borderColor="$borderColor"
+        >
+          <Paragraph>🎵 消耗品管理</Paragraph>
+          <Paragraph color="$color10">›</Paragraph>
+        </XStack>
+      </Pressable>
     </YStack>
   );
 }
