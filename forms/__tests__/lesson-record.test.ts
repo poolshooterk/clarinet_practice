@@ -82,3 +82,93 @@ describe('formatHeldAt', () => {
     expect(result).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
   });
 });
+
+describe('textbookEntrySchema', () => {
+  it('textbookId と currentPage があれば有効', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [{ textbookId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', currentPage: 10 }],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('textbookId が UUID でなければ拒否する', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [{ textbookId: 'not-a-uuid', currentPage: 10 }],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('currentPage が 0 は有効', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [{ textbookId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', currentPage: 0 }],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('currentPage が負数のとき拒否する', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [{ textbookId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', currentPage: -1 }],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('durationMinutes は省略可能', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [{ textbookId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', currentPage: 5 }],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('durationMinutes が 0 のとき拒否する', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [
+        { textbookId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', currentPage: 5, durationMinutes: 0 },
+      ],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('tempoBpm が 40–240 の範囲内なら有効', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [
+        {
+          textbookId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+          currentPage: 5,
+          tempoBpm: 120,
+        },
+      ],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('tempoBpm が 39 のとき拒否する', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [
+        { textbookId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', currentPage: 5, tempoBpm: 39 },
+      ],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('textbookEntries を省略すると空配列がデフォルトになる', () => {
+    const r = lessonRecordSchema.safeParse({ date: '2026-05-15', time: '14:00' });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.textbookEntries).toEqual([]);
+  });
+});

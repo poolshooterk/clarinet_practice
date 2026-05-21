@@ -1,10 +1,25 @@
 import { z } from 'zod';
 
+export const textbookEntrySchema = z.object({
+  textbookId: z.string().uuid('教本を選択してください'),
+  currentPage: z.number().int().min(0, '0以上の整数を入力してください'),
+  durationMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  tempoBpm: z
+    .number()
+    .int()
+    .min(40, '40以上の整数を入力してください')
+    .max(240, '240以下の整数を入力してください')
+    .optional(),
+});
+
+export type TextbookEntryInput = z.infer<typeof textbookEntrySchema>;
+
 export const lessonRecordSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください'),
   time: z.string().regex(/^\d{2}:\d{2}$/, '時刻を入力してください'),
   advice: z.string().optional(),
   notes: z.string().optional(),
+  textbookEntries: z.array(textbookEntrySchema).default([]),
 });
 
 export type LessonRecordInput = z.infer<typeof lessonRecordSchema>;
