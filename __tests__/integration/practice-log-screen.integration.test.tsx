@@ -50,6 +50,7 @@ const makeSession = (id: string, practicedAt: string, durationMinutes: number | 
   otherMemo: null,
   totalMinutes: null,
   memo: null,
+  reedNumber: null,
   textbookEntries: [],
   basicMenuEntries: [],
 });

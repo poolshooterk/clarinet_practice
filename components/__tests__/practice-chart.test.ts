@@ -14,6 +14,7 @@ function makeSession(
     otherMemo: null,
     totalMinutes: null,
     memo: null,
+    reedNumber: null,
     textbookEntries: [],
     basicMenuEntries: [],
   };
