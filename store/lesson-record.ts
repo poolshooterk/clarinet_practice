@@ -3,8 +3,11 @@ import { create } from 'zustand';
 import { combineDateTime, type LessonRecordInput } from '@/forms/lesson-record';
 import { deleteRecording, finalizeRecording } from '@/lib/recording';
 import { supabase } from '@/lib/supabase';
+import type { SessionRecording } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTextbookProgressStore } from '@/store/textbook-progress';
+
+type TempRecording = { tempUri: string; memo: string };
 
 type TextbookEntry = {
   textbookId: string;
@@ -20,6 +23,7 @@ export type LessonRecord = {
   advice: string | null;
   notes: string | null;
   textbookEntries: TextbookEntry[];
+  recordings: SessionRecording[];
 };
 
 type LessonRecordTextbookRow = {
@@ -36,14 +40,25 @@ type LessonRecordRow = {
   advice: string | null;
   notes: string | null;
   lesson_record_textbooks: LessonRecordTextbookRow[];
+  lesson_record_recordings: {
+    id: string;
+    index: number;
+    local_uri: string;
+    memo: string | null;
+  }[];
 };
 
 type LessonRecordState = {
   records: LessonRecord[];
   loading: boolean;
   fetchAll: () => Promise<void>;
-  add: (input: LessonRecordInput, tempRecordingUri?: string | null) => Promise<void>;
-  update: (id: string, input: LessonRecordInput, tempRecordingUri?: string | null) => Promise<void>;
+  add: (input: LessonRecordInput, tempRecordings?: TempRecording[]) => Promise<void>;
+  update: (
+    id: string,
+    input: LessonRecordInput,
+    tempRecordings?: TempRecording[],
+    deletedRecordingIds?: string[],
+  ) => Promise<void>;
   remove: (id: string) => Promise<void>;
 };
 
@@ -60,7 +75,8 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
       .from('lesson_records')
       .select(
         'id, held_at, advice, notes, ' +
-          'lesson_record_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title ) )',
+          'lesson_record_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title ) ), ' +
+          'lesson_record_recordings ( id, index, local_uri, memo )',
       )
       .order('held_at', { ascending: false });
     set({ loading: false });
@@ -81,11 +97,17 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
           durationMinutes: entry.duration_minutes ?? null,
           tempoBpm: entry.tempo_bpm ?? null,
         })),
+        recordings: (row.lesson_record_recordings ?? []).map((r) => ({
+          id: r.id,
+          index: r.index as 1 | 2 | 3,
+          localUri: r.local_uri,
+          memo: r.memo,
+        })),
       })),
     });
   },
 
-  add: async (input: LessonRecordInput, tempRecordingUri?: string | null) => {
+  add: async (input: LessonRecordInput, tempRecordings?: TempRecording[]) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return;
 
@@ -128,13 +150,36 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
       }
     }
 
-    if (tempRecordingUri) {
-      try {
-        await finalizeRecording(row.id);
-      } catch {
-        // 録音失敗でも記録は保存
+    const recordings: SessionRecording[] = [];
+    if (tempRecordings && tempRecordings.length > 0) {
+      for (let i = 0; i < tempRecordings.length; i++) {
+        const index = (i + 1) as 1 | 2 | 3;
+        try {
+          const destUri = await finalizeRecording(tempRecordings[i].tempUri, row.id, index);
+          const { data: recData } = await supabase
+            .from('lesson_record_recordings')
+            .insert({
+              lesson_record_id: row.id,
+              index,
+              local_uri: destUri,
+              memo: tempRecordings[i].memo || null,
+            })
+            .select('id')
+            .single();
+          if (recData) {
+            recordings.push({
+              id: recData.id,
+              index,
+              localUri: destUri,
+              memo: tempRecordings[i].memo || null,
+            });
+          }
+        } catch {
+          // 録音保存失敗はレッスン記録の保存に影響しない
+        }
       }
     }
+
     set({
       records: [
         {
@@ -152,13 +197,19 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
               tempoBpm: entry.tempoBpm ?? null,
             };
           }),
+          recordings,
         },
         ...get().records,
       ],
     });
   },
 
-  update: async (id: string, input: LessonRecordInput, tempRecordingUri?: string | null) => {
+  update: async (
+    id: string,
+    input: LessonRecordInput,
+    tempRecordings?: TempRecording[],
+    deletedRecordingIds?: string[],
+  ) => {
     const { error } = await supabase
       .from('lesson_records')
       .update({
@@ -197,13 +248,53 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
       }
     }
 
-    if (tempRecordingUri) {
-      try {
-        await finalizeRecording(id);
-      } catch {
-        // 録音失敗でも記録は保存
+    const record = get().records.find((r) => r.id === id);
+    if (deletedRecordingIds && deletedRecordingIds.length > 0) {
+      for (const delId of deletedRecordingIds) {
+        const rec = record?.recordings.find((r) => r.id === delId);
+        if (rec) await deleteRecording(rec.localUri);
+      }
+      await supabase.from('lesson_record_recordings').delete().in('id', deletedRecordingIds);
+    }
+
+    const remainingRecordings = (record?.recordings ?? []).filter(
+      (r) => !deletedRecordingIds?.includes(r.id),
+    );
+    const usedIndices = new Set(remainingRecordings.map((r) => r.index));
+    const availableIndices = ([1, 2, 3] as const).filter((i) => !usedIndices.has(i));
+    const newRecordings: SessionRecording[] = [];
+
+    if (tempRecordings && tempRecordings.length > 0) {
+      for (let i = 0; i < tempRecordings.length; i++) {
+        const index = availableIndices[i];
+        try {
+          const destUri = await finalizeRecording(tempRecordings[i].tempUri, id, index);
+          const { data: recData } = await supabase
+            .from('lesson_record_recordings')
+            .insert({
+              lesson_record_id: id,
+              index,
+              local_uri: destUri,
+              memo: tempRecordings[i].memo || null,
+            })
+            .select('id')
+            .single();
+          if (recData) {
+            newRecordings.push({
+              id: recData.id,
+              index,
+              localUri: destUri,
+              memo: tempRecordings[i].memo || null,
+            });
+          }
+        } catch {
+          // 録音保存失敗はレッスン記録の保存に影響しない
+        }
       }
     }
+
+    const updatedRecordings = [...remainingRecordings, ...newRecordings];
+
     set({
       records: get().records.map((r) =>
         r.id === id
@@ -222,6 +313,7 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
                   tempoBpm: entry.tempoBpm ?? null,
                 };
               }),
+              recordings: updatedRecordings,
             }
           : r,
       ),
@@ -229,9 +321,12 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
   },
 
   remove: async (id: string) => {
+    const record = get().records.find((r) => r.id === id);
+    for (const rec of record?.recordings ?? []) {
+      await deleteRecording(rec.localUri);
+    }
     const { error } = await supabase.from('lesson_records').delete().eq('id', id);
     if (error) return;
-    await deleteRecording(id);
     set({ records: get().records.filter((r) => r.id !== id) });
   },
 }));

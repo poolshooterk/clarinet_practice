@@ -10,7 +10,7 @@ jest.mock('@/lib/supabase', () => ({
 }));
 
 jest.mock('@/lib/recording', () => ({
-  finalizeRecording: jest.fn().mockResolvedValue(undefined),
+  finalizeRecording: jest.fn().mockResolvedValue('file:///data/recordings/lr-1-1.m4a'),
   deleteRecording: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -65,6 +65,7 @@ describe('useLessonRecordStore', () => {
                   textbooks: { title: 'ローズ 32のエチュード' },
                 },
               ],
+              lesson_record_recordings: [],
             },
           ],
           error: null,
@@ -83,6 +84,7 @@ describe('useLessonRecordStore', () => {
       durationMinutes: 20,
       tempoBpm: 100,
     });
+    expect(records[0].recordings).toEqual([]);
   });
 
   it('fetchAll で textbookEntries がない場合は空配列', async () => {
@@ -96,6 +98,7 @@ describe('useLessonRecordStore', () => {
               advice: null,
               notes: null,
               lesson_record_textbooks: [],
+              lesson_record_recordings: [],
             },
           ],
           error: null,
@@ -115,6 +118,7 @@ describe('useLessonRecordStore', () => {
           advice: null,
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -252,6 +256,7 @@ describe('useLessonRecordStore', () => {
           advice: '古いアドバイス',
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -288,6 +293,7 @@ describe('useLessonRecordStore', () => {
           advice: null,
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -332,6 +338,7 @@ describe('useLessonRecordStore', () => {
           advice: '元',
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -359,6 +366,7 @@ describe('useLessonRecordStore', () => {
           advice: '元',
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -393,6 +401,7 @@ describe('useLessonRecordStore', () => {
           advice: '元',
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -431,6 +440,7 @@ describe('useLessonRecordStore', () => {
           advice: null,
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
         {
           id: 'lr-2',
@@ -438,6 +448,7 @@ describe('useLessonRecordStore', () => {
           advice: null,
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -451,24 +462,43 @@ describe('useLessonRecordStore', () => {
     expect(useLessonRecordStore.getState().records[0].id).toBe('lr-2');
   });
 
-  it('add: tempRecordingUri あり → finalizeRecording がレコードIDで呼ばれる', async () => {
+  it('add: tempRecordings あり → finalizeRecording が (tempUri, lessonRecordId, index) で呼ばれる', async () => {
+    mockGetUser().mockResolvedValueOnce({ data: { user: { id: 'user-1' } } });
+    // lesson_records insert
     mockFrom().mockReturnValueOnce({
       insert: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           single: jest.fn().mockResolvedValue({
-            data: { id: 'lr-new', held_at: '2026-05-15T14:00:00+09:00', advice: null, notes: null },
+            data: { id: 'lr-new', held_at: '2026-05-20T05:00:00.000Z', advice: null, notes: null },
             error: null,
           }),
         }),
       }),
     });
-    await useLessonRecordStore
-      .getState()
-      .add(
-        { date: '2026-05-15', time: '14:00', advice: '', notes: '', textbookEntries: [] },
-        'file:///data/recordings/tmp.m4a',
-      );
-    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith('lr-new');
+    // lesson_record_recordings insert
+    mockFrom().mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'rec-1' }, error: null }),
+        }),
+      }),
+    });
+
+    await useLessonRecordStore.getState().add(
+      { date: '2026-05-20', time: '10:00', advice: '', notes: '', textbookEntries: [] },
+      [{ tempUri: 'file:///data/recordings/tmp-9999.m4a', memo: '' }],
+    );
+
+    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith(
+      'file:///data/recordings/tmp-9999.m4a',
+      'lr-new',
+      1,
+    );
+    expect(useLessonRecordStore.getState().records[0].recordings).toHaveLength(1);
+    expect(useLessonRecordStore.getState().records[0].recordings[0]).toMatchObject({
+      id: 'rec-1',
+      index: 1,
+    });
   });
 
   it('add: finalizeRecording が失敗しても record は保存される', async () => {
@@ -483,24 +513,30 @@ describe('useLessonRecordStore', () => {
       }),
     });
     mockRecording().finalizeRecording.mockRejectedValueOnce(new Error('disk full'));
-    await useLessonRecordStore
-      .getState()
-      .add(
-        { date: '2026-05-15', time: '14:00', advice: '', notes: '', textbookEntries: [] },
-        'file:///data/recordings/tmp.m4a',
-      );
+    await useLessonRecordStore.getState().add(
+      { date: '2026-05-15', time: '14:00', advice: '', notes: '', textbookEntries: [] },
+      [{ tempUri: 'file:///data/recordings/tmp.m4a', memo: '' }],
+    );
     expect(useLessonRecordStore.getState().records).toHaveLength(1);
   });
 
-  it('remove: deleteRecording がレコードIDで呼ばれる', async () => {
+  it('remove: 各録音の localUri で deleteRecording が呼ばれる', async () => {
     useLessonRecordStore.setState({
       records: [
         {
-          id: 'lr-1',
+          id: 'lr-abc',
           heldAt: '2026-05-15T05:00:00.000Z',
           advice: null,
           notes: null,
           textbookEntries: [],
+          recordings: [
+            {
+              id: 'rec-1',
+              index: 1 as const,
+              localUri: 'file:///data/recordings/lr-abc-1.m4a',
+              memo: null,
+            },
+          ],
         },
       ],
     });
@@ -509,7 +545,69 @@ describe('useLessonRecordStore', () => {
         eq: jest.fn().mockResolvedValue({ error: null }),
       }),
     });
-    await useLessonRecordStore.getState().remove('lr-1');
-    expect(mockRecording().deleteRecording).toHaveBeenCalledWith('lr-1');
+    await useLessonRecordStore.getState().remove('lr-abc');
+    expect(mockRecording().deleteRecording).toHaveBeenCalledWith(
+      'file:///data/recordings/lr-abc-1.m4a',
+    );
+  });
+
+  it('update: deletedRecordingIds → 削除対象録音の localUri で deleteRecording が呼ばれ recordings から除去される', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        {
+          id: 'lr-1',
+          heldAt: '2026-05-15T05:00:00.000Z',
+          advice: null,
+          notes: null,
+          textbookEntries: [],
+          recordings: [
+            {
+              id: 'rec-1',
+              index: 1 as const,
+              localUri: 'file:///data/recordings/lr-1-1.m4a',
+              memo: null,
+            },
+            {
+              id: 'rec-2',
+              index: 2 as const,
+              localUri: 'file:///data/recordings/lr-1-2.m4a',
+              memo: null,
+            },
+          ],
+        },
+      ],
+    });
+    // UPDATE lesson_records
+    mockFrom().mockReturnValueOnce({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    // DELETE lesson_record_textbooks
+    mockFrom().mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    // DELETE lesson_record_recordings
+    mockFrom().mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({
+        in: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+
+    await useLessonRecordStore.getState().update(
+      'lr-1',
+      { date: '2026-05-15', time: '10:00', advice: '', notes: '', textbookEntries: [] },
+      [],
+      ['rec-1'],
+    );
+
+    expect(mockRecording().deleteRecording).toHaveBeenCalledWith(
+      'file:///data/recordings/lr-1-1.m4a',
+    );
+    const recordings = useLessonRecordStore.getState().records[0].recordings;
+    expect(recordings).toHaveLength(1);
+    expect(recordings[0].id).toBe('rec-2');
   });
 });
