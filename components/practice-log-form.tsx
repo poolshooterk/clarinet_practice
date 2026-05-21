@@ -14,7 +14,7 @@ import { Platform, ScrollView } from 'react-native';
 import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
-import { RecordingSection } from '@/components/form/recording-section';
+import { RecordingSection, type RecordingChange } from '@/components/form/recording-section';
 import { TimerControl } from '@/components/timer-control';
 import {
   BASIC_GENRES,
@@ -24,20 +24,19 @@ import {
   practiceLogSchema,
   today,
 } from '@/forms/practice-log';
-import { usePracticeLogStore } from '@/store/practice-log';
+import { usePracticeLogStore, type SessionRecording } from '@/store/practice-log';
 import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTimerStore } from '@/store/timer';
 
 type Props = {
   onSubmit: (data: PracticeLogInput) => void | Promise<void>;
   initialValues?: PracticeLogInput;
-  existingRecordingUri?: string | null;
+  existingRecordings: SessionRecording[];
 };
 
 export type PracticeLogFormRef = {
   submit: () => void;
-  getTempRecordingUri: () => string | null;
-  shouldDeleteExistingRecording: () => boolean;
+  getRecordingChange: () => RecordingChange;
 };
 
 type TextbookEntryRowProps = {
@@ -246,14 +245,14 @@ function TextbookEntryRow({
 }
 
 export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function PracticeLogForm(
-  { onSubmit, initialValues, existingRecordingUri },
+  { onSubmit, initialValues, existingRecordings },
   ref,
 ) {
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
   const sessions = usePracticeLogStore((s) => s.sessions);
   const [showPicker, setShowPicker] = useState(false);
 
-  const recStateRef = useRef({ tempUri: null as string | null, reRecordTriggered: false });
+  const recChangeRef = useRef<RecordingChange>({ toAdd: [], toDelete: [] });
 
   const textbookIds = new Set(textbooks.map((t) => t.id));
   const lastTextbookEntries = (sessions[0]?.textbookEntries ?? [])
@@ -345,9 +344,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       });
       submitForm();
     },
-    getTempRecordingUri: () => recStateRef.current.tempUri,
-    shouldDeleteExistingRecording: () =>
-      recStateRef.current.reRecordTriggered && recStateRef.current.tempUri === null,
+    getRecordingChange: () => recChangeRef.current,
   }));
 
   return (
@@ -355,9 +352,9 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       <YStack gap="$4" p="$4">
         {/* 録音 */}
         <RecordingSection
-          existingRecordingUri={existingRecordingUri}
-          onChange={(s) => {
-            recStateRef.current = s;
+          existingRecordings={existingRecordings}
+          onChange={(change) => {
+            recChangeRef.current = change;
           }}
         />
 

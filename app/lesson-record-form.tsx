@@ -1,11 +1,10 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Alert, ScrollView } from 'react-native';
 
 import { LessonRecordForm } from '@/components/lesson-record-form';
+import type { RecordingChange } from '@/components/form/recording-section';
 import { type LessonRecordInput, splitHeldAt } from '@/forms/lesson-record';
-import { deleteRecording, getRecordingUri } from '@/lib/recording';
 import { useLessonRecordStore } from '@/store/lesson-record';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
@@ -18,22 +17,12 @@ export default function LessonRecordFormScreen() {
 
   const existing = id ? records.find((r) => r.id === id) : undefined;
 
-  const [existingRecordingUri, setExistingRecordingUri] = useState<string | null>(null);
-
   useFocusEffect(
     useCallback(() => {
       useTextbookCatalogStore.getState().fetchAll();
       useLessonRecordStore.getState().fetchAll();
     }, []),
   );
-
-  useEffect(() => {
-    if (!id) return;
-    const uri = getRecordingUri(id);
-    FileSystem.getInfoAsync(uri).then((info) => {
-      if (info.exists) setExistingRecordingUri(uri);
-    });
-  }, [id]);
 
   let defaultValues: LessonRecordInput | undefined;
   if (existing) {
@@ -52,16 +41,11 @@ export default function LessonRecordFormScreen() {
     };
   }
 
-  const handleSave = async (
-    values: LessonRecordInput,
-    tempUri: string | null,
-    shouldDeleteExisting: boolean,
-  ) => {
+  const handleSave = async (values: LessonRecordInput, recChange: RecordingChange) => {
     if (id) {
-      await update(id, values, tempUri);
-      if (shouldDeleteExisting) await deleteRecording(id);
+      await update(id, values, recChange.toAdd, recChange.toDelete);
     } else {
-      await add(values, tempUri);
+      await add(values, recChange.toAdd);
     }
     router.back();
   };
@@ -92,7 +76,7 @@ export default function LessonRecordFormScreen() {
       <ScrollView>
         <LessonRecordForm
           defaultValues={defaultValues}
-          existingRecordingUri={existingRecordingUri}
+          existingRecordings={existing?.recordings ?? []}
           onSubmit={handleSave}
           onDelete={id ? handleDelete : undefined}
         />

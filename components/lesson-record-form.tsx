@@ -12,7 +12,7 @@ import { Alert, Platform } from 'react-native';
 import { Button, Input, Paragraph, Select, TextArea, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
-import { RecordingSection } from '@/components/form/recording-section';
+import { RecordingSection, type RecordingChange } from '@/components/form/recording-section';
 import {
   currentTime,
   formatDate,
@@ -21,6 +21,7 @@ import {
   lessonRecordSchema,
   today,
 } from '@/forms/lesson-record';
+import type { SessionRecording } from '@/store/practice-log';
 import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
 
 type TextbookEntryRowProps = {
@@ -167,37 +168,26 @@ function TextbookEntryRow({
   );
 }
 
-const defaultOnSubmit = (
-  _values: LessonRecordInput,
-  _tempUri: string | null,
-  _shouldDelete: boolean,
-) => {
+const defaultOnSubmit = (_values: LessonRecordInput, _change: RecordingChange) => {
   Alert.alert('保存しました');
 };
 
 type Props = {
   defaultValues?: LessonRecordInput;
-  existingRecordingUri?: string | null;
-  onSubmit?: (
-    values: LessonRecordInput,
-    tempUri: string | null,
-    shouldDeleteExisting: boolean,
-  ) => void | Promise<void>;
+  existingRecordings?: SessionRecording[];
+  onSubmit?: (values: LessonRecordInput, recChange: RecordingChange) => void | Promise<void>;
   onDelete?: () => void;
 };
 
 export function LessonRecordForm({
   defaultValues,
-  existingRecordingUri,
+  existingRecordings = [],
   onSubmit = defaultOnSubmit,
   onDelete,
 }: Props) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [recState, setRecState] = useState({
-    tempUri: null as string | null,
-    reRecordTriggered: false,
-  });
+  const [recChange, setRecChange] = useState<RecordingChange>({ toAdd: [], toDelete: [] });
 
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
 
@@ -222,15 +212,14 @@ export function LessonRecordForm({
   const watchedEntries = watch('textbookEntries') ?? [];
 
   async function handleSave(values: LessonRecordInput) {
-    const shouldDelete = recState.reRecordTriggered && recState.tempUri === null;
-    await onSubmit(values, recState.tempUri, shouldDelete);
+    await onSubmit(values, recChange);
   }
 
   return (
     <YStack gap="$4" p="$4">
       <RecordingSection
-        existingRecordingUri={existingRecordingUri}
-        onChange={(s) => setRecState(s)}
+        existingRecordings={existingRecordings}
+        onChange={setRecChange}
       />
       <Controller
         control={control}

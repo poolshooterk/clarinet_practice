@@ -1,12 +1,10 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { Button, Paragraph, YStack } from 'tamagui';
 
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
 import { type PracticeLogInput } from '@/forms/practice-log';
-import { deleteRecording, getRecordingUri } from '@/lib/recording';
 import { usePracticeLogStore } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
@@ -19,13 +17,8 @@ export default function PracticeLogFormScreen() {
   const update = usePracticeLogStore((s) => s.update);
   const remove = usePracticeLogStore((s) => s.remove);
 
-  // 新規 vs 編集モードは urlId の有無で 1:1 に確定する。フォーム内での日付変更による
-  // 自動切替は行わない (重複時は DB の UNIQUE 制約 + duplicate Alert で誘導する)
   const effectiveId = urlId;
 
-  // フォーカス時に教本カタログと練習記録を再フェッチ。教本カタログが空のまま
-  // Select.Value が render されると、選択中の textbookId (UUID) がそのまま
-  // トリガーに露出するため、画面表示のたびに必ず最新化する。
   useFocusEffect(
     useCallback(() => {
       useTextbookCatalogStore.getState().fetchAll();
@@ -37,19 +30,6 @@ export default function PracticeLogFormScreen() {
     () => (effectiveId ? sessions.find((s) => s.id === effectiveId) : undefined),
     [effectiveId, sessions],
   );
-
-  const [existingRecordingUri, setExistingRecordingUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!effectiveId) {
-      setExistingRecordingUri(null);
-      return;
-    }
-    const uri = getRecordingUri(effectiveId);
-    FileSystem.getInfoAsync(uri).then((info) => {
-      setExistingRecordingUri(info.exists ? uri : null);
-    });
-  }, [effectiveId]);
 
   const initialValues = useMemo<PracticeLogInput | undefined>(
     () =>
@@ -80,10 +60,10 @@ export default function PracticeLogFormScreen() {
   );
 
   const handleSubmit = async (data: PracticeLogInput) => {
-    const tempUri = formRef.current?.getTempRecordingUri() ?? null;
+    const recChange = formRef.current?.getRecordingChange() ?? { toAdd: [], toDelete: [] };
     const result = effectiveId
-      ? await update(effectiveId, data, tempUri)
-      : await add(data, tempUri);
+      ? await update(effectiveId, data, recChange.toAdd, recChange.toDelete)
+      : await add(data, recChange.toAdd);
     if (!result.ok) {
       Alert.alert(
         '保存できません',
@@ -92,9 +72,6 @@ export default function PracticeLogFormScreen() {
           : '保存中にエラーが発生しました。時間を置いて再度お試しください。',
       );
       return;
-    }
-    if (effectiveId && !tempUri && (formRef.current?.shouldDeleteExistingRecording() ?? false)) {
-      await deleteRecording(effectiveId);
     }
     router.back();
   };
@@ -133,7 +110,7 @@ export default function PracticeLogFormScreen() {
         ref={formRef}
         onSubmit={handleSubmit}
         initialValues={initialValues}
-        existingRecordingUri={existingRecordingUri}
+        existingRecordings={editingSession?.recordings ?? []}
       />
       {effectiveId && (
         <YStack px="$4" pb="$6">
