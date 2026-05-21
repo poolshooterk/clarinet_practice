@@ -31,6 +31,15 @@ function RecordingSectionNative({ existingRecordingUri, onChange }: Props) {
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  const appliedExistingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (existingRecordingUri && appliedExistingRef.current !== existingRecordingUri) {
+      appliedExistingRef.current = existingRecordingUri;
+      setTempUri(existingRecordingUri);
+      setRecState('recorded');
+    }
+  }, [existingRecordingUri]);
+
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
