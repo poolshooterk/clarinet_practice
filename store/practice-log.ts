@@ -35,6 +35,7 @@ export type PracticeSession = {
   otherMemo: string | null;
   totalMinutes: number | null;
   memo: string | null;
+  reedNumber: string | null;
   textbookEntries: TextbookEntry[];
   basicMenuEntries: BasicMenuEntry[];
 };
@@ -60,6 +61,7 @@ type SessionRow = {
   other_memo: string | null;
   total_minutes: number | null;
   memo: string | null;
+  reed_number: string | null;
   practice_session_textbooks: {
     textbook_id: string;
     current_page: number;
@@ -107,7 +109,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data, error } = await supabase
       .from('practice_sessions')
       .select(
-        'id, practiced_at, duration_minutes, other_minutes, other_memo, total_minutes, memo, ' +
+        'id, practiced_at, duration_minutes, other_minutes, other_memo, total_minutes, memo, reed_number, ' +
           'practice_session_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title, total_pages, genre ) ), ' +
           'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms )',
       )
@@ -126,6 +128,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         otherMemo: row.other_memo ?? null,
         totalMinutes: row.total_minutes ?? null,
         memo: row.memo ?? null,
+        reedNumber: row.reed_number ?? null,
         textbookEntries: (row.practice_session_textbooks ?? []).map((entry) => ({
           textbookId: entry.textbook_id,
           textbookTitle: entry.textbooks?.title ?? '',
@@ -177,6 +180,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         other_memo: input.otherMemo || null,
         total_minutes: totalMinutesValue,
         memo: input.memo || null,
+        reed_number: input.reedNumber || null,
       })
       .select()
       .single();
@@ -250,6 +254,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       otherMemo: input.otherMemo || null,
       totalMinutes: totalMinutesValue,
       memo: input.memo || null,
+      reedNumber: input.reedNumber || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
         const maxTempo = computeMaxTempo(entry.tempoBpms);
@@ -309,6 +314,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         other_memo: input.otherMemo || null,
         total_minutes: totalMinutesValue,
         memo: input.memo || null,
+        reed_number: input.reedNumber || null,
       })
       .eq('id', id);
     if (sessionError) return classifyError(sessionError);
@@ -381,6 +387,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       otherMemo: input.otherMemo || null,
       totalMinutes: totalMinutesValue,
       memo: input.memo || null,
+      reedNumber: input.reedNumber || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
         const maxTempo = computeMaxTempo(entry.tempoBpms);

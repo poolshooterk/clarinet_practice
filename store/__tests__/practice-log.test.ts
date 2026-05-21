@@ -157,6 +157,7 @@ describe('usePracticeLogStore', () => {
       otherMemo: null,
       totalMinutes: null,
       memo: null,
+      reedNumber: null,
       textbookEntries: [],
       basicMenuEntries: [],
     };
@@ -494,6 +495,7 @@ describe('usePracticeLogStore', () => {
           otherMemo: null,
           totalMinutes: null,
           memo: null,
+          reedNumber: null,
           textbookEntries: [],
           basicMenuEntries: [],
         },
@@ -505,6 +507,7 @@ describe('usePracticeLogStore', () => {
           otherMemo: null,
           totalMinutes: null,
           memo: null,
+          reedNumber: null,
           textbookEntries: [],
           basicMenuEntries: [],
         },
@@ -532,6 +535,7 @@ describe('usePracticeLogStore', () => {
       otherMemo: null,
       totalMinutes: null,
       memo: null,
+      reedNumber: null,
       textbookEntries: [],
       basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
     };
@@ -548,6 +552,7 @@ describe('usePracticeLogStore', () => {
             otherMemo: null,
             totalMinutes: null,
             memo: null,
+            reedNumber: null,
             textbookEntries: [],
             basicMenuEntries: [],
           },
@@ -824,6 +829,7 @@ describe('usePracticeLogStore', () => {
             otherMemo: null,
             totalMinutes: null,
             memo: null,
+            reedNumber: null,
             textbookEntries: [],
             basicMenuEntries: [],
           },
@@ -858,6 +864,7 @@ describe('usePracticeLogStore', () => {
             otherMemo: null,
             totalMinutes: null,
             memo: null,
+            reedNumber: null,
             textbookEntries: [],
             basicMenuEntries: [],
           },
@@ -896,6 +903,7 @@ describe('usePracticeLogStore', () => {
           otherMemo: null,
           totalMinutes: null,
           memo: null,
+          reedNumber: null,
           textbookEntries: [],
           basicMenuEntries: [],
         },
@@ -911,6 +919,63 @@ describe('usePracticeLogStore', () => {
 
     expect(mockRecording().deleteRecording).toHaveBeenCalledWith('session-abc');
   });
+
+  it('add: reedNumber が sessions に保存される', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    // session insert
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: { id: 'session-new' },
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().add({
+      practicedAt: '2026-05-21',
+      textbookEntries: [],
+      reedNumber: 'A3',
+    });
+
+    expect(mockSupabase().from).toHaveBeenCalledWith('practice_sessions');
+    const insertCall = mockSupabase().from.mock.results[0].value.insert;
+    expect(insertCall).toHaveBeenCalledWith(expect.objectContaining({ reed_number: 'A3' }));
+  });
+
+  it('fetchAll: reed_number が reedNumber にマップされる', async () => {
+    mockSupabase().auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'user-1' } },
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      select: jest.fn().mockReturnValue({
+        order: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'session-1',
+              practiced_at: '2026-05-21',
+              duration_minutes: null,
+              other_minutes: null,
+              other_memo: null,
+              total_minutes: null,
+              memo: null,
+              reed_number: 'B2',
+              practice_session_textbooks: [],
+              practice_session_basic_menus: [],
+            },
+          ],
+          error: null,
+        }),
+      }),
+    });
+
+    await usePracticeLogStore.getState().fetchAll();
+    expect(usePracticeLogStore.getState().sessions[0].reedNumber).toBe('B2');
+  });
 });
 
 describe('calcSessionTime', () => {
@@ -922,6 +987,7 @@ describe('calcSessionTime', () => {
     otherMemo: null,
     totalMinutes: null,
     memo: null,
+    reedNumber: null,
     textbookEntries: [],
     basicMenuEntries: [],
   };
