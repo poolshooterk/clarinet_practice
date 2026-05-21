@@ -101,6 +101,23 @@ describe('stopRecording', () => {
       '録音ファイルURIが取得できませんでした',
     );
   });
+
+  it('getURI は stopAndUnloadAsync より前に呼ばれる', async () => {
+    const callOrder: string[] = [];
+    const mockRecording = {
+      stopAndUnloadAsync: jest.fn().mockImplementation(async () => {
+        callOrder.push('stopAndUnloadAsync');
+      }),
+      getURI: jest.fn().mockImplementation(() => {
+        callOrder.push('getURI');
+        return 'file:///tmp/some.caf';
+      }),
+    };
+
+    await stopRecording(mockRecording as never);
+
+    expect(callOrder.indexOf('getURI')).toBeLessThan(callOrder.indexOf('stopAndUnloadAsync'));
+  });
 });
 
 describe('finalizeRecording', () => {

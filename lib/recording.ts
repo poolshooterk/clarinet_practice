@@ -22,9 +22,9 @@ export async function startRecording(): Promise<Audio.Recording> {
 }
 
 export async function stopRecording(recording: Audio.Recording): Promise<string> {
+  const uri = recording.getURI();
   await recording.stopAndUnloadAsync();
   await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-  const uri = recording.getURI();
   if (!uri) throw new Error('録音ファイルURIが取得できませんでした');
   await FileSystem.moveAsync({ from: uri, to: TMP_PATH });
   return TMP_PATH;
