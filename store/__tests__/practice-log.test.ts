@@ -20,7 +20,7 @@ jest.mock('@/store/textbook-progress', () => ({
 }));
 
 jest.mock('@/lib/recording', () => ({
-  finalizeRecording: jest.fn().mockResolvedValue(undefined),
+  finalizeRecording: jest.fn().mockResolvedValue('file:///data/recordings/new-session-1.m4a'),
   deleteRecording: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -71,6 +71,7 @@ describe('usePracticeLogStore', () => {
                 { menu_type: 'long_tone', duration_minutes: 15, tempo_bpms: null },
                 { menu_type: 'tonguing', duration_minutes: 10, tempo_bpms: null },
               ],
+              practice_session_recordings: [],
             },
           ],
           error: null,
@@ -125,6 +126,7 @@ describe('usePracticeLogStore', () => {
                 },
               ],
               practice_session_basic_menus: [],
+              practice_session_recordings: [],
             },
           ],
           error: null,
@@ -160,6 +162,7 @@ describe('usePracticeLogStore', () => {
       reedNumber: null,
       textbookEntries: [],
       basicMenuEntries: [],
+      recordings: [],
     };
     usePracticeLogStore.setState({ sessions: [existing] });
 
@@ -498,6 +501,7 @@ describe('usePracticeLogStore', () => {
           reedNumber: null,
           textbookEntries: [],
           basicMenuEntries: [],
+          recordings: [],
         },
         {
           id: 'session-2',
@@ -510,6 +514,7 @@ describe('usePracticeLogStore', () => {
           reedNumber: null,
           textbookEntries: [],
           basicMenuEntries: [],
+          recordings: [],
         },
       ],
     });
@@ -538,6 +543,7 @@ describe('usePracticeLogStore', () => {
       reedNumber: null,
       textbookEntries: [],
       basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
+      recordings: [],
     };
 
     beforeEach(() => {
@@ -555,6 +561,7 @@ describe('usePracticeLogStore', () => {
             reedNumber: null,
             textbookEntries: [],
             basicMenuEntries: [],
+            recordings: [],
           },
         ],
         loading: false,
@@ -670,10 +677,11 @@ describe('usePracticeLogStore', () => {
     });
   });
 
-  it('add: tempRecordingUri あり → finalizeRecording がセッションIDで呼ばれる', async () => {
+  it('add: tempRecordings あり → finalizeRecording が (tempUri, sessionId, index) で呼ばれる', async () => {
     mockSupabase().auth.getUser.mockResolvedValueOnce({
       data: { user: { id: 'user-1' } },
     });
+    // session insert
     mockSupabase().from.mockReturnValueOnce({
       insert: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
@@ -681,25 +689,34 @@ describe('usePracticeLogStore', () => {
         }),
       }),
     });
+    // practice_session_recordings insert
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'rec-1' }, error: null }),
+        }),
+      }),
+    });
 
     await usePracticeLogStore.getState().add(
-      {
-        practicedAt: '2026-05-19',
-        longToneMinutes: undefined,
-        tonguingMinutes: undefined,
-        tonguingTempoBpms: [],
-        otherMinutes: undefined,
-        otherMemo: '',
-        memo: '',
-        textbookEntries: [],
-      },
-      'file:///data/recordings/tmp.m4a',
+      { practicedAt: '2026-05-19', textbookEntries: [] },
+      [{ tempUri: 'file:///data/recordings/tmp-1234.m4a', memo: '前半練習' }],
     );
 
-    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith('new-session');
+    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith(
+      'file:///data/recordings/tmp-1234.m4a',
+      'new-session',
+      1,
+    );
+    expect(usePracticeLogStore.getState().sessions[0].recordings).toHaveLength(1);
+    expect(usePracticeLogStore.getState().sessions[0].recordings[0]).toMatchObject({
+      id: 'rec-1',
+      index: 1,
+      memo: '前半練習',
+    });
   });
 
-  it('add: tempRecordingUri なし → finalizeRecording は呼ばれない', async () => {
+  it('add: tempRecordings なし → finalizeRecording は呼ばれない', async () => {
     mockSupabase().auth.getUser.mockResolvedValueOnce({
       data: { user: { id: 'user-1' } },
     });
@@ -713,52 +730,75 @@ describe('usePracticeLogStore', () => {
 
     await usePracticeLogStore.getState().add({
       practicedAt: '2026-05-19',
-      longToneMinutes: undefined,
-      tonguingMinutes: undefined,
-      tonguingTempoBpms: [],
-      otherMinutes: undefined,
-      otherMemo: '',
-      memo: '',
       textbookEntries: [],
     });
 
     expect(mockRecording().finalizeRecording).not.toHaveBeenCalled();
   });
 
-  it('update: tempRecordingUri あり → finalizeRecording がセッションIDで呼ばれる', async () => {
-    mockSupabase()
-      .from.mockReturnValueOnce({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null }),
-        }),
-      })
-      .mockReturnValueOnce({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null }),
-        }),
-      })
-      .mockReturnValueOnce({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null }),
-        }),
-      });
+  it('update: deletedRecordingIds → 削除対象録音の localUri で deleteRecording が呼ばれ recordings から除去される', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        {
+          id: 'session-1',
+          practicedAt: '2026-05-19',
+          durationMinutes: null,
+          otherMinutes: null,
+          otherMemo: null,
+          totalMinutes: null,
+          memo: null,
+          reedNumber: null,
+          textbookEntries: [],
+          basicMenuEntries: [],
+          recordings: [
+            {
+              id: 'rec-1',
+              index: 1 as const,
+              localUri: 'file:///data/recordings/session-1-1.m4a',
+              memo: null,
+            },
+            {
+              id: 'rec-2',
+              index: 2 as const,
+              localUri: 'file:///data/recordings/session-1-2.m4a',
+              memo: null,
+            },
+          ],
+        },
+      ],
+    });
+    // UPDATE practice_sessions
+    mockSupabase().from.mockReturnValueOnce({
+      update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+    // DELETE practice_session_textbooks
+    mockSupabase().from.mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+    // DELETE practice_session_basic_menus
+    mockSupabase().from.mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+    // DELETE practice_session_recordings
+    mockSupabase().from.mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({
+        in: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
 
     await usePracticeLogStore.getState().update(
-      'session-abc',
-      {
-        practicedAt: '2026-05-19',
-        longToneMinutes: undefined,
-        tonguingMinutes: undefined,
-        tonguingTempoBpms: [],
-        otherMinutes: undefined,
-        otherMemo: '',
-        memo: '',
-        textbookEntries: [],
-      },
-      'file:///data/recordings/tmp.m4a',
+      'session-1',
+      { practicedAt: '2026-05-19', textbookEntries: [] },
+      [],
+      ['rec-1'],
     );
 
-    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith('session-abc');
+    expect(mockRecording().deleteRecording).toHaveBeenCalledWith(
+      'file:///data/recordings/session-1-1.m4a',
+    );
+    const recordings = usePracticeLogStore.getState().sessions[0].recordings;
+    expect(recordings).toHaveLength(1);
+    expect(recordings[0].id).toBe('rec-2');
   });
 
   describe('UNIQUE 制約違反', () => {
@@ -832,6 +872,7 @@ describe('usePracticeLogStore', () => {
             reedNumber: null,
             textbookEntries: [],
             basicMenuEntries: [],
+            recordings: [],
           },
         ],
       });
@@ -867,6 +908,7 @@ describe('usePracticeLogStore', () => {
             reedNumber: null,
             textbookEntries: [],
             basicMenuEntries: [],
+            recordings: [],
           },
         ],
       });
@@ -892,7 +934,7 @@ describe('usePracticeLogStore', () => {
     });
   });
 
-  it('remove: deleteRecording がセッションIDで呼ばれる', async () => {
+  it('remove: 各録音の localUri で deleteRecording が呼ばれる', async () => {
     usePracticeLogStore.setState({
       sessions: [
         {
@@ -906,6 +948,20 @@ describe('usePracticeLogStore', () => {
           reedNumber: null,
           textbookEntries: [],
           basicMenuEntries: [],
+          recordings: [
+            {
+              id: 'rec-1',
+              index: 1 as const,
+              localUri: 'file:///data/recordings/session-abc-1.m4a',
+              memo: null,
+            },
+            {
+              id: 'rec-2',
+              index: 2 as const,
+              localUri: 'file:///data/recordings/session-abc-2.m4a',
+              memo: null,
+            },
+          ],
         },
       ],
     });
@@ -917,7 +973,12 @@ describe('usePracticeLogStore', () => {
 
     await usePracticeLogStore.getState().remove('session-abc');
 
-    expect(mockRecording().deleteRecording).toHaveBeenCalledWith('session-abc');
+    expect(mockRecording().deleteRecording).toHaveBeenCalledWith(
+      'file:///data/recordings/session-abc-1.m4a',
+    );
+    expect(mockRecording().deleteRecording).toHaveBeenCalledWith(
+      'file:///data/recordings/session-abc-2.m4a',
+    );
   });
 
   it('add: reedNumber が sessions に保存される', async () => {
@@ -966,6 +1027,7 @@ describe('usePracticeLogStore', () => {
               reed_number: 'B2',
               practice_session_textbooks: [],
               practice_session_basic_menus: [],
+              practice_session_recordings: [],
             },
           ],
           error: null,
@@ -990,6 +1052,7 @@ describe('calcSessionTime', () => {
     reedNumber: null,
     textbookEntries: [],
     basicMenuEntries: [],
+    recordings: [],
   };
 
   it('基礎練習もなく教本もなければ両方 0 になる', () => {

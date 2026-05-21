@@ -27,6 +27,13 @@ type BasicMenuEntry = {
   tempoBpms: number[];
 };
 
+export type SessionRecording = {
+  id: string;
+  index: 1 | 2 | 3;
+  localUri: string;
+  memo: string | null;
+};
+
 export type PracticeSession = {
   id: string;
   practicedAt: string;
@@ -38,6 +45,7 @@ export type PracticeSession = {
   reedNumber: string | null;
   textbookEntries: TextbookEntry[];
   basicMenuEntries: BasicMenuEntry[];
+  recordings: SessionRecording[];
 };
 
 export function calcSessionTime(session: PracticeSession): { basic: number; nonBasic: number } {
@@ -74,6 +82,12 @@ type SessionRow = {
     duration_minutes: number;
     tempo_bpms: number[] | null;
   }[];
+  practice_session_recordings: {
+    id: string;
+    index: number;
+    local_uri: string;
+    memo: string | null;
+  }[];
 };
 
 export type MutationResult = { ok: true } | { ok: false; reason: 'duplicate' | 'unknown' };
@@ -84,15 +98,18 @@ function classifyError(error: { code?: string } | null | undefined): MutationRes
   return { ok: false, reason: 'unknown' };
 }
 
+type TempRecording = { tempUri: string; memo: string };
+
 type PracticeLogState = {
   sessions: PracticeSession[];
   loading: boolean;
   fetchAll: () => Promise<void>;
-  add: (input: PracticeLogInput, tempRecordingUri?: string | null) => Promise<MutationResult>;
+  add: (input: PracticeLogInput, tempRecordings?: TempRecording[]) => Promise<MutationResult>;
   update: (
     id: string,
     input: PracticeLogInput,
-    tempRecordingUri?: string | null,
+    tempRecordings?: TempRecording[],
+    deletedRecordingIds?: string[],
   ) => Promise<MutationResult>;
   remove: (id: string) => Promise<void>;
 };
@@ -111,7 +128,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .select(
         'id, practiced_at, duration_minutes, other_minutes, other_memo, total_minutes, memo, reed_number, ' +
           'practice_session_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title, total_pages, genre ) ), ' +
-          'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms )',
+          'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms ), ' +
+          'practice_session_recordings ( id, index, local_uri, memo )',
       )
       .order('practiced_at', { ascending: false });
     set({ loading: false });
@@ -143,17 +161,22 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
           durationMinutes: m.duration_minutes,
           tempoBpms: m.tempo_bpms ?? [],
         })),
+        recordings: (row.practice_session_recordings ?? []).map((r) => ({
+          id: r.id,
+          index: r.index as 1 | 2 | 3,
+          localUri: r.local_uri,
+          memo: r.memo,
+        })),
       })),
     });
   },
 
-  add: async (input: PracticeLogInput, tempRecordingUri?: string | null) => {
+  add: async (input: PracticeLogInput, tempRecordings?: TempRecording[]) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return { ok: false, reason: 'unknown' };
 
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
-    // total_minutes 計算のため先に取得（関数末尾の取得を削除）
     const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
     const basicTextbookMinutes = input.textbookEntries
       .filter((e) => {
@@ -246,6 +269,36 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       }
     }
 
+    const recordings: SessionRecording[] = [];
+    if (tempRecordings && tempRecordings.length > 0) {
+      for (let i = 0; i < tempRecordings.length; i++) {
+        const index = (i + 1) as 1 | 2 | 3;
+        try {
+          const destUri = await finalizeRecording(tempRecordings[i].tempUri, sessionId, index);
+          const { data: recData } = await supabase
+            .from('practice_session_recordings')
+            .insert({
+              session_id: sessionId,
+              index,
+              local_uri: destUri,
+              memo: tempRecordings[i].memo || null,
+            })
+            .select('id')
+            .single();
+          if (recData) {
+            recordings.push({
+              id: (recData as { id: string }).id,
+              index,
+              localUri: destUri,
+              memo: tempRecordings[i].memo || null,
+            });
+          }
+        } catch {
+          // 録音保存失敗は記録の保存に影響しない
+        }
+      }
+    }
+
     const newSession: PracticeSession = {
       id: sessionId,
       practicedAt: input.practicedAt,
@@ -273,22 +326,20 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         durationMinutes: r.duration_minutes,
         tempoBpms: r.tempo_bpms ?? [],
       })),
+      recordings,
     };
-    if (tempRecordingUri) {
-      try {
-        await finalizeRecording(sessionId);
-      } catch {
-        // 録音ファイルの保存に失敗しても練習記録の保存は継続する
-      }
-    }
     set({ sessions: [newSession, ...get().sessions] });
     return { ok: true };
   },
 
-  update: async (id: string, input: PracticeLogInput, tempRecordingUri?: string | null) => {
+  update: async (
+    id: string,
+    input: PracticeLogInput,
+    tempRecordings?: TempRecording[],
+    deletedRecordingIds?: string[],
+  ) => {
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
-    // total_minutes 計算のため先に取得
     const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
     const basicTextbookMinutes = input.textbookEntries
       .filter((e) => {
@@ -379,6 +430,52 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       if (basicError) return { ok: false, reason: 'unknown' };
     }
 
+    const session = get().sessions.find((s) => s.id === id);
+    if (deletedRecordingIds && deletedRecordingIds.length > 0) {
+      for (const delId of deletedRecordingIds) {
+        const rec = session?.recordings.find((r) => r.id === delId);
+        if (rec) await deleteRecording(rec.localUri);
+      }
+      await supabase.from('practice_session_recordings').delete().in('id', deletedRecordingIds);
+    }
+
+    const remainingRecordings = (session?.recordings ?? []).filter(
+      (r) => !deletedRecordingIds?.includes(r.id),
+    );
+    const usedIndices = new Set(remainingRecordings.map((r) => r.index));
+    const availableIndices = ([1, 2, 3] as const).filter((i) => !usedIndices.has(i));
+    const newRecordings: SessionRecording[] = [];
+
+    if (tempRecordings && tempRecordings.length > 0) {
+      for (let i = 0; i < tempRecordings.length; i++) {
+        const index = availableIndices[i];
+        try {
+          const destUri = await finalizeRecording(tempRecordings[i].tempUri, id, index);
+          const { data: recData } = await supabase
+            .from('practice_session_recordings')
+            .insert({
+              session_id: id,
+              index,
+              local_uri: destUri,
+              memo: tempRecordings[i].memo || null,
+            })
+            .select('id')
+            .single();
+          if (recData) {
+            newRecordings.push({
+              id: (recData as { id: string }).id,
+              index,
+              localUri: destUri,
+              memo: tempRecordings[i].memo || null,
+            });
+          }
+        } catch {
+          // 録音保存失敗は記録の保存に影響しない
+        }
+      }
+    }
+
+    const updatedRecordings = [...remainingRecordings, ...newRecordings];
     const updatedSession: PracticeSession = {
       id,
       practicedAt: input.practicedAt,
@@ -406,22 +503,19 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         durationMinutes: r.duration_minutes,
         tempoBpms: r.tempo_bpms ?? [],
       })),
+      recordings: updatedRecordings,
     };
-    if (tempRecordingUri) {
-      try {
-        await finalizeRecording(id);
-      } catch {
-        // 録音ファイルの保存に失敗しても練習記録の保存は継続する
-      }
-    }
     set({ sessions: get().sessions.map((s) => (s.id === id ? updatedSession : s)) });
     return { ok: true };
   },
 
   remove: async (id: string) => {
+    const session = get().sessions.find((s) => s.id === id);
+    for (const rec of session?.recordings ?? []) {
+      await deleteRecording(rec.localUri);
+    }
     const { error } = await supabase.from('practice_sessions').delete().eq('id', id);
     if (error) return;
-    await deleteRecording(id);
     set({ sessions: get().sessions.filter((s) => s.id !== id) });
   },
 }));
