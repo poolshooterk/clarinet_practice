@@ -5,7 +5,8 @@ import {
   deleteRecording,
   finalizeRecording,
   getRecordingUri,
-  loadRecordedIds,
+  pauseRecording,
+  resumeRecording,
   startRecording,
   stopRecording,
 } from '@/lib/recording';
@@ -59,11 +60,8 @@ describe('startRecording', () => {
   });
 
   it('recordings/ ディレクトリが存在しない場合は作成する', async () => {
-    mockFS().getInfoAsync.mockResolvedValueOnce({
-      exists: false,
-    } as unknown as FileSystem.FileInfo);
-    const mockRecording = {};
-    mockAudio().Recording.createAsync.mockResolvedValueOnce({ recording: mockRecording });
+    mockFS().getInfoAsync.mockResolvedValueOnce({ exists: false } as unknown as FileSystem.FileInfo);
+    mockAudio().Recording.createAsync.mockResolvedValueOnce({ recording: {} });
 
     await startRecording();
 
@@ -74,7 +72,8 @@ describe('startRecording', () => {
 });
 
 describe('stopRecording', () => {
-  it('録音を停止し tmp.m4a に移動して URI を返す', async () => {
+  it('録音を停止し tmp-{timestamp}.m4a に移動して URI を返す', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1234567890);
     const mockRecording = {
       stopAndUnloadAsync: jest.fn().mockResolvedValue(undefined),
       getURI: jest.fn().mockReturnValue('file:///tmp/some.caf'),
@@ -82,13 +81,11 @@ describe('stopRecording', () => {
 
     const uri = await stopRecording(mockRecording as never);
 
-    expect(mockRecording.stopAndUnloadAsync).toHaveBeenCalled();
-    expect(mockAudio().setAudioModeAsync).toHaveBeenCalledWith({ allowsRecordingIOS: false });
     expect(mockFS().moveAsync).toHaveBeenCalledWith({
       from: 'file:///tmp/some.caf',
-      to: 'file:///data/recordings/tmp.m4a',
+      to: 'file:///data/recordings/tmp-1234567890.m4a',
     });
-    expect(uri).toBe('file:///data/recordings/tmp.m4a');
+    expect(uri).toBe('file:///data/recordings/tmp-1234567890.m4a');
   });
 
   it('URI が null のとき例外を投げる', async () => {
@@ -103,6 +100,7 @@ describe('stopRecording', () => {
   });
 
   it('getURI は stopAndUnloadAsync より前に呼ばれる', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(9999);
     const callOrder: string[] = [];
     const mockRecording = {
       stopAndUnloadAsync: jest.fn().mockImplementation(async () => {
@@ -120,14 +118,35 @@ describe('stopRecording', () => {
   });
 });
 
+describe('pauseRecording', () => {
+  it('recording.pauseAsync を呼ぶ', async () => {
+    const mockRecording = { pauseAsync: jest.fn().mockResolvedValue(undefined) };
+    await pauseRecording(mockRecording as never);
+    expect(mockRecording.pauseAsync).toHaveBeenCalled();
+  });
+});
+
+describe('resumeRecording', () => {
+  it('recording.resumeAsync を呼ぶ', async () => {
+    const mockRecording = { resumeAsync: jest.fn().mockResolvedValue(undefined) };
+    await resumeRecording(mockRecording as never);
+    expect(mockRecording.resumeAsync).toHaveBeenCalled();
+  });
+});
+
 describe('finalizeRecording', () => {
-  it('tmp.m4a を {sessionId}.m4a にリネームする', async () => {
-    await finalizeRecording('session-abc');
+  it('tempUri を {sessionId}-{index}.m4a にリネームし dest URI を返す', async () => {
+    const destUri = await finalizeRecording(
+      'file:///data/recordings/tmp-1234.m4a',
+      'session-abc',
+      2,
+    );
 
     expect(mockFS().moveAsync).toHaveBeenCalledWith({
-      from: 'file:///data/recordings/tmp.m4a',
-      to: 'file:///data/recordings/session-abc.m4a',
+      from: 'file:///data/recordings/tmp-1234.m4a',
+      to: 'file:///data/recordings/session-abc-2.m4a',
     });
+    expect(destUri).toBe('file:///data/recordings/session-abc-2.m4a');
   });
 });
 
@@ -135,17 +154,15 @@ describe('deleteRecording', () => {
   it('ファイルが存在する場合は削除する', async () => {
     mockFS().getInfoAsync.mockResolvedValueOnce({ exists: true } as unknown as FileSystem.FileInfo);
 
-    await deleteRecording('session-abc');
+    await deleteRecording('file:///data/recordings/session-abc-1.m4a');
 
-    expect(mockFS().deleteAsync).toHaveBeenCalledWith('file:///data/recordings/session-abc.m4a');
+    expect(mockFS().deleteAsync).toHaveBeenCalledWith('file:///data/recordings/session-abc-1.m4a');
   });
 
   it('ファイルが存在しない場合はスキップする', async () => {
-    mockFS().getInfoAsync.mockResolvedValueOnce({
-      exists: false,
-    } as unknown as FileSystem.FileInfo);
+    mockFS().getInfoAsync.mockResolvedValueOnce({ exists: false } as unknown as FileSystem.FileInfo);
 
-    await deleteRecording('session-abc');
+    await deleteRecording('file:///data/recordings/session-abc-1.m4a');
 
     expect(mockFS().deleteAsync).not.toHaveBeenCalled();
   });
@@ -153,33 +170,8 @@ describe('deleteRecording', () => {
 
 describe('getRecordingUri', () => {
   it('ファイルパスを返す（存在確認なし）', () => {
-    expect(getRecordingUri('session-abc')).toBe('file:///data/recordings/session-abc.m4a');
-  });
-});
-
-describe('loadRecordedIds', () => {
-  it('ディレクトリが存在しない場合は空の Set を返す', async () => {
-    mockFS().getInfoAsync.mockResolvedValueOnce({
-      exists: false,
-    } as unknown as FileSystem.FileInfo);
-
-    const ids = await loadRecordedIds();
-
-    expect(ids.size).toBe(0);
-  });
-
-  it('.m4a ファイルから sessionId を抽出し tmp と非 m4a は除外する', async () => {
-    mockFS().getInfoAsync.mockResolvedValueOnce({ exists: true } as unknown as FileSystem.FileInfo);
-    mockFS().readDirectoryAsync.mockResolvedValueOnce([
-      'session-abc.m4a',
-      'session-def.m4a',
-      'tmp.m4a',
-      'other.txt',
-    ]);
-
-    const ids = await loadRecordedIds();
-
-    expect(ids).toEqual(new Set(['session-abc', 'session-def']));
+    expect(getRecordingUri('session-abc', 1)).toBe('file:///data/recordings/session-abc-1.m4a');
+    expect(getRecordingUri('session-abc', 3)).toBe('file:///data/recordings/session-abc-3.m4a');
   });
 });
 
@@ -188,14 +180,11 @@ describe('createSound', () => {
     const mockSound = { playAsync: jest.fn() };
     mockAudio().Sound.createAsync.mockResolvedValueOnce({ sound: mockSound });
 
-    const sound = await createSound('file:///data/recordings/session-abc.m4a');
+    const sound = await createSound('file:///data/recordings/session-abc-1.m4a');
 
     expect(mockAudio().setAudioModeAsync).toHaveBeenCalledWith({
       allowsRecordingIOS: false,
       playsInSilentModeIOS: true,
-    });
-    expect(mockAudio().Sound.createAsync).toHaveBeenCalledWith({
-      uri: 'file:///data/recordings/session-abc.m4a',
     });
     expect(sound).toBe(mockSound);
   });

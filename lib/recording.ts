@@ -2,7 +2,6 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const RECORDINGS_DIR = `${FileSystem.documentDirectory}recordings/`;
-const TMP_PATH = `${RECORDINGS_DIR}tmp.m4a`;
 
 async function ensureDir(): Promise<void> {
   const info = await FileSystem.getInfoAsync(RECORDINGS_DIR);
@@ -26,40 +25,42 @@ export async function stopRecording(recording: Audio.Recording): Promise<string>
   await recording.stopAndUnloadAsync();
   await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
   if (!uri) throw new Error('録音ファイルURIが取得できませんでした');
-  await FileSystem.moveAsync({ from: uri, to: TMP_PATH });
-  return TMP_PATH;
+  const tmpPath = `${RECORDINGS_DIR}tmp-${Date.now()}.m4a`;
+  await FileSystem.moveAsync({ from: uri, to: tmpPath });
+  return tmpPath;
 }
 
-export async function finalizeRecording(sessionId: string): Promise<void> {
-  await FileSystem.moveAsync({
-    from: TMP_PATH,
-    to: `${RECORDINGS_DIR}${sessionId}.m4a`,
-  });
+export async function pauseRecording(recording: Audio.Recording): Promise<void> {
+  await recording.pauseAsync();
 }
 
-export async function deleteRecording(sessionId: string): Promise<void> {
-  const uri = `${RECORDINGS_DIR}${sessionId}.m4a`;
+export async function resumeRecording(recording: Audio.Recording): Promise<void> {
+  await recording.resumeAsync();
+}
+
+export async function finalizeRecording(
+  tempUri: string,
+  sessionId: string,
+  index: 1 | 2 | 3,
+): Promise<string> {
+  const destPath = `${RECORDINGS_DIR}${sessionId}-${index}.m4a`;
+  await FileSystem.moveAsync({ from: tempUri, to: destPath });
+  return destPath;
+}
+
+export async function deleteRecording(uri: string): Promise<void> {
   const info = await FileSystem.getInfoAsync(uri);
   if (info.exists) {
     await FileSystem.deleteAsync(uri);
   }
 }
 
-export function getRecordingUri(sessionId: string): string {
-  return `${RECORDINGS_DIR}${sessionId}.m4a`;
+export function getRecordingUri(sessionId: string, index: 1 | 2 | 3): string {
+  return `${RECORDINGS_DIR}${sessionId}-${index}.m4a`;
 }
 
 export async function createSound(uri: string): Promise<Audio.Sound> {
   await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
   const { sound } = await Audio.Sound.createAsync({ uri });
   return sound;
-}
-
-export async function loadRecordedIds(): Promise<Set<string>> {
-  const info = await FileSystem.getInfoAsync(RECORDINGS_DIR);
-  if (!info.exists) return new Set();
-  const files = await FileSystem.readDirectoryAsync(RECORDINGS_DIR);
-  return new Set(
-    files.filter((f) => f.endsWith('.m4a') && f !== 'tmp.m4a').map((f) => f.slice(0, -4)),
-  );
 }
