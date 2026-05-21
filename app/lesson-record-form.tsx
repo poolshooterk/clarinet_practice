@@ -1,12 +1,13 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
 
 import { LessonRecordForm } from '@/components/lesson-record-form';
 import { type LessonRecordInput, splitHeldAt } from '@/forms/lesson-record';
 import { deleteRecording, getRecordingUri } from '@/lib/recording';
 import { useLessonRecordStore } from '@/store/lesson-record';
+import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
 export default function LessonRecordFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -18,6 +19,13 @@ export default function LessonRecordFormScreen() {
   const existing = id ? records.find((r) => r.id === id) : undefined;
 
   const [existingRecordingUri, setExistingRecordingUri] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      useTextbookCatalogStore.getState().fetchAll();
+      useLessonRecordStore.getState().fetchAll();
+    }, []),
+  );
 
   useEffect(() => {
     if (!id) return;
