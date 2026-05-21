@@ -127,10 +127,10 @@ describe('pauseRecording', () => {
 });
 
 describe('resumeRecording', () => {
-  it('recording.resumeAsync を呼ぶ', async () => {
-    const mockRecording = { resumeAsync: jest.fn().mockResolvedValue(undefined) };
+  it('recording.startAsync を呼ぶ（expo-av は startAsync で一時停止を再開する）', async () => {
+    const mockRecording = { startAsync: jest.fn().mockResolvedValue(undefined) };
     await resumeRecording(mockRecording as never);
-    expect(mockRecording.resumeAsync).toHaveBeenCalled();
+    expect(mockRecording.startAsync).toHaveBeenCalled();
   });
 });
 

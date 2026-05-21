@@ -35,7 +35,7 @@ export async function pauseRecording(recording: Audio.Recording): Promise<void> 
 }
 
 export async function resumeRecording(recording: Audio.Recording): Promise<void> {
-  await recording.resumeAsync();
+  await recording.startAsync();
 }
 
 export async function finalizeRecording(
