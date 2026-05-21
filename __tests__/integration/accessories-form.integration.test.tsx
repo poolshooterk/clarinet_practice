@@ -26,7 +26,34 @@ jest.mock('@/store/equipment', () => ({
   ),
 }));
 
+const defaultEquipmentState = {
+  equipment: {
+    instrument: {
+      makerId: 'maker-1',
+      makerName: 'Buffet Crampon',
+      modelId: 'model-1',
+      modelName: 'R13',
+      startDate: '2024-01-01',
+    },
+    reed: { name: 'Vandoren V12', startDate: '2025-01-01' },
+    ligature: { name: 'Vandoren M/O', startDate: '2025-01-01' },
+    mouthpiece: { name: 'Vandoren B45', startDate: '2025-01-01' },
+  },
+  loaded: true,
+  loading: false,
+  fetchEquipment: jest.fn(),
+  saveEquipment: jest.fn().mockResolvedValue({ ok: true }),
+};
+
 describe('AccessoriesForm (integration)', () => {
+  beforeEach(() => {
+    const { useEquipmentStore } = jest.requireMock('@/store/equipment');
+    useEquipmentStore.mockImplementation(
+      (selector: (s: typeof defaultEquipmentState) => unknown) =>
+        selector(defaultEquipmentState),
+    );
+  });
+
   it('リード名が表示される', async () => {
     renderWithProviders(<AccessoriesForm />);
     await waitFor(() => {
@@ -37,25 +64,9 @@ describe('AccessoriesForm (integration)', () => {
   it('リード名を変更して保存すると saveEquipment が呼ばれる', async () => {
     const { useEquipmentStore } = jest.requireMock('@/store/equipment');
     const mockSave = jest.fn().mockResolvedValue({ ok: true });
-    useEquipmentStore.mockImplementation((selector: (s: unknown) => unknown) =>
-      selector({
-        equipment: {
-          instrument: {
-            makerId: 'maker-1',
-            makerName: 'Buffet Crampon',
-            modelId: 'model-1',
-            modelName: 'R13',
-            startDate: '2024-01-01',
-          },
-          reed: { name: 'Vandoren V12', startDate: '2025-01-01' },
-          ligature: { name: 'Vandoren M/O', startDate: '2025-01-01' },
-          mouthpiece: { name: 'Vandoren B45', startDate: '2025-01-01' },
-        },
-        loaded: true,
-        loading: false,
-        fetchEquipment: jest.fn(),
-        saveEquipment: mockSave,
-      }),
+    useEquipmentStore.mockImplementation(
+      (selector: (s: typeof defaultEquipmentState) => unknown) =>
+        selector({ ...defaultEquipmentState, saveEquipment: mockSave }),
     );
     renderWithProviders(<AccessoriesForm />);
     const reedInput = screen.getByLabelText('リード名');
