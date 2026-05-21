@@ -36,7 +36,6 @@ jest.mock('@/lib/recording', () => ({
   stopRecording: jest.fn().mockResolvedValue('file:///recordings/tmp.m4a'),
   getRecordingUri: jest.fn().mockReturnValue(null),
   createSound: jest.fn().mockResolvedValue(undefined),
-  loadRecordedIds: jest.fn().mockResolvedValue(new Set()),
 }));
 
 // Select は Portal を使うため jest 環境では PortalProvider が不足してエラーになる。
@@ -418,6 +417,7 @@ describe('PracticeLogForm (integration)', () => {
               },
             ],
             basicMenuEntries: [],
+            recordings: [],
           },
         ],
         loading: false,
@@ -455,6 +455,7 @@ describe('PracticeLogForm (integration)', () => {
               },
             ],
             basicMenuEntries: [],
+            recordings: [],
           },
         ],
         loading: false,
@@ -603,6 +604,7 @@ function makeSession(overrides: Partial<PracticeSession>): PracticeSession {
     reedNumber: null,
     textbookEntries: [],
     basicMenuEntries: [],
+    recordings: [],
     ...overrides,
   };
 }

@@ -64,8 +64,7 @@ describe('LessonRecordForm (integration)', () => {
       time: '14:00',
       textbookEntries: [],
     });
-    expect(onSubmit.mock.calls[0][1]).toBeNull();
-    expect(onSubmit.mock.calls[0][2]).toBe(false);
+    expect(onSubmit.mock.calls[0][1]).toEqual({ toAdd: [], toDelete: [] });
   });
 
   it('アドバイスと気づきを入力して保存すると onSubmit に値が渡される', async () => {

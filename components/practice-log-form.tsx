@@ -31,7 +31,7 @@ import { useTimerStore } from '@/store/timer';
 type Props = {
   onSubmit: (data: PracticeLogInput) => void | Promise<void>;
   initialValues?: PracticeLogInput;
-  existingRecordings: SessionRecording[];
+  existingRecordings?: SessionRecording[];
 };
 
 export type PracticeLogFormRef = {
@@ -245,7 +245,7 @@ function TextbookEntryRow({
 }
 
 export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function PracticeLogForm(
-  { onSubmit, initialValues, existingRecordings },
+  { onSubmit, initialValues, existingRecordings = [] },
   ref,
 ) {
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);

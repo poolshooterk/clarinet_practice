@@ -17,6 +17,7 @@ function makeSession(
     reedNumber: null,
     textbookEntries: [],
     basicMenuEntries: [],
+    recordings: [],
   };
 }
 

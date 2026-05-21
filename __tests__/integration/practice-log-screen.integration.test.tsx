@@ -26,7 +26,6 @@ jest.mock('@/lib/recording', () => ({
   stopRecording: jest.fn().mockResolvedValue('file:///recordings/tmp.m4a'),
   getRecordingUri: jest.fn().mockReturnValue(null),
   createSound: jest.fn().mockResolvedValue(undefined),
-  loadRecordedIds: jest.fn().mockResolvedValue(new Set()),
 }));
 
 const THIS_MONTH = today().slice(0, 7);
@@ -53,6 +52,7 @@ const makeSession = (id: string, practicedAt: string, durationMinutes: number | 
   reedNumber: null,
   textbookEntries: [],
   basicMenuEntries: [],
+  recordings: [],
 });
 
 describe('PracticeLogScreen (integration)', () => {
