@@ -19,7 +19,6 @@ jest.mock('@/lib/recording', () => ({
   deleteRecording: jest.fn().mockResolvedValue(undefined),
   getRecordingUri: jest.fn((id: string) => `file:///recordings/${id}.m4a`),
   createSound: jest.fn(),
-  loadRecordedIds: jest.fn().mockResolvedValue(new Set()),
 }));
 
 describe('LessonScreen (integration)', () => {
@@ -33,6 +32,7 @@ describe('LessonScreen (integration)', () => {
           advice: 'タンギングを軽く',
           notes: null,
           textbookEntries: [],
+          recordings: [],
         },
       ],
       loading: false,

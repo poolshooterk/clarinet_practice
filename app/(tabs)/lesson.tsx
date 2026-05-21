@@ -1,11 +1,15 @@
 import { router, Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable } from 'react-native';
 import { Paragraph, XStack, YStack } from 'tamagui';
 
-import { formatHeldAt } from '@/forms/lesson-record';
-import { loadRecordedIds } from '@/lib/recording';
+import { formatHeldAt, today } from '@/forms/lesson-record';
 import { useLessonRecordStore } from '@/store/lesson-record';
+
+function formatMonthLabel(month: string): string {
+  const [y, m] = month.split('-');
+  return `${y}年${Number(m)}月`;
+}
 
 export default function LessonScreen() {
   const records = useLessonRecordStore((s) => s.records);
@@ -13,14 +17,51 @@ export default function LessonScreen() {
   const fetchAll = useLessonRecordStore((s) => s.fetchAll);
   const remove = useLessonRecordStore((s) => s.remove);
 
-  const [recordedIds, setRecordedIds] = useState<Set<string>>(new Set());
+  const currentMonth = today().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   useFocusEffect(
     useCallback(() => {
       fetchAll();
-      loadRecordedIds().then(setRecordedIds);
     }, [fetchAll]),
   );
+
+  function prevMonth() {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  function nextMonth() {
+    if (selectedMonth >= currentMonth) return;
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m, 1);
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  const monthRecords = records.filter((r) => r.heldAt.startsWith(selectedMonth));
+
+  const monthlySummary = useMemo(() => {
+    const sorted = [...monthRecords].sort((a, b) => a.heldAt.localeCompare(b.heldAt));
+    const byTextbook = new Map<string, { title: string; pages: number[] }>();
+    for (const record of sorted) {
+      for (const entry of record.textbookEntries) {
+        if (!byTextbook.has(entry.textbookId)) {
+          byTextbook.set(entry.textbookId, { title: entry.textbookTitle, pages: [] });
+        }
+        byTextbook.get(entry.textbookId)!.pages.push(entry.currentPage);
+      }
+    }
+    const progress = Array.from(byTextbook.values())
+      .map(({ title, pages }) => ({
+        title,
+        first: pages[0],
+        last: pages[pages.length - 1],
+        delta: pages[pages.length - 1] - pages[0],
+      }))
+      .filter((p) => p.delta > 0);
+    return { count: monthRecords.length, progress };
+  }, [monthRecords]);
 
   const handleLongPress = (id: string) => {
     Alert.alert('レッスン記録を削除', 'この記録を削除しますか？', [
@@ -33,19 +74,64 @@ export default function LessonScreen() {
     <>
       <Stack.Screen options={{ title: 'レッスン' }} />
       <FlatList
-        data={records}
+        data={monthRecords}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
-          <XStack justify="space-between" items="center" p="$3">
-            <Paragraph fontSize="$2" color="$color10">
-              {`${records.length}件`}
-            </Paragraph>
-            <Pressable onPress={() => router.push('/lesson-record-form')}>
-              <Paragraph color="$blue9" fontSize="$2">
-                ＋ 追加
+          <YStack>
+            <XStack justify="space-between" items="center" px="$4" pt="$3" pb="$1">
+              <Pressable onPress={prevMonth} aria-label="前月へ">
+                <Paragraph color="$blue9" fontSize="$5">
+                  ＜
+                </Paragraph>
+              </Pressable>
+              <Paragraph fontWeight="bold" fontSize="$4">
+                {formatMonthLabel(selectedMonth)}
               </Paragraph>
-            </Pressable>
-          </XStack>
+              <Pressable
+                onPress={nextMonth}
+                aria-label="次月へ"
+                disabled={selectedMonth >= currentMonth}
+              >
+                <Paragraph
+                  color={selectedMonth >= currentMonth ? '$color8' : '$blue9'}
+                  fontSize="$5"
+                >
+                  ＞
+                </Paragraph>
+              </Pressable>
+            </XStack>
+
+            {monthlySummary.count > 0 && (
+              <YStack
+                mx="$3"
+                mb="$2"
+                p="$3"
+                bg="$color1"
+                rounded="$3"
+                borderWidth={1}
+                borderColor="$borderColor"
+                gap="$1"
+              >
+                <Paragraph fontSize="$3" fontWeight="600">
+                  今月のレッスン: {monthlySummary.count}回
+                </Paragraph>
+                {monthlySummary.progress.map((p) => (
+                  <Paragraph key={p.title} fontSize="$2" color="$color11">
+                    {`● ${p.title} p.${p.first}→p.${p.last} (+${p.delta})`}
+                  </Paragraph>
+                ))}
+              </YStack>
+            )}
+
+            <XStack justify="space-between" items="center" px="$3" pb="$1">
+              <Paragraph fontSize="$2" color="$color10">{`${monthlySummary.count}件`}</Paragraph>
+              <Pressable onPress={() => router.push('/lesson-record-form')}>
+                <Paragraph color="$blue9" fontSize="$2">
+                  ＋ 追加
+                </Paragraph>
+              </Pressable>
+            </XStack>
+          </YStack>
         }
         ListEmptyComponent={
           !loading ? (
@@ -71,7 +157,7 @@ export default function LessonScreen() {
             >
               <XStack items="center" gap="$2">
                 <Paragraph fontWeight="bold">{formatHeldAt(item.heldAt)}</Paragraph>
-                {recordedIds.has(item.id) && (
+                {item.recordings.length > 0 && (
                   <Paragraph
                     fontSize="$1"
                     color="$blue9"
@@ -90,11 +176,13 @@ export default function LessonScreen() {
                   {item.advice}
                 </Paragraph>
               ) : null}
-              {item.notes ? (
-                <Paragraph fontSize="$2" color="$color10" numberOfLines={2} mt="$1">
-                  {item.notes}
+              {item.textbookEntries.length > 0 && (
+                <Paragraph fontSize="$2" color="$color10" mt="$1">
+                  {item.textbookEntries
+                    .map((e) => `${e.textbookTitle} p.${e.currentPage}`)
+                    .join(' / ')}
                 </Paragraph>
-              ) : null}
+              )}
             </YStack>
           </Pressable>
         )}

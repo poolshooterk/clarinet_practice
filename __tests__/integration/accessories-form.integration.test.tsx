@@ -48,9 +48,8 @@ const defaultEquipmentState = {
 describe('AccessoriesForm (integration)', () => {
   beforeEach(() => {
     const { useEquipmentStore } = jest.requireMock('@/store/equipment');
-    useEquipmentStore.mockImplementation(
-      (selector: (s: typeof defaultEquipmentState) => unknown) =>
-        selector(defaultEquipmentState),
+    useEquipmentStore.mockImplementation((selector: (s: typeof defaultEquipmentState) => unknown) =>
+      selector(defaultEquipmentState),
     );
   });
 
@@ -64,9 +63,8 @@ describe('AccessoriesForm (integration)', () => {
   it('リード名を変更して保存すると saveEquipment が呼ばれる', async () => {
     const { useEquipmentStore } = jest.requireMock('@/store/equipment');
     const mockSave = jest.fn().mockResolvedValue({ ok: true });
-    useEquipmentStore.mockImplementation(
-      (selector: (s: typeof defaultEquipmentState) => unknown) =>
-        selector({ ...defaultEquipmentState, saveEquipment: mockSave }),
+    useEquipmentStore.mockImplementation((selector: (s: typeof defaultEquipmentState) => unknown) =>
+      selector({ ...defaultEquipmentState, saveEquipment: mockSave }),
     );
     renderWithProviders(<AccessoriesForm />);
     const reedInput = screen.getByLabelText('リード名');

@@ -5,7 +5,6 @@ import { Paragraph, XStack, YStack } from 'tamagui';
 
 import { PracticeChart } from '@/components/practice-chart';
 import { BASIC_MENUS, today } from '@/forms/practice-log';
-import { loadRecordedIds } from '@/lib/recording';
 import { calcSessionTime, usePracticeLogStore } from '@/store/practice-log';
 
 function dayOfWeek(dateStr: string): string {
@@ -32,12 +31,10 @@ export default function PracticeLogScreen() {
 
   const currentMonth = today().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [recordedIds, setRecordedIds] = useState<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
       fetchAll();
-      loadRecordedIds().then(setRecordedIds);
     }, [fetchAll]),
   );
 
@@ -137,7 +134,7 @@ export default function PracticeLogScreen() {
                   {`${item.practicedAt}（${dayOfWeek(item.practicedAt)}）`}
                 </Paragraph>
                 <XStack gap="$2" items="center">
-                  {recordedIds.has(item.id) && (
+                  {item.recordings.length > 0 && (
                     <Paragraph
                       fontSize="$1"
                       color="$blue9"
