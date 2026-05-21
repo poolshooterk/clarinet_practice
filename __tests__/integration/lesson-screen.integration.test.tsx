@@ -32,6 +32,7 @@ describe('LessonScreen (integration)', () => {
           heldAt: '2026-05-15T05:00:00.000Z',
           advice: 'タンギングを軽く',
           notes: null,
+          textbookEntries: [],
         },
       ],
       loading: false,

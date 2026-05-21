@@ -15,7 +15,7 @@ describe('LessonRecordForm (integration)', () => {
     renderWithProviders(
       <LessonRecordForm
         onSubmit={onSubmit}
-        defaultValues={{ date: '', time: '14:00', advice: '', notes: '' }}
+        defaultValues={{ date: '', time: '14:00', advice: '', notes: '', textbookEntries: [] }}
       />,
     );
     fireEvent.press(screen.getByText('保存'));
@@ -30,7 +30,7 @@ describe('LessonRecordForm (integration)', () => {
     renderWithProviders(
       <LessonRecordForm
         onSubmit={onSubmit}
-        defaultValues={{ date: '2026-05-15', time: '', advice: '', notes: '' }}
+        defaultValues={{ date: '2026-05-15', time: '', advice: '', notes: '', textbookEntries: [] }}
       />,
     );
     fireEvent.press(screen.getByText('保存'));
@@ -45,7 +45,13 @@ describe('LessonRecordForm (integration)', () => {
     renderWithProviders(
       <LessonRecordForm
         onSubmit={onSubmit}
-        defaultValues={{ date: '2026-05-15', time: '14:00', advice: '', notes: '' }}
+        defaultValues={{
+          date: '2026-05-15',
+          time: '14:00',
+          advice: '',
+          notes: '',
+          textbookEntries: [],
+        }}
       />,
     );
     fireEvent.press(screen.getByText('保存'));
@@ -62,7 +68,13 @@ describe('LessonRecordForm (integration)', () => {
     renderWithProviders(
       <LessonRecordForm
         onSubmit={onSubmit}
-        defaultValues={{ date: '2026-05-15', time: '14:00', advice: '', notes: '' }}
+        defaultValues={{
+          date: '2026-05-15',
+          time: '14:00',
+          advice: '',
+          notes: '',
+          textbookEntries: [],
+        }}
       />,
     );
     fireEvent.changeText(screen.getByLabelText('アドバイス'), 'タンギングを軽く');
@@ -87,6 +99,7 @@ describe('LessonRecordForm (integration)', () => {
           time: '14:00',
           advice: 'アドバイスあり',
           notes: 'メモあり',
+          textbookEntries: [],
         }}
       />,
     );

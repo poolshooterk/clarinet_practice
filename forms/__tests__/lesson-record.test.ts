@@ -8,8 +8,11 @@ import {
 } from '@/forms/lesson-record';
 
 describe('lessonRecordSchema', () => {
-  it('date と time が揃っていれば有効', () => {
-    expect(lessonRecordSchema.safeParse({ date: '2026-05-15', time: '14:00' }).success).toBe(true);
+  it('date と time と textbookEntries が揃っていれば有効', () => {
+    expect(
+      lessonRecordSchema.safeParse({ date: '2026-05-15', time: '14:00', textbookEntries: [] })
+        .success,
+    ).toBe(true);
   });
 
   it('advice と notes を含む場合も有効', () => {
@@ -19,6 +22,7 @@ describe('lessonRecordSchema', () => {
         time: '14:00',
         advice: 'タンギングを軽く',
         notes: '息のスピードが足りない',
+        textbookEntries: [],
       }).success,
     ).toBe(true);
   });
@@ -46,7 +50,10 @@ describe('lessonRecordSchema', () => {
   });
 
   it('advice と notes は省略可能', () => {
-    expect(lessonRecordSchema.safeParse({ date: '2026-05-15', time: '14:00' }).success).toBe(true);
+    expect(
+      lessonRecordSchema.safeParse({ date: '2026-05-15', time: '14:00', textbookEntries: [] })
+        .success,
+    ).toBe(true);
   });
 });
 
@@ -166,8 +173,12 @@ describe('textbookEntrySchema', () => {
     expect(r.success).toBe(false);
   });
 
-  it('textbookEntries を省略すると空配列がデフォルトになる', () => {
-    const r = lessonRecordSchema.safeParse({ date: '2026-05-15', time: '14:00' });
+  it('textbookEntries が空配列のとき有効', () => {
+    const r = lessonRecordSchema.safeParse({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [],
+    });
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.textbookEntries).toEqual([]);
   });

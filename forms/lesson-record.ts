@@ -19,7 +19,7 @@ export const lessonRecordSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/, '時刻を入力してください'),
   advice: z.string().optional(),
   notes: z.string().optional(),
-  textbookEntries: z.array(textbookEntrySchema).default([]),
+  textbookEntries: z.array(textbookEntrySchema),
 });
 
 export type LessonRecordInput = z.infer<typeof lessonRecordSchema>;

@@ -35,6 +35,12 @@ export default function LessonRecordFormScreen() {
       time,
       advice: existing.advice ?? '',
       notes: existing.notes ?? '',
+      textbookEntries: existing.textbookEntries.map((e) => ({
+        textbookId: e.textbookId,
+        currentPage: e.currentPage,
+        durationMinutes: e.durationMinutes ?? undefined,
+        tempoBpm: e.tempoBpm ?? undefined,
+      })),
     };
   }
 
