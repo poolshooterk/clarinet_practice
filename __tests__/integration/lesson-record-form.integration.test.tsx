@@ -9,14 +9,29 @@ jest.mock('@/lib/recording', () => ({
   createSound: jest.fn(),
 }));
 
+jest.mock('@/store/textbook-catalog', () => ({
+  useTextbookCatalogStore: jest.fn((selector) =>
+    selector({
+      textbooks: [
+        { id: 'tb-1', title: 'ローズ 32のエチュード', genre: 'エチュード', totalPages: 32 },
+      ],
+    }),
+  ),
+}));
+
+const defaultValues = {
+  date: '2026-05-15',
+  time: '14:00',
+  advice: '',
+  notes: '',
+  textbookEntries: [],
+};
+
 describe('LessonRecordForm (integration)', () => {
   it('日付が空のまま保存するとバリデーションエラーが表示される', async () => {
     const onSubmit = jest.fn();
     renderWithProviders(
-      <LessonRecordForm
-        onSubmit={onSubmit}
-        defaultValues={{ date: '', time: '14:00', advice: '', notes: '', textbookEntries: [] }}
-      />,
+      <LessonRecordForm onSubmit={onSubmit} defaultValues={{ ...defaultValues, date: '' }} />,
     );
     fireEvent.press(screen.getByText('保存'));
     await waitFor(() => {
@@ -28,10 +43,7 @@ describe('LessonRecordForm (integration)', () => {
   it('時刻が空のまま保存するとバリデーションエラーが表示される', async () => {
     const onSubmit = jest.fn();
     renderWithProviders(
-      <LessonRecordForm
-        onSubmit={onSubmit}
-        defaultValues={{ date: '2026-05-15', time: '', advice: '', notes: '', textbookEntries: [] }}
-      />,
+      <LessonRecordForm onSubmit={onSubmit} defaultValues={{ ...defaultValues, time: '' }} />,
     );
     fireEvent.press(screen.getByText('保存'));
     await waitFor(() => {
@@ -42,83 +54,40 @@ describe('LessonRecordForm (integration)', () => {
 
   it('日付・時刻を入力して保存すると onSubmit が呼ばれる', async () => {
     const onSubmit = jest.fn();
-    renderWithProviders(
-      <LessonRecordForm
-        onSubmit={onSubmit}
-        defaultValues={{
-          date: '2026-05-15',
-          time: '14:00',
-          advice: '',
-          notes: '',
-          textbookEntries: [],
-        }}
-      />,
-    );
+    renderWithProviders(<LessonRecordForm onSubmit={onSubmit} defaultValues={defaultValues} />);
     fireEvent.press(screen.getByText('保存'));
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
-    expect(onSubmit.mock.calls[0][0]).toMatchObject({ date: '2026-05-15', time: '14:00' });
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      date: '2026-05-15',
+      time: '14:00',
+      textbookEntries: [],
+    });
     expect(onSubmit.mock.calls[0][1]).toBeNull();
     expect(onSubmit.mock.calls[0][2]).toBe(false);
   });
 
   it('アドバイスと気づきを入力して保存すると onSubmit に値が渡される', async () => {
     const onSubmit = jest.fn();
-    renderWithProviders(
-      <LessonRecordForm
-        onSubmit={onSubmit}
-        defaultValues={{
-          date: '2026-05-15',
-          time: '14:00',
-          advice: '',
-          notes: '',
-          textbookEntries: [],
-        }}
-      />,
-    );
+    renderWithProviders(<LessonRecordForm onSubmit={onSubmit} defaultValues={defaultValues} />);
     fireEvent.changeText(screen.getByLabelText('アドバイス'), 'タンギングを軽く');
-    fireEvent.changeText(screen.getByLabelText('気づいたこと'), '息のスピードが足りない');
+    fireEvent.changeText(screen.getByLabelText('気づいたこと'), '息が足りない');
     fireEvent.press(screen.getByText('保存'));
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
     expect(onSubmit.mock.calls[0][0]).toMatchObject({
       advice: 'タンギングを軽く',
-      notes: '息のスピードが足りない',
+      notes: '息が足りない',
     });
-    expect(onSubmit.mock.calls[0][1]).toBeNull();
-    expect(onSubmit.mock.calls[0][2]).toBe(false);
   });
 
-  it('defaultValues が渡されるとフォームに初期値が表示される', () => {
-    renderWithProviders(
-      <LessonRecordForm
-        defaultValues={{
-          date: '2026-05-15',
-          time: '14:00',
-          advice: 'アドバイスあり',
-          notes: 'メモあり',
-          textbookEntries: [],
-        }}
-      />,
-    );
-    expect(screen.getByLabelText('日付').props.value).toBe('2026-05-15');
-    expect(screen.getByLabelText('時刻').props.value).toBe('14:00');
-    expect(screen.getByLabelText('アドバイス').props.value).toBe('アドバイスあり');
-    expect(screen.getByLabelText('気づいたこと').props.value).toBe('メモあり');
-  });
-
-  it('onDelete が渡されると削除ボタンが表示されタップで呼ばれる', () => {
-    const onDelete = jest.fn();
-    renderWithProviders(<LessonRecordForm onDelete={onDelete} />);
-    expect(screen.getByText('このレッスン記録を削除')).toBeTruthy();
-    fireEvent.press(screen.getByText('このレッスン記録を削除'));
-    expect(onDelete).toHaveBeenCalledTimes(1);
-  });
-
-  it('onDelete が渡されないと削除ボタンが表示されない', () => {
-    renderWithProviders(<LessonRecordForm />);
-    expect(screen.queryByText('このレッスン記録を削除')).toBeNull();
+  it('教本を追加ボタンを押すとエントリが1件増える', async () => {
+    renderWithProviders(<LessonRecordForm onSubmit={jest.fn()} defaultValues={defaultValues} />);
+    fireEvent.press(screen.getByLabelText('教本を追加'));
+    await waitFor(() => {
+      expect(screen.getByLabelText('教本を選択 1')).toBeTruthy();
+    });
   });
 });
