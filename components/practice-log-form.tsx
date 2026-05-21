@@ -278,6 +278,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       otherMinutes: undefined,
       otherMemo: '',
       memo: '',
+      reedNumber: '',
       textbookEntries: lastTextbookEntries,
     },
   });
@@ -596,6 +597,25 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
             )}
           />
         </YStack>
+
+        <Controller
+          control={control}
+          name="reedNumber"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <YStack gap="$1">
+              <Paragraph color="$color12">使用リード番号 任意</Paragraph>
+              <Input
+                value={value ?? ''}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder="例: A3、2b など"
+                keyboardType="ascii-capable"
+                aria-label="使用リード番号"
+              />
+              <FieldError message={errors.reedNumber?.message} />
+            </YStack>
+          )}
+        />
 
         <Button theme="blue" onPress={submitForm} disabled={isSubmitting} aria-label="保存">
           保存

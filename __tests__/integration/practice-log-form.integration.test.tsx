@@ -604,6 +604,23 @@ function makeSession(overrides: Partial<PracticeSession>): PracticeSession {
   };
 }
 
+it('reedNumber に英数字を入力して保存すると onSubmit に値が渡される', async () => {
+  const onSubmit = jest.fn();
+  renderWithProviders(
+    <PracticeLogForm
+      ref={null}
+      onSubmit={onSubmit}
+      initialValues={{ practicedAt: '2026-05-21', textbookEntries: [], reedNumber: '' }}
+    />,
+  );
+  fireEvent.changeText(screen.getByLabelText('使用リード番号'), 'A3b');
+  fireEvent.press(screen.getByLabelText('保存'));
+  await waitFor(() => {
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+  expect(onSubmit.mock.calls[0][0]).toMatchObject({ reedNumber: 'A3b' });
+});
+
 describe('PracticeLogFormScreen (urlId による新規/編集モード分離 + 衝突時 Alert)', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
