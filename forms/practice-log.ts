@@ -36,6 +36,10 @@ export const practiceLogSchema = z.object({
   otherMemo: z.string().optional(),
   memo: z.string().optional(),
   textbookEntries: z.array(textbookEntrySchema),
+  reedNumber: z
+    .string()
+    .regex(/^[a-zA-Z0-9]*$/, '英数字のみ入力できます')
+    .optional(),
 });
 
 export type PracticeLogInput = z.infer<typeof practiceLogSchema>;

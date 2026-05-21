@@ -403,6 +403,52 @@ describe('practiceLogSchema', () => {
     });
   });
 
+  describe('reedNumber', () => {
+    it('reedNumber が英数字のみなら有効', () => {
+      const r = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-15',
+        textbookEntries: [],
+        reedNumber: 'A3b',
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it('reedNumber が空文字なら有効（任意項目）', () => {
+      const r = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-15',
+        textbookEntries: [],
+        reedNumber: '',
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it('reedNumber が省略された場合も有効', () => {
+      const r = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-15',
+        textbookEntries: [],
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it('reedNumber に記号が含まれる場合は拒否する', () => {
+      const r = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-15',
+        textbookEntries: [],
+        reedNumber: 'A-3',
+      });
+      expect(r.success).toBe(false);
+    });
+
+    it('reedNumber に日本語が含まれる場合は拒否する', () => {
+      const r = practiceLogSchema.safeParse({
+        practicedAt: '2026-05-15',
+        textbookEntries: [],
+        reedNumber: '第3番',
+      });
+      expect(r.success).toBe(false);
+    });
+  });
+
   describe('BASIC_MENUS', () => {
     it('long_tone と tonguing が含まれる', () => {
       const types = BASIC_MENUS.map((m) => m.type);
