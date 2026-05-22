@@ -698,10 +698,11 @@ describe('usePracticeLogStore', () => {
       }),
     });
 
-    await usePracticeLogStore.getState().add(
-      { practicedAt: '2026-05-19', textbookEntries: [] },
-      [{ tempUri: 'file:///data/recordings/tmp-1234.m4a', memo: '前半練習' }],
-    );
+    await usePracticeLogStore
+      .getState()
+      .add({ practicedAt: '2026-05-19', textbookEntries: [] }, [
+        { tempUri: 'file:///data/recordings/tmp-1234.m4a', memo: '前半練習' },
+      ]);
 
     expect(mockRecording().finalizeRecording).toHaveBeenCalledWith(
       'file:///data/recordings/tmp-1234.m4a',
@@ -786,12 +787,9 @@ describe('usePracticeLogStore', () => {
       }),
     });
 
-    await usePracticeLogStore.getState().update(
-      'session-1',
-      { practicedAt: '2026-05-19', textbookEntries: [] },
-      [],
-      ['rec-1'],
-    );
+    await usePracticeLogStore
+      .getState()
+      .update('session-1', { practicedAt: '2026-05-19', textbookEntries: [] }, [], ['rec-1']);
 
     expect(mockRecording().deleteRecording).toHaveBeenCalledWith(
       'file:///data/recordings/session-1-1.m4a',

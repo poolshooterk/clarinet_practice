@@ -85,9 +85,7 @@ describe('RecordingSection', () => {
     const existing: SessionRecording[] = [
       { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
     ];
-    renderWithProviders(
-      <RecordingSection existingRecordings={existing} onChange={jest.fn()} />,
-    );
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={jest.fn()} />);
     expect(screen.getByLabelText('録音 1を削除')).toBeTruthy();
   });
 
@@ -96,9 +94,7 @@ describe('RecordingSection', () => {
     const existing: SessionRecording[] = [
       { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
     ];
-    renderWithProviders(
-      <RecordingSection existingRecordings={existing} onChange={onChange} />,
-    );
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={onChange} />);
 
     fireEvent.press(screen.getByLabelText('録音 1を削除'));
     expect(onChange).toHaveBeenCalledWith({ toAdd: [], toDelete: ['rec-1'] });
@@ -111,9 +107,7 @@ describe('RecordingSection', () => {
       { id: 'rec-2', index: 2, localUri: 'file:///recordings/s-2.m4a', memo: null },
       { id: 'rec-3', index: 3, localUri: 'file:///recordings/s-3.m4a', memo: null },
     ];
-    renderWithProviders(
-      <RecordingSection existingRecordings={existing} onChange={onChange} />,
-    );
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={onChange} />);
     expect(screen.queryByLabelText('録音を追加')).toBeNull();
   });
 });

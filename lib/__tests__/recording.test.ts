@@ -60,7 +60,9 @@ describe('startRecording', () => {
   });
 
   it('recordings/ ディレクトリが存在しない場合は作成する', async () => {
-    mockFS().getInfoAsync.mockResolvedValueOnce({ exists: false } as unknown as FileSystem.FileInfo);
+    mockFS().getInfoAsync.mockResolvedValueOnce({
+      exists: false,
+    } as unknown as FileSystem.FileInfo);
     mockAudio().Recording.createAsync.mockResolvedValueOnce({ recording: {} });
 
     await startRecording();
@@ -160,7 +162,9 @@ describe('deleteRecording', () => {
   });
 
   it('ファイルが存在しない場合はスキップする', async () => {
-    mockFS().getInfoAsync.mockResolvedValueOnce({ exists: false } as unknown as FileSystem.FileInfo);
+    mockFS().getInfoAsync.mockResolvedValueOnce({
+      exists: false,
+    } as unknown as FileSystem.FileInfo);
 
     await deleteRecording('file:///data/recordings/session-abc-1.m4a');
 

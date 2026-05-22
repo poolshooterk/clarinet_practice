@@ -14,7 +14,7 @@ import { Platform, ScrollView } from 'react-native';
 import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
-import { RecordingSection, type RecordingChange } from '@/components/form/recording-section';
+import { type RecordingChange, RecordingSection } from '@/components/form/recording-section';
 import { TimerControl } from '@/components/timer-control';
 import {
   BASIC_GENRES,
@@ -24,7 +24,7 @@ import {
   practiceLogSchema,
   today,
 } from '@/forms/practice-log';
-import { usePracticeLogStore, type SessionRecording } from '@/store/practice-log';
+import { type SessionRecording, usePracticeLogStore } from '@/store/practice-log';
 import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { useTimerStore } from '@/store/timer';
 

@@ -2,8 +2,8 @@ import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router
 import { useCallback } from 'react';
 import { Alert, ScrollView } from 'react-native';
 
-import { LessonRecordForm } from '@/components/lesson-record-form';
 import type { RecordingChange } from '@/components/form/recording-section';
+import { LessonRecordForm } from '@/components/lesson-record-form';
 import { type LessonRecordInput, splitHeldAt } from '@/forms/lesson-record';
 import { useLessonRecordStore } from '@/store/lesson-record';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';

@@ -484,10 +484,11 @@ describe('useLessonRecordStore', () => {
       }),
     });
 
-    await useLessonRecordStore.getState().add(
-      { date: '2026-05-20', time: '10:00', advice: '', notes: '', textbookEntries: [] },
-      [{ tempUri: 'file:///data/recordings/tmp-9999.m4a', memo: '' }],
-    );
+    await useLessonRecordStore
+      .getState()
+      .add({ date: '2026-05-20', time: '10:00', advice: '', notes: '', textbookEntries: [] }, [
+        { tempUri: 'file:///data/recordings/tmp-9999.m4a', memo: '' },
+      ]);
 
     expect(mockRecording().finalizeRecording).toHaveBeenCalledWith(
       'file:///data/recordings/tmp-9999.m4a',
@@ -513,10 +514,11 @@ describe('useLessonRecordStore', () => {
       }),
     });
     mockRecording().finalizeRecording.mockRejectedValueOnce(new Error('disk full'));
-    await useLessonRecordStore.getState().add(
-      { date: '2026-05-15', time: '14:00', advice: '', notes: '', textbookEntries: [] },
-      [{ tempUri: 'file:///data/recordings/tmp.m4a', memo: '' }],
-    );
+    await useLessonRecordStore
+      .getState()
+      .add({ date: '2026-05-15', time: '14:00', advice: '', notes: '', textbookEntries: [] }, [
+        { tempUri: 'file:///data/recordings/tmp.m4a', memo: '' },
+      ]);
     expect(useLessonRecordStore.getState().records).toHaveLength(1);
   });
 
@@ -596,12 +598,14 @@ describe('useLessonRecordStore', () => {
       }),
     });
 
-    await useLessonRecordStore.getState().update(
-      'lr-1',
-      { date: '2026-05-15', time: '10:00', advice: '', notes: '', textbookEntries: [] },
-      [],
-      ['rec-1'],
-    );
+    await useLessonRecordStore
+      .getState()
+      .update(
+        'lr-1',
+        { date: '2026-05-15', time: '10:00', advice: '', notes: '', textbookEntries: [] },
+        [],
+        ['rec-1'],
+      );
 
     expect(mockRecording().deleteRecording).toHaveBeenCalledWith(
       'file:///data/recordings/lr-1-1.m4a',

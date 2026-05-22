@@ -12,7 +12,7 @@ import { Alert, Platform } from 'react-native';
 import { Button, Input, Paragraph, Select, TextArea, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
-import { RecordingSection, type RecordingChange } from '@/components/form/recording-section';
+import { type RecordingChange, RecordingSection } from '@/components/form/recording-section';
 import {
   currentTime,
   formatDate,
@@ -217,10 +217,7 @@ export function LessonRecordForm({
 
   return (
     <YStack gap="$4" p="$4">
-      <RecordingSection
-        existingRecordings={existingRecordings}
-        onChange={setRecChange}
-      />
+      <RecordingSection existingRecordings={existingRecordings} onChange={setRecChange} />
       <Controller
         control={control}
         name="date"
