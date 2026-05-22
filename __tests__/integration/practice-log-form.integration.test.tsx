@@ -570,25 +570,22 @@ describe('PracticeLogForm with initialValues (編集モード)', () => {
     });
   });
 
-  it('initialValues を後から差し替えると reset() でフィールドが置き換わる', async () => {
+  it('バックグラウンド再フェッチで initialValues の参照が差し替わっても編集中の値は上書きされない', async () => {
     const { rerender } = renderWithProviders(
       <PracticeLogForm onSubmit={jest.fn()} initialValues={initialValues} />,
     );
 
     expect(screen.getByDisplayValue('テストメモ')).toBeTruthy();
 
-    const swapped: PracticeLogInput = {
-      ...initialValues,
-      practicedAt: '2026-03-10',
-      memo: '差し替え後のメモ',
-      otherMinutes: 5,
-    };
-    rerender(<PracticeLogForm onSubmit={jest.fn()} initialValues={swapped} />);
+    // ユーザーがメモを編集
+    fireEvent.changeText(screen.getByLabelText('メモ'), '編集中のメモ');
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('差し替え後のメモ')).toBeTruthy();
-      expect(screen.getByDisplayValue('2026-03-10')).toBeTruthy();
-    });
+    // バックグラウンド再フェッチで同一データが新しいオブジェクト参照として渡される
+    const refetchedRef: PracticeLogInput = { ...initialValues };
+    rerender(<PracticeLogForm onSubmit={jest.fn()} initialValues={refetchedRef} />);
+
+    // ユーザーの編集が保持されている
+    expect(screen.getByDisplayValue('編集中のメモ')).toBeTruthy();
   });
 });
 

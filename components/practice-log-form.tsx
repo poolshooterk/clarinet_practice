@@ -282,9 +282,14 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
     },
   });
 
-  // 親が initialValues を差し替えた時にフォームへ反映
+  // initialValues が undefined → 定義済みになったときだけ1回 reset する
+  // バックグラウンドの再フェッチで参照が差し替わっても上書きしない
+  const hasAppliedInitialValues = useRef(false);
   useEffect(() => {
-    if (initialValues) reset(initialValues);
+    if (initialValues && !hasAppliedInitialValues.current) {
+      hasAppliedInitialValues.current = true;
+      reset(initialValues);
+    }
   }, [initialValues, reset]);
 
   const { fields, append, remove } = useFieldArray({ control, name: 'textbookEntries' });
