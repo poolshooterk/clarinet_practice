@@ -20,7 +20,7 @@ const tonguingBpmEntrySchema = z.object({
 const textbookEntrySchema = z.object({
   textbookId: z.string().uuid('教本を選択してください'),
   currentPage: z.number().int().min(0, '0以上の整数を入力してください'),
-  durationMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  durationMinutes: z.number().int().min(1, '1以上の整数を入力してください').nullable().optional(),
   tempoBpms: z.array(tonguingBpmEntrySchema).optional(),
 });
 
@@ -29,10 +29,10 @@ export const practiceLogSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください')
     .refine((s) => s <= today(), '未来の日付は入力できません'),
-  longToneMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
-  tonguingMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  longToneMinutes: z.number().int().min(1, '1以上の整数を入力してください').nullable().optional(),
+  tonguingMinutes: z.number().int().min(1, '1以上の整数を入力してください').nullable().optional(),
   tonguingTempoBpms: z.array(tonguingBpmEntrySchema).optional(),
-  otherMinutes: z.number().int().min(1, '1以上の整数を入力してください').optional(),
+  otherMinutes: z.number().int().min(1, '1以上の整数を入力してください').nullable().optional(),
   otherMemo: z.string().optional(),
   memo: z.string().optional(),
   textbookEntries: z.array(textbookEntrySchema),

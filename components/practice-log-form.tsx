@@ -14,6 +14,7 @@ import { Platform, ScrollView } from 'react-native';
 import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
+import { NumericInput } from '@/components/form/numeric-input';
 import { type RecordingChange, RecordingSection } from '@/components/form/recording-section';
 import { TimerControl } from '@/components/timer-control';
 import {
@@ -38,49 +39,6 @@ export type PracticeLogFormRef = {
   submit: () => void;
   getRecordingChange: () => RecordingChange;
 };
-
-type NumericInputProps = {
-  value: number | undefined;
-  onChange: (value: number | undefined) => void;
-  onBlur: () => void;
-  placeholder?: string;
-  ariaLabel?: string;
-  width?: number;
-  flex?: number;
-};
-
-function NumericInput({
-  value,
-  onChange,
-  onBlur,
-  placeholder,
-  ariaLabel,
-  width,
-  flex,
-}: NumericInputProps) {
-  const [text, setText] = useState(value !== undefined ? String(value) : '');
-
-  useEffect(() => {
-    setText(value !== undefined ? String(value) : '');
-  }, [value]);
-
-  return (
-    <Input
-      value={text}
-      onChangeText={(t) => {
-        setText(t);
-        const n = Number(t);
-        onChange(t === '' || isNaN(n) ? undefined : n);
-      }}
-      onBlur={onBlur}
-      placeholder={placeholder}
-      keyboardType="numeric"
-      aria-label={ariaLabel}
-      width={width}
-      flex={flex}
-    />
-  );
-}
 
 type TextbookEntryRowProps = {
   index: number;
@@ -493,7 +451,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
             );
           })}
 
-          {watchedTonguing !== undefined && (
+          {watchedTonguing != null && (
             <YStack gap="$2">
               <Paragraph color="$color11" fontSize="$3">
                 テンポ（BPM）任意

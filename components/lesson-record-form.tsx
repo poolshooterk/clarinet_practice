@@ -12,6 +12,7 @@ import { Alert, Platform } from 'react-native';
 import { Button, Input, Paragraph, Select, TextArea, XStack, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
+import { NumericInput } from '@/components/form/numeric-input';
 import { type RecordingChange, RecordingSection } from '@/components/form/recording-section';
 import {
   currentTime,
@@ -100,16 +101,12 @@ function TextbookEntryRow({
             control={control}
             name={`textbookEntries.${index}.currentPage`}
             render={({ field: { onChange, onBlur, value } }) => (
-              <Input
+              <NumericInput
                 width={64}
-                value={value !== undefined ? String(value) : ''}
-                onChangeText={(t) => {
-                  const n = Number(t);
-                  onChange(t === '' || isNaN(n) ? undefined : n);
-                }}
+                value={value}
+                onChange={onChange}
                 onBlur={onBlur}
-                keyboardType="numeric"
-                aria-label={`ページ ${index + 1}`}
+                ariaLabel={`ページ ${index + 1}`}
               />
             )}
           />
@@ -125,16 +122,12 @@ function TextbookEntryRow({
             <Paragraph fontSize="$2" color="$color10">
               練習時間（分）任意
             </Paragraph>
-            <Input
-              value={value !== undefined ? String(value) : ''}
-              onChangeText={(t) => {
-                const n = Number(t);
-                onChange(t === '' || isNaN(n) ? undefined : n);
-              }}
+            <NumericInput
+              value={value}
+              onChange={onChange}
               onBlur={onBlur}
               placeholder="例: 15"
-              keyboardType="numeric"
-              aria-label={`教本練習時間 ${index + 1}`}
+              ariaLabel={`教本練習時間 ${index + 1}`}
             />
           </YStack>
         )}
@@ -149,16 +142,12 @@ function TextbookEntryRow({
             <Paragraph fontSize="$2" color="$color10">
               テンポ BPM（任意）
             </Paragraph>
-            <Input
-              value={value !== undefined ? String(value) : ''}
-              onChangeText={(t) => {
-                const n = Number(t);
-                onChange(t === '' || isNaN(n) ? undefined : n);
-              }}
+            <NumericInput
+              value={value}
+              onChange={onChange}
               onBlur={onBlur}
               placeholder="例: 120"
-              keyboardType="numeric"
-              aria-label={`テンポ ${index + 1}`}
+              ariaLabel={`テンポ ${index + 1}`}
             />
           </YStack>
         )}
