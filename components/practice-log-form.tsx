@@ -39,6 +39,49 @@ export type PracticeLogFormRef = {
   getRecordingChange: () => RecordingChange;
 };
 
+type NumericInputProps = {
+  value: number | undefined;
+  onChange: (value: number | undefined) => void;
+  onBlur: () => void;
+  placeholder?: string;
+  ariaLabel?: string;
+  width?: number;
+  flex?: number;
+};
+
+function NumericInput({
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+  ariaLabel,
+  width,
+  flex,
+}: NumericInputProps) {
+  const [text, setText] = useState(value !== undefined ? String(value) : '');
+
+  useEffect(() => {
+    setText(value !== undefined ? String(value) : '');
+  }, [value]);
+
+  return (
+    <Input
+      value={text}
+      onChangeText={(t) => {
+        setText(t);
+        const n = Number(t);
+        onChange(t === '' || isNaN(n) ? undefined : n);
+      }}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      keyboardType="numeric"
+      aria-label={ariaLabel}
+      width={width}
+      flex={flex}
+    />
+  );
+}
+
 type TextbookEntryRowProps = {
   index: number;
   fieldId: string;
@@ -132,16 +175,12 @@ function TextbookEntryRow({
             name={`textbookEntries.${index}.currentPage`}
             render={({ field: { onChange, onBlur, value } }) => (
               <XStack gap="$2" items="center">
-                <Input
+                <NumericInput
                   width={64}
-                  value={value !== undefined ? String(value) : ''}
-                  onChangeText={(t) => {
-                    const n = Number(t);
-                    onChange(t === '' || isNaN(n) ? undefined : n);
-                  }}
+                  value={value}
+                  onChange={onChange}
                   onBlur={onBlur}
-                  keyboardType="numeric"
-                  aria-label={`ページ ${index + 1}`}
+                  ariaLabel={`ページ ${index + 1}`}
                 />
                 {selectedTextbook?.totalPages != null && (
                   <Paragraph fontSize="$2" color="$color10">
@@ -168,16 +207,12 @@ function TextbookEntryRow({
             <Paragraph fontSize="$2" color="$color10">
               練習時間（分）任意
             </Paragraph>
-            <Input
-              value={value !== undefined ? String(value) : ''}
-              onChangeText={(t) => {
-                const n = Number(t);
-                onChange(t === '' || isNaN(n) ? undefined : n);
-              }}
+            <NumericInput
+              value={value}
+              onChange={onChange}
               onBlur={onBlur}
               placeholder="例: 15"
-              keyboardType="numeric"
-              aria-label={`教本練習時間 ${index + 1}`}
+              ariaLabel={`教本練習時間 ${index + 1}`}
             />
           </YStack>
         )}
@@ -198,17 +233,13 @@ function TextbookEntryRow({
                     `textbookEntries.${index}.tempoBpms.${bpmIndex}.bpm` as `textbookEntries.0.tempoBpms.0.bpm`
                   }
                   render={({ field: { onChange, onBlur, value } }) => (
-                    <Input
+                    <NumericInput
                       flex={1}
-                      value={value !== undefined ? String(value) : ''}
-                      onChangeText={(t) => {
-                        const n = Number(t);
-                        onChange(t === '' || isNaN(n) ? undefined : n);
-                      }}
+                      value={value}
+                      onChange={onChange}
                       onBlur={onBlur}
                       placeholder="例: 120"
-                      keyboardType="numeric"
-                      aria-label={`スケールBPM ${index + 1}-${bpmIndex + 1}`}
+                      ariaLabel={`スケールBPM ${index + 1}-${bpmIndex + 1}`}
                     />
                   )}
                 />
@@ -448,16 +479,12 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                   control={control}
                   name={fieldName}
                   render={({ field: { onChange, onBlur, value } }) => (
-                    <Input
-                      value={value !== undefined ? String(value) : ''}
-                      onChangeText={(t) => {
-                        const n = Number(t);
-                        onChange(t === '' || isNaN(n) ? undefined : n);
-                      }}
+                    <NumericInput
+                      value={value}
+                      onChange={onChange}
                       onBlur={onBlur}
                       placeholder="例: 10"
-                      keyboardType="numeric"
-                      aria-label={ariaLabel}
+                      ariaLabel={ariaLabel}
                     />
                   )}
                 />
@@ -478,17 +505,13 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
                       control={control}
                       name={`tonguingTempoBpms.${index}.bpm`}
                       render={({ field: { onChange, onBlur, value } }) => (
-                        <Input
+                        <NumericInput
                           flex={1}
-                          value={value !== undefined ? String(value) : ''}
-                          onChangeText={(t) => {
-                            const n = Number(t);
-                            onChange(t === '' || isNaN(n) ? undefined : n);
-                          }}
+                          value={value}
+                          onChange={onChange}
                           onBlur={onBlur}
                           placeholder="例: 120"
-                          keyboardType="numeric"
-                          aria-label={`BPM ${index + 1}`}
+                          ariaLabel={`BPM ${index + 1}`}
                         />
                       )}
                     />
@@ -568,16 +591,12 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
             control={control}
             name="otherMinutes"
             render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                value={value !== undefined ? String(value) : ''}
-                onChangeText={(t) => {
-                  const n = Number(t);
-                  onChange(t === '' || isNaN(n) ? undefined : n);
-                }}
+              <NumericInput
+                value={value}
+                onChange={onChange}
                 onBlur={onBlur}
                 placeholder="例: 20"
-                keyboardType="numeric"
-                aria-label="その他"
+                ariaLabel="その他"
               />
             )}
           />
