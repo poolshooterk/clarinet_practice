@@ -1,7 +1,11 @@
-import { calcPurchaseDate, purchasePlanSchema } from '@/forms/purchase-plan';
+import {
+  calcPurchaseDate,
+  purchasePlanSavingsSchema,
+  purchasePlanSchema,
+} from '@/forms/purchase-plan';
 
 describe('calcPurchaseDate', () => {
-  it('monthlySavings が 0 以下のとき null を返す', () => {
+  it('monthlyTarget が 0 以下のとき null を返す', () => {
     expect(calcPurchaseDate(850000, 200000, 0)).toBeNull();
     expect(calcPurchaseDate(850000, 200000, -1000)).toBeNull();
   });
@@ -17,7 +21,6 @@ describe('calcPurchaseDate', () => {
   });
 
   it('通常ケース: 残額 650000 / 月 30000 → 22 ヶ月', () => {
-    // ceil(650000 / 30000) = ceil(21.67) = 22
     const result = calcPurchaseDate(850000, 200000, 30000);
     expect(result).not.toBeNull();
     expect(result!.months).toBe(22);
@@ -29,7 +32,6 @@ describe('calcPurchaseDate', () => {
   });
 
   it('ちょうど割り切れる場合は ceil で同じ値になる', () => {
-    // 残額 60000 / 月 30000 = 2.0 → 2 ヶ月
     const result = calcPurchaseDate(260000, 200000, 30000);
     expect(result!.months).toBe(2);
   });
@@ -42,8 +44,7 @@ describe('purchasePlanSchema', () => {
     modelId: 'model-1',
     modelName: 'R13',
     targetPrice: 850000,
-    currentSavings: 200000,
-    monthlySavings: 30000,
+    monthlyTarget: 30000,
   };
 
   it('有効なデータを受け入れる', () => {
@@ -51,22 +52,69 @@ describe('purchasePlanSchema', () => {
   });
 
   it('makerId が空文字列のとき拒否する', () => {
-    const r = purchasePlanSchema.safeParse({ ...valid, makerId: '' });
-    expect(r.success).toBe(false);
+    expect(purchasePlanSchema.safeParse({ ...valid, makerId: '' }).success).toBe(false);
   });
 
   it('targetPrice が 0 以下のとき拒否する', () => {
-    const r = purchasePlanSchema.safeParse({ ...valid, targetPrice: 0 });
-    expect(r.success).toBe(false);
+    expect(purchasePlanSchema.safeParse({ ...valid, targetPrice: 0 }).success).toBe(false);
   });
 
-  it('currentSavings が負のとき拒否する', () => {
-    const r = purchasePlanSchema.safeParse({ ...valid, currentSavings: -1 });
-    expect(r.success).toBe(false);
+  it('targetPrice が null のとき拒否する', () => {
+    expect(purchasePlanSchema.safeParse({ ...valid, targetPrice: null }).success).toBe(false);
   });
 
-  it('monthlySavings が 0 以下のとき拒否する', () => {
-    const r = purchasePlanSchema.safeParse({ ...valid, monthlySavings: 0 });
-    expect(r.success).toBe(false);
+  it('monthlyTarget が 0 以下のとき拒否する', () => {
+    expect(purchasePlanSchema.safeParse({ ...valid, monthlyTarget: 0 }).success).toBe(false);
+  });
+
+  it('monthlyTarget が null のとき拒否する', () => {
+    expect(purchasePlanSchema.safeParse({ ...valid, monthlyTarget: null }).success).toBe(false);
+  });
+});
+
+describe('purchasePlanSavingsSchema', () => {
+  const valid = { yearMonth: '2026-05', amount: 30000, memo: null };
+
+  it('有効なデータを受け入れる', () => {
+    expect(purchasePlanSavingsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('メモありでも有効', () => {
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, memo: 'ボーナス分' }).success,
+    ).toBe(true);
+  });
+
+  it('yearMonth が YYYY-MM 形式でないとき拒否する', () => {
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '2026/05' }).success,
+    ).toBe(false);
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '202605' }).success,
+    ).toBe(false);
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '2026-5' }).success,
+    ).toBe(false);
+  });
+
+  it('amount が 0 以下のとき拒否する', () => {
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, amount: 0 }).success,
+    ).toBe(false);
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, amount: -1 }).success,
+    ).toBe(false);
+  });
+
+  it('amount が整数でないとき拒否する', () => {
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, amount: 30000.5 }).success,
+    ).toBe(false);
+  });
+
+  it('amount が null のとき拒否する', () => {
+    expect(
+      purchasePlanSavingsSchema.safeParse({ ...valid, amount: null }).success,
+    ).toBe(false);
   });
 });
