@@ -34,6 +34,7 @@ CREATE TABLE purchase_plans (
 ```
 
 RLS:
+
 - SELECT: `user_id = auth.uid()`
 - INSERT: `user_id = auth.uid()`
 - UPDATE: `user_id = auth.uid()`
@@ -55,6 +56,7 @@ CREATE TABLE purchase_plan_savings (
 ```
 
 RLS:
+
 - 全操作: `EXISTS (SELECT 1 FROM purchase_plans WHERE id = purchase_plan_id AND user_id = auth.uid())`
 
 ### `current_savings`（導出値）
@@ -144,18 +146,21 @@ type PurchasePlanState = {
 3カード構成のスクロールビュー。
 
 **計画カード（青）**
+
 - 楽器ピッカー（InstrumentPicker）
 - 目標金額・予定月額の数値入力
 - 「保存」ボタン（`upsertPlan` を呼ぶ）
 - plan が未登録の場合は計画カードのみ表示
 
 **進捗カード（緑）**
+
 - 現在の貯蓄額: `savings.reduce(...)` で全件合計
 - プログレスバー: `currentSavings / targetPrice` の比率
 - 購入予定時期: `calcPurchaseDate(targetPrice, currentSavings, monthlyTarget)`
 - plan が登録済みの場合のみ表示
 
 **貯蓄実績カード（橙）**
+
 - 表示対象: 当月・前月のエントリのみ（`year_month >= prevMonthStr` でフィルター）
 - 全件は DB に保持し、進捗の合計には含める
 - 各エントリ行: 年月・金額・メモ・編集ボタン・削除ボタン

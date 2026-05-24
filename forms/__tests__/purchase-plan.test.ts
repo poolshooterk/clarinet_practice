@@ -80,41 +80,33 @@ describe('purchasePlanSavingsSchema', () => {
   });
 
   it('メモありでも有効', () => {
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, memo: 'ボーナス分' }).success,
-    ).toBe(true);
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, memo: 'ボーナス分' }).success).toBe(
+      true,
+    );
   });
 
   it('yearMonth が YYYY-MM 形式でないとき拒否する', () => {
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '2026/05' }).success,
-    ).toBe(false);
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '202605' }).success,
-    ).toBe(false);
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '2026-5' }).success,
-    ).toBe(false);
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '2026/05' }).success).toBe(
+      false,
+    );
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '202605' }).success).toBe(
+      false,
+    );
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, yearMonth: '2026-5' }).success).toBe(
+      false,
+    );
   });
 
   it('amount が 0 以下のとき拒否する', () => {
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, amount: 0 }).success,
-    ).toBe(false);
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, amount: -1 }).success,
-    ).toBe(false);
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, amount: 0 }).success).toBe(false);
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, amount: -1 }).success).toBe(false);
   });
 
   it('amount が整数でないとき拒否する', () => {
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, amount: 30000.5 }).success,
-    ).toBe(false);
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, amount: 30000.5 }).success).toBe(false);
   });
 
   it('amount が null のとき拒否する', () => {
-    expect(
-      purchasePlanSavingsSchema.safeParse({ ...valid, amount: null }).success,
-    ).toBe(false);
+    expect(purchasePlanSavingsSchema.safeParse({ ...valid, amount: null }).success).toBe(false);
   });
 });
