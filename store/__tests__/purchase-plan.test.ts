@@ -8,8 +8,7 @@ jest.mock('@/lib/supabase', () => ({
 }));
 
 const mockFrom = () => jest.requireMock('@/lib/supabase').supabase.from as jest.Mock;
-const mockGetUser = () =>
-  jest.requireMock('@/lib/supabase').supabase.auth.getUser as jest.Mock;
+const mockGetUser = () => jest.requireMock('@/lib/supabase').supabase.auth.getUser as jest.Mock;
 
 describe('usePurchasePlanStore', () => {
   beforeEach(() => {
