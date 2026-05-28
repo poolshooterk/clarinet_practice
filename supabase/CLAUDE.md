@@ -43,6 +43,10 @@ create policy "..." on <table> for delete using (auth.uid() = user_id);
 - `user_equipment` — 所有楽器セット (PK = `user_id`、ユーザごとに1行)。`instrument` (`instrument_maker_id` / `instrument_model_id` で `instrument_makers` / `instrument_models` を参照、`instrument_purchase_price` / `instrument_start_date` / `instrument_photo_uri`) + `reed` / `ligature` / `mouthpiece` の `*_name` / `*_start_date` カラムを 1 行に格納。書き込みは `upsert` (`user_id` 衝突時 UPDATE)
 - `instrument_makers` — メーカーマスタ (カタログストア `store/instrument-catalog.ts` が管理)
 - `lesson_records` — レッスン記録
+- `practice_session_recordings` — 練習セッション録音 (最大3本/セッション)。`session_id` / `index(1-3)` / `local_uri` / `memo`。`UNIQUE(session_id, index)`
+- `lesson_record_recordings` — レッスン録音 (最大3本/レッスン)。`lesson_record_id` / `index(1-3)` / `local_uri` / `memo`。`UNIQUE(lesson_record_id, index)`
+- `purchase_plans` — 購入計画 (PK = `id`、`user_id` に UNIQUE 制約でユーザごとに1行)。`maker_id` / `maker_name` / `model_id` / `model_name` / `target_price` / `monthly_savings_target`
+- `purchase_plan_savings` — 貯蓄実績 (`purchase_plan_id` 外部キー)。`year_month` / `amount` / `memo`。RLS は `purchase_plans` の `user_id` を JOIN で検証
 
 ## テストでのモック
 
