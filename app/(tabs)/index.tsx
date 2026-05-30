@@ -83,8 +83,10 @@ export default function PracticeLogScreen() {
                 <Paragraph fontSize="$2" color="$color10">
                   {(() => {
                     const total = monthTotals.basic + monthTotals.nonBasic;
+                    // total > 0 は monthSessions.length > 0 を含意するため除算は安全
+                    const avg = total > 0 ? Math.round(total / monthSessions.length) : 0;
                     return total > 0
-                      ? `${monthSessions.length}回 / 合計: ${total}分`
+                      ? `${monthSessions.length}回 / 平均: ${avg}分/日`
                       : `${monthSessions.length}回 / 練習時間未記録`;
                   })()}
                 </Paragraph>
