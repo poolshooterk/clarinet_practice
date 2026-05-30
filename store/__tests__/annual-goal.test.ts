@@ -290,3 +290,107 @@ describe('removeMilestone', () => {
     expect(useAnnualGoalsStore.getState().goals[0].milestones).toEqual([]);
   });
 });
+
+describe('reviewMilestone', () => {
+  it('既存 milestone を review 内容で更新', async () => {
+    useAnnualGoalsStore.setState({
+      goals: [
+        {
+          id: 'g1',
+          year: 2026,
+          title: 'X',
+          numericTarget: null,
+          numericUnit: null,
+          yearEndReviewText: null,
+          yearEndAchievement: null,
+          yearEndReviewedAt: null,
+          milestones: [
+            {
+              id: 'm1',
+              month: 5,
+              text: 'A',
+              numericTarget: null,
+              numericUnit: null,
+              reviewText: null,
+              achievement: null,
+              reviewedAt: null,
+            },
+          ],
+        },
+      ],
+    });
+    mockedSupabase.from.mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: {
+                id: 'm1',
+                month: 5,
+                text: 'A',
+                numeric_target: null,
+                numeric_unit: null,
+                review_text: 'いいかんじ',
+                achievement: 'partial',
+                reviewed_at: '2026-05-25T00:00:00Z',
+              },
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    });
+    await useAnnualGoalsStore
+      .getState()
+      .reviewMilestone('m1', { reviewText: 'いいかんじ', achievement: 'partial' });
+    const m = useAnnualGoalsStore.getState().goals[0].milestones[0];
+    expect(m.achievement).toBe('partial');
+    expect(m.reviewText).toBe('いいかんじ');
+    expect(m.reviewedAt).toBe('2026-05-25T00:00:00Z');
+  });
+});
+
+describe('yearEndReview', () => {
+  it('annual goal の年末振り返り欄を更新', async () => {
+    useAnnualGoalsStore.setState({
+      goals: [
+        {
+          id: 'g1',
+          year: 2026,
+          title: 'X',
+          numericTarget: null,
+          numericUnit: null,
+          yearEndReviewText: null,
+          yearEndAchievement: null,
+          yearEndReviewedAt: null,
+          milestones: [],
+        },
+      ],
+    });
+    mockedSupabase.from.mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: {
+                year_end_review_text: 'よい一年だった',
+                year_end_achievement: 'achieved',
+                year_end_reviewed_at: '2026-12-31T00:00:00Z',
+              },
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    });
+    await useAnnualGoalsStore
+      .getState()
+      .yearEndReview('g1', {
+        yearEndReviewText: 'よい一年だった',
+        yearEndAchievement: 'achieved',
+      });
+    const g = useAnnualGoalsStore.getState().goals[0];
+    expect(g.yearEndAchievement).toBe('achieved');
+    expect(g.yearEndReviewText).toBe('よい一年だった');
+  });
+});

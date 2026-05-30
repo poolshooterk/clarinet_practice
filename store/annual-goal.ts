@@ -230,6 +230,61 @@ export const useAnnualGoalsStore = create<State>()((set, get) => ({
     });
   },
 
-  reviewMilestone: async () => ({ ok: false, reason: 'unknown' }),
-  yearEndReview: async () => ({ ok: false, reason: 'unknown' }),
+  reviewMilestone: async (id, review) => {
+    const reviewedAt = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('monthly_milestones')
+      .update({
+        review_text: review.reviewText,
+        achievement: review.achievement,
+        reviewed_at: reviewedAt,
+      })
+      .eq('id', id)
+      .select(
+        'id, month, text, numeric_target, numeric_unit, review_text, achievement, reviewed_at',
+      )
+      .single();
+    if (error || !data) return { ok: false, reason: 'unknown' };
+    const milestone = mapMilestone(data as unknown as MilestoneRow);
+    set({
+      goals: get().goals.map((g) => ({
+        ...g,
+        milestones: g.milestones.map((m) => (m.id === id ? milestone : m)),
+      })),
+    });
+    return { ok: true, milestoneId: id };
+  },
+
+  yearEndReview: async (goalId, review) => {
+    const reviewedAt = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('annual_goals')
+      .update({
+        year_end_review_text: review.yearEndReviewText ?? null,
+        year_end_achievement: review.yearEndAchievement ?? null,
+        year_end_reviewed_at: reviewedAt,
+      })
+      .eq('id', goalId)
+      .select('year_end_review_text, year_end_achievement, year_end_reviewed_at')
+      .single();
+    if (error || !data) return { ok: false, reason: 'unknown' };
+    const row = data as {
+      year_end_review_text: string | null;
+      year_end_achievement: Achievement | null;
+      year_end_reviewed_at: string | null;
+    };
+    set({
+      goals: get().goals.map((g) =>
+        g.id === goalId
+          ? {
+              ...g,
+              yearEndReviewText: row.year_end_review_text,
+              yearEndAchievement: row.year_end_achievement,
+              yearEndReviewedAt: row.year_end_reviewed_at,
+            }
+          : g,
+      ),
+    });
+    return { ok: true, goalId };
+  },
 }));
