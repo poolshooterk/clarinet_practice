@@ -1,0 +1,94 @@
+import { router } from 'expo-router';
+import { Pressable } from 'react-native';
+import { Paragraph, Theme, XStack, YStack } from 'tamagui';
+
+import { ACHIEVEMENT_LABELS, canReviewMilestone } from '@/forms/annual-goal';
+import { useAnnualGoalsStore } from '@/store/annual-goal';
+
+const THEME_BY_ACHIEVEMENT = {
+  achieved: 'green',
+  partial: 'yellow',
+  unachieved: 'red',
+} as const;
+
+export function ThisMonthMilestonesCard() {
+  const goals = useAnnualGoalsStore((s) => s.goals);
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const rows = goals
+    .filter((g) => g.year === year)
+    .flatMap((g) => {
+      const milestone = g.milestones.find((m) => m.month === month);
+      return milestone ? [{ goal: g, milestone }] : [];
+    });
+
+  if (rows.length === 0) return null;
+
+  const canReview = canReviewMilestone(year, month, now);
+
+  return (
+    <YStack
+      mx="$3"
+      mt="$3"
+      p="$3"
+      bg="$color1"
+      rounded="$3"
+      borderWidth={1}
+      borderColor="$borderColor"
+      gap="$2"
+    >
+      <Paragraph fontWeight="bold">今月のマイルストーン</Paragraph>
+      {rows.map(({ goal, milestone }) => (
+        <Pressable
+          key={milestone.id}
+          onPress={() =>
+            router.push(`/monthly-milestone-form?goalId=${goal.id}&id=${milestone.id}`)
+          }
+        >
+          <YStack
+            p="$2"
+            bg="$color2"
+            rounded="$2"
+            borderWidth={1}
+            borderColor="$borderColor"
+            gap="$1"
+          >
+            <XStack justify="space-between" items="baseline">
+              <Paragraph fontSize="$2" color="$color10">
+                {goal.title}
+              </Paragraph>
+              {milestone.achievement != null && (
+                <Theme name={THEME_BY_ACHIEVEMENT[milestone.achievement]}>
+                  <Paragraph
+                    fontSize="$1"
+                    color="$color11"
+                    bg="$color3"
+                    px="$2"
+                    py="$1"
+                    rounded="$2"
+                  >
+                    {ACHIEVEMENT_LABELS[milestone.achievement]}
+                  </Paragraph>
+                </Theme>
+              )}
+            </XStack>
+            <Paragraph fontSize="$3">{milestone.text}</Paragraph>
+            {milestone.numericTarget != null && (
+              <Paragraph fontSize="$2" color="$color10">
+                {`目標: ${milestone.numericTarget}${milestone.numericUnit ?? ''}`}
+              </Paragraph>
+            )}
+            {canReview && milestone.achievement == null && (
+              <Paragraph fontSize="$2" color="$blue9">
+                振り返る ＞
+              </Paragraph>
+            )}
+          </YStack>
+        </Pressable>
+      ))}
+    </YStack>
+  );
+}

@@ -4,7 +4,9 @@ import { FlatList, Pressable } from 'react-native';
 import { Paragraph, XStack, YStack } from 'tamagui';
 
 import { PracticeChart } from '@/components/practice-chart';
+import { ThisMonthMilestonesCard } from '@/components/this-month-milestones-card';
 import { BASIC_MENUS, today } from '@/forms/practice-log';
+import { useAnnualGoalsStore } from '@/store/annual-goal';
 import { calcSessionTime, usePracticeLogStore } from '@/store/practice-log';
 
 function dayOfWeek(dateStr: string): string {
@@ -35,6 +37,7 @@ export default function PracticeLogScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchAll();
+      useAnnualGoalsStore.getState().fetchAll();
     }, [fetchAll]),
   );
 
@@ -68,6 +71,7 @@ export default function PracticeLogScreen() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <YStack>
+            <ThisMonthMilestonesCard />
             <XStack justify="space-between" items="center" px="$4" pt="$3" pb="$1">
               <Pressable onPress={prevMonth} aria-label="前月へ">
                 <Paragraph color="$blue9" fontSize="$5">
