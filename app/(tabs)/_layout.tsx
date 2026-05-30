@@ -41,6 +41,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="annual-goals"
+        options={{
+          title: '年間目標',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flag-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: '設定',

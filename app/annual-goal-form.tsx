@@ -7,7 +7,7 @@ import { Button, Input, Paragraph, YStack } from 'tamagui';
 
 import { FieldError } from '@/components/form/field-error';
 import { NumericInput } from '@/components/form/numeric-input';
-import { annualGoalSchema, type AnnualGoalInput } from '@/forms/annual-goal';
+import { type AnnualGoalInput, annualGoalSchema } from '@/forms/annual-goal';
 import { useAnnualGoalsStore } from '@/store/annual-goal';
 
 export default function AnnualGoalForm() {

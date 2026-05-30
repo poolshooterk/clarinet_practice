@@ -5,7 +5,7 @@ import { Button, Paragraph, Theme, YStack } from 'tamagui';
 
 import { MonthlyMilestoneCard } from '@/components/monthly-milestone-card';
 import { ACHIEVEMENT_LABELS, canReviewAnnualGoal } from '@/forms/annual-goal';
-import { useAnnualGoalsStore, type Milestone } from '@/store/annual-goal';
+import { type Milestone, useAnnualGoalsStore } from '@/store/annual-goal';
 
 const THEME_BY_ACHIEVEMENT = {
   achieved: 'green',
@@ -108,9 +108,7 @@ export default function AnnualGoalDetail() {
             {yearEndAvailable && (
               <Button
                 size="$2"
-                onPress={() =>
-                  router.push(`/monthly-milestone-form?goalId=${goal.id}&month=12`)
-                }
+                onPress={() => router.push(`/monthly-milestone-form?goalId=${goal.id}&month=12`)}
                 theme="blue"
               >
                 12月マイルストーンを編集

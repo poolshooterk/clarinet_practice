@@ -95,9 +95,7 @@ describe('addGoal', () => {
         }),
       }),
     });
-    const result = await useAnnualGoalsStore
-      .getState()
-      .addGoal({ year: 2026, title: 'X' });
+    const result = await useAnnualGoalsStore.getState().addGoal({ year: 2026, title: 'X' });
     expect(result).toEqual({ ok: true, goalId: 'g1' });
     expect(useAnnualGoalsStore.getState().goals[0]).toMatchObject({ id: 'g1', title: 'X' });
   });
@@ -110,9 +108,7 @@ describe('addGoal', () => {
         }),
       }),
     });
-    const result = await useAnnualGoalsStore
-      .getState()
-      .addGoal({ year: 2026, title: 'X' });
+    const result = await useAnnualGoalsStore.getState().addGoal({ year: 2026, title: 'X' });
     expect(result).toEqual({ ok: false, reason: 'unknown' });
   });
 });
@@ -150,10 +146,7 @@ describe('updateGoal', () => {
 describe('removeGoal', () => {
   it('成功時に goals から除外', async () => {
     useAnnualGoalsStore.setState({
-      goals: [
-        { id: 'g1', milestones: [] } as never,
-        { id: 'g2', milestones: [] } as never,
-      ],
+      goals: [{ id: 'g1', milestones: [] } as never, { id: 'g2', milestones: [] } as never],
     });
     mockedSupabase.from.mockReturnValue({
       delete: jest.fn().mockReturnValue({
@@ -383,12 +376,10 @@ describe('yearEndReview', () => {
         }),
       }),
     });
-    await useAnnualGoalsStore
-      .getState()
-      .yearEndReview('g1', {
-        yearEndReviewText: 'よい一年だった',
-        yearEndAchievement: 'achieved',
-      });
+    await useAnnualGoalsStore.getState().yearEndReview('g1', {
+      yearEndReviewText: 'よい一年だった',
+      yearEndAchievement: 'achieved',
+    });
     const g = useAnnualGoalsStore.getState().goals[0];
     expect(g.yearEndAchievement).toBe('achieved');
     expect(g.yearEndReviewText).toBe('よい一年だった');

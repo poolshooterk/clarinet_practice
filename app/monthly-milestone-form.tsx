@@ -11,8 +11,8 @@ import {
   ACHIEVEMENT_LABELS,
   ACHIEVEMENT_VALUES,
   canReviewMilestone,
-  monthlyMilestoneSchema,
   type MonthlyMilestoneInput,
+  monthlyMilestoneSchema,
 } from '@/forms/annual-goal';
 import { useAnnualGoalsStore } from '@/store/annual-goal';
 

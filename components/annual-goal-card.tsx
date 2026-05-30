@@ -31,55 +31,27 @@ export function AnnualGoalCard({ goal }: Props) {
       <XStack gap="$2" flexWrap="wrap">
         {progress.achieved > 0 && (
           <Theme name="green">
-            <Paragraph
-              fontSize="$1"
-              color="$color11"
-              bg="$color3"
-              px="$2"
-              py="$1"
-              rounded="$2"
-            >
+            <Paragraph fontSize="$1" color="$color11" bg="$color3" px="$2" py="$1" rounded="$2">
               {`${ACHIEVEMENT_LABELS.achieved} ${progress.achieved}`}
             </Paragraph>
           </Theme>
         )}
         {progress.partial > 0 && (
           <Theme name="yellow">
-            <Paragraph
-              fontSize="$1"
-              color="$color11"
-              bg="$color3"
-              px="$2"
-              py="$1"
-              rounded="$2"
-            >
+            <Paragraph fontSize="$1" color="$color11" bg="$color3" px="$2" py="$1" rounded="$2">
               {`${ACHIEVEMENT_LABELS.partial} ${progress.partial}`}
             </Paragraph>
           </Theme>
         )}
         {progress.unachieved > 0 && (
           <Theme name="red">
-            <Paragraph
-              fontSize="$1"
-              color="$color11"
-              bg="$color3"
-              px="$2"
-              py="$1"
-              rounded="$2"
-            >
+            <Paragraph fontSize="$1" color="$color11" bg="$color3" px="$2" py="$1" rounded="$2">
               {`${ACHIEVEMENT_LABELS.unachieved} ${progress.unachieved}`}
             </Paragraph>
           </Theme>
         )}
         {progress.unreviewed > 0 && (
-          <Paragraph
-            fontSize="$1"
-            color="$color10"
-            bg="$color3"
-            px="$2"
-            py="$1"
-            rounded="$2"
-          >
+          <Paragraph fontSize="$1" color="$color10" bg="$color3" px="$2" py="$1" rounded="$2">
             {`未振り返り ${progress.unreviewed}`}
           </Paragraph>
         )}
