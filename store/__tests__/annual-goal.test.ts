@@ -1,5 +1,5 @@
-import { useAnnualGoalsStore } from '@/store/annual-goal';
 import { supabase } from '@/lib/supabase';
+import { useAnnualGoalsStore } from '@/store/annual-goal';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -162,5 +162,131 @@ describe('removeGoal', () => {
     });
     await useAnnualGoalsStore.getState().removeGoal('g1');
     expect(useAnnualGoalsStore.getState().goals.map((g) => g.id)).toEqual(['g2']);
+  });
+});
+
+describe('upsertMilestone', () => {
+  const baseGoal = {
+    id: 'g1',
+    year: 2026,
+    title: 'X',
+    numericTarget: null,
+    numericUnit: null,
+    yearEndReviewText: null,
+    yearEndAchievement: null,
+    yearEndReviewedAt: null,
+    milestones: [],
+  };
+
+  it('新規月: 該当 goal の milestones に追加', async () => {
+    useAnnualGoalsStore.setState({ goals: [baseGoal] });
+    mockedSupabase.from.mockReturnValue({
+      upsert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'm1',
+              month: 5,
+              text: 'A',
+              numeric_target: null,
+              numeric_unit: null,
+              review_text: null,
+              achievement: null,
+              reviewed_at: null,
+            },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    await useAnnualGoalsStore.getState().upsertMilestone('g1', { month: 5, text: 'A' });
+    expect(useAnnualGoalsStore.getState().goals[0].milestones).toHaveLength(1);
+    expect(useAnnualGoalsStore.getState().goals[0].milestones[0].month).toBe(5);
+  });
+
+  it('既存月: 該当 milestone を置き換え', async () => {
+    useAnnualGoalsStore.setState({
+      goals: [
+        {
+          ...baseGoal,
+          milestones: [
+            {
+              id: 'm1',
+              month: 5,
+              text: 'old',
+              numericTarget: null,
+              numericUnit: null,
+              reviewText: null,
+              achievement: null,
+              reviewedAt: null,
+            },
+          ],
+        },
+      ],
+    });
+    mockedSupabase.from.mockReturnValue({
+      upsert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'm1',
+              month: 5,
+              text: 'new',
+              numeric_target: 10,
+              numeric_unit: 'ページ',
+              review_text: null,
+              achievement: null,
+              reviewed_at: null,
+            },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    await useAnnualGoalsStore
+      .getState()
+      .upsertMilestone('g1', { month: 5, text: 'new', numericTarget: 10, numericUnit: 'ページ' });
+    const milestones = useAnnualGoalsStore.getState().goals[0].milestones;
+    expect(milestones).toHaveLength(1);
+    expect(milestones[0].text).toBe('new');
+    expect(milestones[0].numericTarget).toBe(10);
+  });
+});
+
+describe('removeMilestone', () => {
+  it('成功時に milestones から除外', async () => {
+    useAnnualGoalsStore.setState({
+      goals: [
+        {
+          id: 'g1',
+          year: 2026,
+          title: 'X',
+          numericTarget: null,
+          numericUnit: null,
+          yearEndReviewText: null,
+          yearEndAchievement: null,
+          yearEndReviewedAt: null,
+          milestones: [
+            {
+              id: 'm1',
+              month: 5,
+              text: 'A',
+              numericTarget: null,
+              numericUnit: null,
+              reviewText: null,
+              achievement: null,
+              reviewedAt: null,
+            },
+          ],
+        },
+      ],
+    });
+    mockedSupabase.from.mockReturnValue({
+      delete: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    await useAnnualGoalsStore.getState().removeMilestone('m1');
+    expect(useAnnualGoalsStore.getState().goals[0].milestones).toEqual([]);
   });
 });

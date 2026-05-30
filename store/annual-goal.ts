@@ -186,8 +186,50 @@ export const useAnnualGoalsStore = create<State>()((set, get) => ({
     set({ goals: get().goals.filter((g) => g.id !== id) });
   },
 
-  upsertMilestone: async () => ({ ok: false, reason: 'unknown' }),
-  removeMilestone: async () => {},
+  upsertMilestone: async (goalId, input) => {
+    const { data, error } = await supabase
+      .from('monthly_milestones')
+      .upsert(
+        {
+          annual_goal_id: goalId,
+          month: input.month,
+          text: input.text,
+          numeric_target: input.numericTarget ?? null,
+          numeric_unit: input.numericUnit ?? null,
+        },
+        { onConflict: 'annual_goal_id,month' },
+      )
+      .select(
+        'id, month, text, numeric_target, numeric_unit, review_text, achievement, reviewed_at',
+      )
+      .single();
+    if (error || !data) return { ok: false, reason: 'unknown' };
+    const milestone = mapMilestone(data as unknown as MilestoneRow);
+    set({
+      goals: get().goals.map((g) => {
+        if (g.id !== goalId) return g;
+        const existing = g.milestones.findIndex((m) => m.month === milestone.month);
+        const nextMilestones =
+          existing >= 0
+            ? g.milestones.map((m, i) => (i === existing ? milestone : m))
+            : [...g.milestones, milestone];
+        return { ...g, milestones: nextMilestones };
+      }),
+    });
+    return { ok: true, milestoneId: milestone.id };
+  },
+
+  removeMilestone: async (id) => {
+    const { error } = await supabase.from('monthly_milestones').delete().eq('id', id);
+    if (error) return;
+    set({
+      goals: get().goals.map((g) => ({
+        ...g,
+        milestones: g.milestones.filter((m) => m.id !== id),
+      })),
+    });
+  },
+
   reviewMilestone: async () => ({ ok: false, reason: 'unknown' }),
   yearEndReview: async () => ({ ok: false, reason: 'unknown' }),
 }));
