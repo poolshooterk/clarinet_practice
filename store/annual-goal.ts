@@ -109,7 +109,7 @@ type State = {
   yearEndReview: (goalId: string, review: YearEndReviewInput) => Promise<MutationResult>;
 };
 
-export const useAnnualGoalsStore = create<State>()((set) => ({
+export const useAnnualGoalsStore = create<State>()((set, get) => ({
   goals: [],
   loading: false,
 
@@ -129,9 +129,63 @@ export const useAnnualGoalsStore = create<State>()((set) => ({
     set({ goals });
   },
 
-  addGoal: async () => ({ ok: false, reason: 'unknown' }),
-  updateGoal: async () => ({ ok: false, reason: 'unknown' }),
-  removeGoal: async () => {},
+  addGoal: async (input) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return { ok: false, reason: 'unknown' };
+    const { data, error } = await supabase
+      .from('annual_goals')
+      .insert({
+        user_id: userData.user.id,
+        year: input.year,
+        title: input.title,
+        numeric_target: input.numericTarget ?? null,
+        numeric_unit: input.numericUnit ?? null,
+      })
+      .select(
+        'id, year, title, numeric_target, numeric_unit, ' +
+          'year_end_review_text, year_end_achievement, year_end_reviewed_at',
+      )
+      .single();
+    if (error || !data) return { ok: false, reason: 'unknown' };
+    const row = data as unknown as Omit<GoalRow, 'monthly_milestones'>;
+    const goal = mapGoal({ ...row, monthly_milestones: [] });
+    set({ goals: [goal, ...get().goals] });
+    return { ok: true, goalId: goal.id };
+  },
+
+  updateGoal: async (id, input) => {
+    const { error } = await supabase
+      .from('annual_goals')
+      .update({
+        year: input.year,
+        title: input.title,
+        numeric_target: input.numericTarget ?? null,
+        numeric_unit: input.numericUnit ?? null,
+      })
+      .eq('id', id);
+    if (error) return { ok: false, reason: 'unknown' };
+    set({
+      goals: get().goals.map((g) =>
+        g.id === id
+          ? {
+              ...g,
+              year: input.year,
+              title: input.title,
+              numericTarget: input.numericTarget ?? null,
+              numericUnit: input.numericUnit ?? null,
+            }
+          : g,
+      ),
+    });
+    return { ok: true, goalId: id };
+  },
+
+  removeGoal: async (id) => {
+    const { error } = await supabase.from('annual_goals').delete().eq('id', id);
+    if (error) return;
+    set({ goals: get().goals.filter((g) => g.id !== id) });
+  },
+
   upsertMilestone: async () => ({ ok: false, reason: 'unknown' }),
   removeMilestone: async () => {},
   reviewMilestone: async () => ({ ok: false, reason: 'unknown' }),
