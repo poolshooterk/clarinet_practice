@@ -2,6 +2,8 @@ import {
   annualGoalSchema,
   monthlyMilestoneSchema,
   annualGoalYearEndReviewSchema,
+  canReviewMilestone,
+  canReviewAnnualGoal,
 } from '@/forms/annual-goal';
 
 describe('annualGoalSchema', () => {
@@ -99,5 +101,63 @@ describe('annualGoalYearEndReviewSchema', () => {
   it('不正な yearEndAchievement はエラー', () => {
     const result = annualGoalYearEndReviewSchema.safeParse({ yearEndAchievement: 'maybe' });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('canReviewMilestone', () => {
+  it('過去の月: 常に true', () => {
+    // milestone = 2026-03、today = 2026-05-01
+    expect(canReviewMilestone(2026, 3, new Date(2026, 4, 1))).toBe(true);
+  });
+
+  it('未来の月: false', () => {
+    // milestone = 2026-12、today = 2026-05-30
+    expect(canReviewMilestone(2026, 12, new Date(2026, 4, 30))).toBe(false);
+  });
+
+  it('当月最終週 7 日目 (5月25日) ちょうど: true', () => {
+    expect(canReviewMilestone(2026, 5, new Date(2026, 4, 25))).toBe(true);
+  });
+
+  it('当月最終週 7 日目の前日 (5月24日): false', () => {
+    expect(canReviewMilestone(2026, 5, new Date(2026, 4, 24))).toBe(false);
+  });
+
+  it('当月の月末日 (5月31日): true', () => {
+    expect(canReviewMilestone(2026, 5, new Date(2026, 4, 31))).toBe(true);
+  });
+
+  it('2月 (28日): 2月22日 ちょうどで true', () => {
+    expect(canReviewMilestone(2026, 2, new Date(2026, 1, 22))).toBe(true);
+  });
+
+  it('2月: 2月21日 で false', () => {
+    expect(canReviewMilestone(2026, 2, new Date(2026, 1, 21))).toBe(false);
+  });
+
+  it('うるう年 (2024年2月、29日): 2月23日 ちょうどで true', () => {
+    expect(canReviewMilestone(2024, 2, new Date(2024, 1, 23))).toBe(true);
+  });
+
+  it('過去年: 常に true', () => {
+    expect(canReviewMilestone(2025, 1, new Date(2026, 4, 30))).toBe(true);
+  });
+});
+
+describe('canReviewAnnualGoal', () => {
+  it('過去年: true', () => {
+    expect(canReviewAnnualGoal(2025, new Date(2026, 4, 30))).toBe(true);
+  });
+
+  it('当年で 12月最終週開始 (12月25日): true', () => {
+    expect(canReviewAnnualGoal(2026, new Date(2026, 11, 25))).toBe(true);
+  });
+
+  it('当年で 12月24日: false', () => {
+    expect(canReviewAnnualGoal(2026, new Date(2026, 11, 24))).toBe(false);
+  });
+
+  it('未来年: false', () => {
+    expect(canReviewAnnualGoal(2027, new Date(2026, 4, 30))).toBe(false);
   });
 });

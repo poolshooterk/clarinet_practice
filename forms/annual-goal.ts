@@ -33,3 +33,23 @@ export const annualGoalYearEndReviewSchema = z.object({
 export type AnnualGoalInput = z.infer<typeof annualGoalSchema>;
 export type MonthlyMilestoneInput = z.infer<typeof monthlyMilestoneSchema>;
 export type YearEndReviewInput = z.infer<typeof annualGoalYearEndReviewSchema>;
+
+// (year, month) の月末日。例: month=5 → new Date(2026, 5, 0) = 2026-05-31
+function getLastDayOfMonth(year: number, month: number): Date {
+  return new Date(year, month, 0);
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+export function canReviewMilestone(year: number, month: number, today: Date): boolean {
+  const monthEnd = getLastDayOfMonth(year, month);
+  // 最終週 7 日: 月末日含めて 7 日間 (例: 5月25日〜5月31日)
+  const reviewWindowStart = new Date(year, month - 1, monthEnd.getDate() - 6);
+  return startOfDay(today).getTime() >= reviewWindowStart.getTime();
+}
+
+export function canReviewAnnualGoal(year: number, today: Date): boolean {
+  return canReviewMilestone(year, 12, today);
+}
