@@ -53,3 +53,27 @@ export function canReviewMilestone(year: number, month: number, today: Date): bo
 export function canReviewAnnualGoal(year: number, today: Date): boolean {
   return canReviewMilestone(year, 12, today);
 }
+
+type MilestoneForProgress = { achievement?: Achievement | null };
+
+export type GoalProgress = {
+  achieved: number;
+  partial: number;
+  unachieved: number;
+  unreviewed: number;
+  unset: number;
+};
+
+export function calcGoalProgress(milestones: MilestoneForProgress[]): GoalProgress {
+  let achieved = 0;
+  let partial = 0;
+  let unachieved = 0;
+  let unreviewed = 0;
+  for (const m of milestones) {
+    if (m.achievement === 'achieved') achieved++;
+    else if (m.achievement === 'partial') partial++;
+    else if (m.achievement === 'unachieved') unachieved++;
+    else unreviewed++;
+  }
+  return { achieved, partial, unachieved, unreviewed, unset: 12 - milestones.length };
+}

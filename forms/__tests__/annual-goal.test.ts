@@ -4,6 +4,7 @@ import {
   annualGoalYearEndReviewSchema,
   canReviewMilestone,
   canReviewAnnualGoal,
+  calcGoalProgress,
 } from '@/forms/annual-goal';
 
 describe('annualGoalSchema', () => {
@@ -159,5 +160,49 @@ describe('canReviewAnnualGoal', () => {
 
   it('未来年: false', () => {
     expect(canReviewAnnualGoal(2027, new Date(2026, 4, 30))).toBe(false);
+  });
+});
+
+describe('calcGoalProgress', () => {
+  it('milestones が空: unset=12 で他は 0', () => {
+    expect(calcGoalProgress([])).toEqual({
+      achieved: 0,
+      partial: 0,
+      unachieved: 0,
+      unreviewed: 0,
+      unset: 12,
+    });
+  });
+
+  it('混合: 各 achievement を正しくカウント、未振り返りも区別', () => {
+    const milestones = [
+      { month: 1, text: 'A', achievement: 'achieved' as const },
+      { month: 2, text: 'B', achievement: 'partial' as const },
+      { month: 3, text: 'C', achievement: 'unachieved' as const },
+      { month: 4, text: 'D', achievement: null },
+      { month: 5, text: 'E', achievement: null },
+    ];
+    expect(calcGoalProgress(milestones)).toEqual({
+      achieved: 1,
+      partial: 1,
+      unachieved: 1,
+      unreviewed: 2,
+      unset: 7, // 12 - 5
+    });
+  });
+
+  it('12 件全て埋まる: unset=0', () => {
+    const milestones = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      text: 'X',
+      achievement: 'achieved' as const,
+    }));
+    expect(calcGoalProgress(milestones)).toEqual({
+      achieved: 12,
+      partial: 0,
+      unachieved: 0,
+      unreviewed: 0,
+      unset: 0,
+    });
   });
 });
