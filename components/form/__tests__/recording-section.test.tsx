@@ -13,6 +13,17 @@ jest.mock('@/lib/recording', () => ({
   createSound: jest.fn(),
 }));
 
+jest.mock('expo-keep-awake', () => ({
+  activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined),
+  deactivateKeepAwake: jest.fn().mockResolvedValue(undefined),
+}));
+
+const keepAwake = () =>
+  jest.requireMock('expo-keep-awake') as {
+    activateKeepAwakeAsync: jest.Mock;
+    deactivateKeepAwake: jest.Mock;
+  };
+
 const NO_RECORDINGS: SessionRecording[] = [];
 
 describe('RecordingSection', () => {
@@ -63,6 +74,22 @@ describe('RecordingSection', () => {
         toAdd: [{ tempUri: 'file:///recordings/tmp-1234.m4a', memo: '' }],
         toDelete: [],
       });
+    });
+  });
+
+  it('録音開始で keepAwake を activate、停止で deactivate する', async () => {
+    renderWithProviders(
+      <RecordingSection existingRecordings={NO_RECORDINGS} onChange={jest.fn()} />,
+    );
+
+    fireEvent.press(screen.getByLabelText('録音を追加'));
+    await waitFor(() => {
+      expect(keepAwake().activateKeepAwakeAsync).toHaveBeenCalledWith('clarinet-recording');
+    });
+
+    fireEvent.press(screen.getByLabelText('録音を停止'));
+    await waitFor(() => {
+      expect(keepAwake().deactivateKeepAwake).toHaveBeenCalledWith('clarinet-recording');
     });
   });
 

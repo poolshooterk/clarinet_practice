@@ -1,4 +1,5 @@
 import { Audio } from 'expo-av';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable } from 'react-native';
 import { Input, Paragraph, XStack, YStack } from 'tamagui';
@@ -16,6 +17,8 @@ export type TempRecording = { tempUri: string; memo: string };
 export type RecordingChange = { toAdd: TempRecording[]; toDelete: string[] };
 
 type ActiveStatus = 'recording' | 'paused';
+
+const KEEP_AWAKE_TAG = 'clarinet-recording';
 
 type Props = {
   existingRecordings: SessionRecording[];
@@ -157,6 +160,7 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
     };
   }, []);
 
@@ -170,13 +174,18 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
 
   async function handleStart() {
     try {
-      const rec = await startRecording();
+      await activateKeepAwakeAsync(KEEP_AWAKE_TAG);
+      const rec = await startRecording((status) => {
+        if (__DEV__ && (status.canRecord === false || status.isRecording === false)) {
+          console.warn('[recording-section] status changed', status);
+        }
+      });
       recordingRef.current = rec;
       setElapsed(0);
       setActiveStatus('recording');
       intervalRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
     } catch {
-      // パーミッション拒否など
+      deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
     }
   }
 
@@ -188,10 +197,12 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
     }
     await pauseRecording(recordingRef.current);
     setActiveStatus('paused');
+    deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
   }
 
   async function handleResume() {
     if (!recordingRef.current) return;
+    await activateKeepAwakeAsync(KEEP_AWAKE_TAG);
     await resumeRecording(recordingRef.current);
     setActiveStatus('recording');
     intervalRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
@@ -213,6 +224,8 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
     } catch {
       recordingRef.current = null;
       setActiveStatus(null);
+    } finally {
+      deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
     }
   }
 

@@ -25,7 +25,29 @@ jest.mock('expo-av', () => ({
       createAsync: jest.fn(),
     },
   },
+  InterruptionModeIOS: { MixWithOthers: 0, DoNotMix: 1, DuckOthers: 2 },
+  InterruptionModeAndroid: { DoNotMix: 1, DuckOthers: 2 },
 }));
+
+const RECORDING_AUDIO_MODE = {
+  allowsRecordingIOS: true,
+  playsInSilentModeIOS: true,
+  staysActiveInBackground: true,
+  interruptionModeIOS: 1,
+  interruptionModeAndroid: 1,
+  shouldDuckAndroid: false,
+  playThroughEarpieceAndroid: false,
+};
+
+const IDLE_AUDIO_MODE = {
+  allowsRecordingIOS: false,
+  playsInSilentModeIOS: true,
+  staysActiveInBackground: false,
+  interruptionModeIOS: 1,
+  interruptionModeAndroid: 1,
+  shouldDuckAndroid: false,
+  playThroughEarpieceAndroid: false,
+};
 
 jest.mock('expo-file-system/legacy', () => ({
   documentDirectory: 'file:///data/',
@@ -52,11 +74,21 @@ describe('startRecording', () => {
     const recording = await startRecording();
 
     expect(mockAudio().requestPermissionsAsync).toHaveBeenCalled();
-    expect(mockAudio().setAudioModeAsync).toHaveBeenCalledWith({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-    });
+    expect(mockAudio().setAudioModeAsync).toHaveBeenCalledWith(RECORDING_AUDIO_MODE);
     expect(recording).toBe(mockRecording);
+  });
+
+  it('onStatusUpdate コールバックを Recording.createAsync に渡す', async () => {
+    mockFS().getInfoAsync.mockResolvedValueOnce({ exists: true } as unknown as FileSystem.FileInfo);
+    mockAudio().Recording.createAsync.mockResolvedValueOnce({ recording: {} });
+    const onStatus = jest.fn();
+
+    await startRecording(onStatus);
+
+    expect(mockAudio().Recording.createAsync).toHaveBeenCalledWith(
+      mockAudio().RecordingOptionsPresets.HIGH_QUALITY,
+      onStatus,
+    );
   });
 
   it('recordings/ ディレクトリが存在しない場合は作成する', async () => {
@@ -83,6 +115,7 @@ describe('stopRecording', () => {
 
     const uri = await stopRecording(mockRecording as never);
 
+    expect(mockAudio().setAudioModeAsync).toHaveBeenCalledWith(IDLE_AUDIO_MODE);
     expect(mockFS().moveAsync).toHaveBeenCalledWith({
       from: 'file:///tmp/some.caf',
       to: 'file:///data/recordings/tmp-1234567890.m4a',
@@ -186,10 +219,7 @@ describe('createSound', () => {
 
     const sound = await createSound('file:///data/recordings/session-abc-1.m4a');
 
-    expect(mockAudio().setAudioModeAsync).toHaveBeenCalledWith({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-    });
+    expect(mockAudio().setAudioModeAsync).toHaveBeenCalledWith(IDLE_AUDIO_MODE);
     expect(sound).toBe(mockSound);
   });
 });
