@@ -30,6 +30,10 @@ type RecordingCardProps = {
   uri: string;
   memo?: string;
   memoEditable?: boolean;
+  recordingKey: string;
+  isActive: boolean;
+  onPlayStart: (key: string) => void;
+  onPlayEnd: () => void;
   onMemoChange?: (memo: string) => void;
   onDelete: () => void;
 };
@@ -39,6 +43,10 @@ function RecordingCard({
   uri,
   memo,
   memoEditable,
+  recordingKey,
+  isActive,
+  onPlayStart,
+  onPlayEnd,
   onMemoChange,
   onDelete,
 }: RecordingCardProps) {
@@ -53,10 +61,18 @@ function RecordingCard({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isActive && isPlaying) {
+      soundRef.current?.pauseAsync().catch(() => {});
+      setIsPlaying(false);
+    }
+  }, [isActive, isPlaying]);
+
   async function handlePlayPause() {
     if (soundRef.current && isPlaying) {
       await soundRef.current.pauseAsync();
       setIsPlaying(false);
+      onPlayEnd();
       return;
     }
     if (!soundRef.current) {
@@ -70,9 +86,11 @@ function RecordingCard({
           setIsPlaying(false);
           setPosition(0);
           sound.setPositionAsync(0).catch(() => {});
+          onPlayEnd();
         }
       });
     }
+    onPlayStart(recordingKey);
     await soundRef.current.playAsync();
     setIsPlaying(true);
   }
@@ -106,7 +124,10 @@ function RecordingCard({
             </Paragraph>
           </XStack>
         </YStack>
-        <Pressable onPress={handlePlayPause} aria-label={isPlaying ? '一時停止' : '再生'}>
+        <Pressable
+          onPress={handlePlayPause}
+          aria-label={isPlaying ? `${label}一時停止` : `${label}再生`}
+        >
           <YStack
             width={32}
             height={32}
@@ -149,6 +170,7 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
   const [confirmed, setConfirmed] = useState<TempRecording[]>([]);
   const [activeStatus, setActiveStatus] = useState<ActiveStatus | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [playingKey, setPlayingKey] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -230,12 +252,14 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
   }
 
   function handleDeleteExisting(id: string) {
+    if (playingKey === id) setPlayingKey(null);
     const next = [...deletedIds, id];
     setDeletedIds(next);
     notify(confirmed, next);
   }
 
   function handleDeleteConfirmed(idx: number) {
+    if (playingKey === confirmed[idx]?.tempUri) setPlayingKey(null);
     const next = confirmed.filter((_, i) => i !== idx);
     setConfirmed(next);
     notify(next, deletedIds);
@@ -263,6 +287,10 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
           label={`録音 ${i + 1}`}
           uri={rec.localUri}
           memo={rec.memo ?? undefined}
+          recordingKey={rec.id}
+          isActive={playingKey === rec.id}
+          onPlayStart={setPlayingKey}
+          onPlayEnd={() => setPlayingKey(null)}
           onDelete={() => handleDeleteExisting(rec.id)}
         />
       ))}
@@ -274,6 +302,10 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
           uri={item.tempUri}
           memo={item.memo}
           memoEditable
+          recordingKey={item.tempUri}
+          isActive={playingKey === item.tempUri}
+          onPlayStart={setPlayingKey}
+          onPlayEnd={() => setPlayingKey(null)}
           onMemoChange={(memo) => handleMemoChange(i, memo)}
           onDelete={() => handleDeleteConfirmed(i)}
         />
