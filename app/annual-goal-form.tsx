@@ -64,7 +64,9 @@ export default function AnnualGoalForm() {
 
   return (
     <>
-      <Stack.Screen options={{ title: isEdit ? '年間目標の編集' : '年間目標の追加' }} />
+      <Stack.Screen
+        options={{ headerShown: true, title: isEdit ? '年間目標の編集' : '年間目標の追加' }}
+      />
       <YStack p="$4" gap="$3">
         <Controller
           control={control}

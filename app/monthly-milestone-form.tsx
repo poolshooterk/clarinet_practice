@@ -108,6 +108,7 @@ export default function MonthlyMilestoneForm() {
     <>
       <Stack.Screen
         options={{
+          headerShown: true,
           title: isEdit ? `${initialMonth}月のマイルストーン編集` : 'マイルストーン追加',
         }}
       />

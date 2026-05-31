@@ -34,7 +34,7 @@ export default function AnnualGoalDetail() {
   if (!goal) {
     return (
       <>
-        <Stack.Screen options={{ title: '年間目標' }} />
+        <Stack.Screen options={{ headerShown: true, title: '年間目標' }} />
         <YStack p="$4">
           <Paragraph>目標が見つかりませんでした。</Paragraph>
         </YStack>
@@ -48,6 +48,7 @@ export default function AnnualGoalDetail() {
     <>
       <Stack.Screen
         options={{
+          headerShown: true,
           title: `${goal.year}年: ${goal.title}`,
           headerRight: () => (
             <Pressable onPress={() => router.push(`/annual-goal-form?id=${goal.id}`)}>
