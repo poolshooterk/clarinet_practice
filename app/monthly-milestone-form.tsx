@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert } from 'react-native';
 import { Button, Input, Paragraph, XStack, YStack } from 'tamagui';
@@ -14,7 +14,7 @@ import {
   type MonthlyMilestoneInput,
   monthlyMilestoneSchema,
 } from '@/forms/annual-goal';
-import { useAnnualGoalsStore } from '@/store/annual-goal';
+import { type Milestone, useAnnualGoalsStore } from '@/store/annual-goal';
 
 export default function MonthlyMilestoneForm() {
   const { goalId, month, id } = useLocalSearchParams<{
@@ -28,12 +28,23 @@ export default function MonthlyMilestoneForm() {
   const reviewMilestone = useAnnualGoalsStore((s) => s.reviewMilestone);
 
   const goal = useMemo(() => goals.find((g) => g.id === goalId), [goals, goalId]);
-  const existing = useMemo(() => {
-    if (!goal) return undefined;
-    if (id != null) return goal.milestones.find((m) => m.id === id);
-    if (month != null) return goal.milestones.find((m) => String(m.month) === month);
-    return undefined;
-  }, [goal, id, month]);
+
+  // 画面を開いた時点の milestone を一度だけスナップショットして固定する。
+  // upsertMilestone 後にストアへ追加された milestone を再解決して isEdit が
+  // false→true に切り替わると、<Stack.Screen> のヘッダータイトルが router.back()
+  // の最中に書き換わり、New Architecture + react-native-screens で
+  // 保存時にアプリが即終了するネイティブクラッシュを招くため。
+  const snapshotRef = useRef<{ existing: Milestone | undefined } | null>(null);
+  if (snapshotRef.current === null && goal != null) {
+    const ex =
+      id != null
+        ? goal.milestones.find((m) => m.id === id)
+        : month != null
+          ? goal.milestones.find((m) => String(m.month) === month)
+          : undefined;
+    snapshotRef.current = { existing: ex };
+  }
+  const existing = snapshotRef.current?.existing;
   const isEdit = existing != null;
   const initialMonth = existing?.month ?? Number(month ?? '1');
   const canReview = goal ? canReviewMilestone(goal.year, initialMonth, new Date()) : false;
@@ -49,7 +60,7 @@ export default function MonthlyMilestoneForm() {
       }
     : {
         month: initialMonth,
-        text: '',
+        text: goal?.title ?? '',
         numericTarget: null,
         numericUnit: null,
         reviewText: null,
@@ -113,21 +124,6 @@ export default function MonthlyMilestoneForm() {
         }}
       />
       <YStack p="$4" gap="$3">
-        <Controller
-          control={control}
-          name="month"
-          render={({ field }) => (
-            <YStack gap="$1">
-              <Paragraph>月 (1-12)</Paragraph>
-              <NumericInput
-                value={field.value}
-                onChange={(v) => field.onChange(v ?? 1)}
-                onBlur={field.onBlur}
-              />
-              <FieldError message={errors.month?.message} />
-            </YStack>
-          )}
-        />
         <Controller
           control={control}
           name="text"
