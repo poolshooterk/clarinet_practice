@@ -6,46 +6,50 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
 }));
 
+function makeMilestone(month: number, text: string) {
+  return {
+    id: `m${month}`,
+    month,
+    text,
+    numericTarget: null,
+    numericUnit: null,
+    reviewText: null,
+    achievement: null,
+    reviewedAt: null,
+  };
+}
+
 describe('ThisMonthMilestonesCard', () => {
   beforeEach(() => {
     useAnnualGoalsStore.setState({ goals: [], loading: false } as never);
   });
 
-  it('当月のマイルストーン 0 件: 何も表示しない', () => {
-    const { toJSON } = renderWithProviders(<ThisMonthMilestonesCard />);
+  it('選択月のマイルストーン 0 件: 何も表示しない', () => {
+    const { toJSON } = renderWithProviders(<ThisMonthMilestonesCard month="2026-06" />);
     expect(toJSON()).toBeNull();
   });
 
-  it('当月のマイルストーンがあるとき: タイトルと本文が表示される', () => {
-    const now = new Date();
+  it('選択月のマイルストーンだけを表示し、他の月のものは表示しない', () => {
     useAnnualGoalsStore.setState({
       goals: [
         {
           id: 'g1',
-          year: now.getFullYear(),
+          year: 2026,
           title: '音色を磨く',
           numericTarget: null,
           numericUnit: null,
           yearEndReviewText: null,
           yearEndAchievement: null,
           yearEndReviewedAt: null,
-          milestones: [
-            {
-              id: 'm1',
-              month: now.getMonth() + 1,
-              text: 'ロングトーン',
-              numericTarget: null,
-              numericUnit: null,
-              reviewText: null,
-              achievement: null,
-              reviewedAt: null,
-            },
-          ],
+          milestones: [makeMilestone(5, '5月ロングトーン'), makeMilestone(6, '6月タンギング')],
         },
       ],
     } as never);
-    const { getByText } = renderWithProviders(<ThisMonthMilestonesCard />);
-    expect(getByText('音色を磨く')).toBeOnTheScreen();
-    expect(getByText('ロングトーン')).toBeOnTheScreen();
+    const { getByText, queryByText } = renderWithProviders(
+      <ThisMonthMilestonesCard month="2026-05" />,
+    );
+    expect(getByText('5月のマイルストーン')).toBeOnTheScreen();
+    expect(getByText('5月ロングトーン')).toBeOnTheScreen();
+    expect(queryByText('6月タンギング')).toBeNull();
   });
 });

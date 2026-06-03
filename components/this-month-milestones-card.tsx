@@ -11,23 +11,28 @@ const THEME_BY_ACHIEVEMENT = {
   unachieved: 'red',
 } as const;
 
-export function ThisMonthMilestonesCard() {
+type Props = {
+  // 練習記録画面で選択中の月 ("YYYY-MM")
+  month: string;
+};
+
+export function ThisMonthMilestonesCard({ month }: Props) {
   const goals = useAnnualGoalsStore((s) => s.goals);
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const [yearStr, monthStr] = month.split('-');
+  const year = Number(yearStr);
+  const monthNum = Number(monthStr);
 
   const rows = goals
     .filter((g) => g.year === year)
     .flatMap((g) => {
-      const milestone = g.milestones.find((m) => m.month === month);
+      const milestone = g.milestones.find((m) => m.month === monthNum);
       return milestone ? [{ goal: g, milestone }] : [];
     });
 
   if (rows.length === 0) return null;
 
-  const canReview = canReviewMilestone(year, month, now);
+  const canReview = canReviewMilestone(year, monthNum, new Date());
 
   return (
     <YStack
@@ -40,7 +45,7 @@ export function ThisMonthMilestonesCard() {
       borderColor="$borderColor"
       gap="$2"
     >
-      <Paragraph fontWeight="bold">今月のマイルストーン</Paragraph>
+      <Paragraph fontWeight="bold">{`${monthNum}月のマイルストーン`}</Paragraph>
       {rows.map(({ goal, milestone }) => (
         <Pressable
           key={milestone.id}

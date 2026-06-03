@@ -71,7 +71,7 @@ export default function PracticeLogScreen() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <YStack>
-            <ThisMonthMilestonesCard />
+            <ThisMonthMilestonesCard month={selectedMonth} />
             <XStack justify="space-between" items="center" px="$4" pt="$3" pb="$1">
               <Pressable onPress={prevMonth} aria-label="前月へ">
                 <Paragraph color="$blue9" fontSize="$5">
