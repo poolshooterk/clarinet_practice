@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent } from '@testing-library/react-native';
 
 import LessonScreen from '@/app/(tabs)/lesson';
+import { today } from '@/forms/lesson-record';
 import { useLessonRecordStore } from '@/store/lesson-record';
 import { renderWithProviders, screen } from '@/test-utils/render';
 
@@ -28,7 +29,9 @@ describe('LessonScreen (integration)', () => {
       records: [
         {
           id: 'lr-1',
-          heldAt: '2026-05-15T05:00:00.000Z',
+          // 画面は当月 (today()) でフィルタするため、実時刻が進んでも当月に入る
+          // ように当月の 15 日を使う (固定の過去日付だと月送りで一覧から外れる)
+          heldAt: `${today().slice(0, 7)}-15T05:00:00.000Z`,
           advice: 'タンギングを軽く',
           notes: null,
           textbookEntries: [],
