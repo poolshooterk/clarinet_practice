@@ -50,6 +50,9 @@ WSL2 環境での既知の caveat:
 
 - `npm run lint` (= `expo lint`) はハングすることがある。変更ファイルだけ確認したい場合は `npx eslint <files>` を直接呼ぶのが確実
 - `npx jest` の並列実行は WSL2 のリソース競合で integration テスト (`__tests__/integration/`) が flaky に落ちる。確実に通したいときは `npx jest --runInBand` を使う (時間はかかるが CI と同等の信頼性)
+- **Jest はパイプ/リダイレクトを挟まず直接実行する**。`> file 2>&1` や `| tail` は標準出力を握り潰してハーネス上「Waiting」だけになり進捗が見えなくなる。反復中は `npx jest <pattern>` をそのまま走らせて出力をストリームさせる (ログ保存が要るときだけ `tee`)
+- **反復中は最小スコープで回す**: `npx jest <1ファイル> -t '<テスト名>'`。単一ファイルなら `--runInBand` は不要 (並列のままで十分速い)。`--runInBand` の全件実行は最後の総合チェック 1 回に限定する
+- **キャッシュは `node_modules/.cache/jest` に永続化済み** (`package.json` の `jest.cacheDirectory`)。`node_modules` が残る限りセッションをまたいで効くため、新セッションでも初回の cold transform (~195s) を概ね回避できる。`npm install` 直後や軽いファイルを 1 本走らせるとキャッシュが温まり以降が速い
 - `.husky/pre-commit` の実行属性が落ちると `git commit` 時に `The '.husky/pre-commit' hook was ignored because it's not set as executable.` の warning と共に lint-staged がスキップされる (= コミット運用 手順 4 のセーフティネットが効かない)。`git update-index --chmod=+x .husky/pre-commit` で復元する
 
 ## ビジュアルコンパニオン (WSL2 環境)

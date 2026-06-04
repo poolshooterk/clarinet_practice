@@ -20,6 +20,7 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "cacheDirectory": "<rootDir>/node_modules/.cache/jest",
     "setupFiles": [
       "<rootDir>/jest.setup.ts"
     ],
