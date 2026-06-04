@@ -214,4 +214,61 @@ describe('RecordingSection', () => {
 
     await waitFor(() => expect(screen.getByLabelText('録音 1再生')).toBeTruthy());
   });
+
+  it('onDirtyChange: 初期は false、録音開始で true になる', async () => {
+    const onDirtyChange = jest.fn();
+    renderWithProviders(
+      <RecordingSection
+        existingRecordings={NO_RECORDINGS}
+        onChange={jest.fn()}
+        onDirtyChange={onDirtyChange}
+      />,
+    );
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+
+    fireEvent.press(screen.getByLabelText('録音を追加'));
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+  });
+
+  it('onDirtyChange: 既存録音を削除すると true になる', () => {
+    const onDirtyChange = jest.fn();
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
+    ];
+    renderWithProviders(
+      <RecordingSection
+        existingRecordings={existing}
+        onChange={jest.fn()}
+        onDirtyChange={onDirtyChange}
+      />,
+    );
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+
+    fireEvent.press(screen.getByLabelText('録音 1を削除'));
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+  });
+
+  it('onMoveExisting あり: 既存録音に移動ボタンが出て押すと録音を渡して呼ばれる', () => {
+    const onMoveExisting = jest.fn();
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: 'm' },
+    ];
+    renderWithProviders(
+      <RecordingSection
+        existingRecordings={existing}
+        onChange={jest.fn()}
+        onMoveExisting={onMoveExisting}
+      />,
+    );
+    fireEvent.press(screen.getByLabelText('録音 1を移動'));
+    expect(onMoveExisting).toHaveBeenCalledWith(existing[0]);
+  });
+
+  it('onMoveExisting なし: 移動ボタンは表示されない', () => {
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
+    ];
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={jest.fn()} />);
+    expect(screen.queryByLabelText('録音 1を移動')).toBeNull();
+  });
 });

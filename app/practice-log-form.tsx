@@ -1,16 +1,34 @@
-import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useRef } from 'react';
+import { usePreventRemove } from '@react-navigation/native';
+import { router, Stack, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { Button, Paragraph, YStack } from 'tamagui';
 
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
+import { RecordingMoveSheet } from '@/components/recording-move-sheet';
 import { type PracticeLogInput } from '@/forms/practice-log';
-import { usePracticeLogStore } from '@/store/practice-log';
+import { type SessionRecording, usePracticeLogStore } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
 export default function PracticeLogFormScreen() {
   const formRef = useRef<PracticeLogFormRef>(null);
+  const navigation = useNavigation();
+  const savedRef = useRef(false);
+  const [dirty, setDirty] = useState(false);
+  const [movingRec, setMovingRec] = useState<SessionRecording | null>(null);
   const { id: urlId } = useLocalSearchParams<{ id?: string }>();
+
+  // 未保存の入力・録音がある状態で戻ろうとしたら確認する。保存・削除済みは savedRef でバイパス。
+  usePreventRemove(dirty, ({ data }) => {
+    if (savedRef.current) {
+      navigation.dispatch(data.action);
+      return;
+    }
+    Alert.alert('変更を破棄しますか？', '保存していない入力や録音があります。', [
+      { text: 'キャンセル', style: 'cancel' },
+      { text: '破棄', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
+    ]);
+  });
 
   const sessions = usePracticeLogStore((s) => s.sessions);
   const add = usePracticeLogStore((s) => s.add);
@@ -73,6 +91,7 @@ export default function PracticeLogFormScreen() {
       );
       return;
     }
+    savedRef.current = true;
     router.back();
   };
 
@@ -85,6 +104,7 @@ export default function PracticeLogFormScreen() {
         style: 'destructive',
         onPress: async () => {
           await remove(effectiveId);
+          savedRef.current = true;
           router.back();
         },
       },
@@ -111,6 +131,8 @@ export default function PracticeLogFormScreen() {
         onSubmit={handleSubmit}
         initialValues={initialValues}
         existingRecordings={editingSession?.recordings ?? []}
+        onDirtyChange={setDirty}
+        onMoveExisting={setMovingRec}
       />
       {effectiveId && (
         <YStack px="$4" pb="$6">
@@ -118,6 +140,14 @@ export default function PracticeLogFormScreen() {
             この練習記録を削除
           </Button>
         </YStack>
+      )}
+      {effectiveId && (
+        <RecordingMoveSheet
+          recording={movingRec}
+          sourceType="practice"
+          sourceRecordId={effectiveId}
+          onClose={() => setMovingRec(null)}
+        />
       )}
     </>
   );

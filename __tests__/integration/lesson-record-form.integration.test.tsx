@@ -82,6 +82,23 @@ describe('LessonRecordForm (integration)', () => {
     });
   });
 
+  it('フィールドを編集すると onDirtyChange が true で呼ばれる', async () => {
+    const onDirtyChange = jest.fn();
+    renderWithProviders(
+      <LessonRecordForm
+        onSubmit={jest.fn()}
+        defaultValues={defaultValues}
+        onDirtyChange={onDirtyChange}
+      />,
+    );
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+
+    fireEvent.changeText(screen.getByLabelText('アドバイス'), 'タンギングを軽く');
+    await waitFor(() => {
+      expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+    });
+  });
+
   it('教本を追加ボタンを押すとエントリが1件増える', async () => {
     renderWithProviders(<LessonRecordForm onSubmit={jest.fn()} defaultValues={defaultValues} />);
     fireEvent.press(screen.getByLabelText('教本を追加'));

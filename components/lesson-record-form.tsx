@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   type Control,
   Controller,
@@ -166,6 +166,8 @@ type Props = {
   existingRecordings?: SessionRecording[];
   onSubmit?: (values: LessonRecordInput, recChange: RecordingChange) => void | Promise<void>;
   onDelete?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  onMoveExisting?: (rec: SessionRecording) => void;
 };
 
 export function LessonRecordForm({
@@ -173,10 +175,13 @@ export function LessonRecordForm({
   existingRecordings = [],
   onSubmit = defaultOnSubmit,
   onDelete,
+  onDirtyChange,
+  onMoveExisting,
 }: Props) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [recChange, setRecChange] = useState<RecordingChange>({ toAdd: [], toDelete: [] });
+  const [recDirty, setRecDirty] = useState(false);
 
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
 
@@ -184,7 +189,7 @@ export function LessonRecordForm({
     control,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<LessonRecordInput>({
     resolver: zodResolver(lessonRecordSchema),
     mode: 'onTouched',
@@ -200,13 +205,27 @@ export function LessonRecordForm({
   const { fields, append, remove } = useFieldArray({ control, name: 'textbookEntries' });
   const watchedEntries = watch('textbookEntries') ?? [];
 
+  // 入力変更・録音変更のどちらかがあれば未保存とみなして親へ通知する。
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  }, [onDirtyChange]);
+  useEffect(() => {
+    onDirtyChangeRef.current?.(isDirty || recDirty);
+  }, [isDirty, recDirty]);
+
   async function handleSave(values: LessonRecordInput) {
     await onSubmit(values, recChange);
   }
 
   return (
     <YStack gap="$4" p="$4">
-      <RecordingSection existingRecordings={existingRecordings} onChange={setRecChange} />
+      <RecordingSection
+        existingRecordings={existingRecordings}
+        onChange={setRecChange}
+        onDirtyChange={setRecDirty}
+        onMoveExisting={onMoveExisting}
+      />
       <Controller
         control={control}
         name="date"

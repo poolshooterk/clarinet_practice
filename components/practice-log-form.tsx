@@ -33,6 +33,8 @@ type Props = {
   onSubmit: (data: PracticeLogInput) => void | Promise<void>;
   initialValues?: PracticeLogInput;
   existingRecordings?: SessionRecording[];
+  onDirtyChange?: (dirty: boolean) => void;
+  onMoveExisting?: (rec: SessionRecording) => void;
 };
 
 export type PracticeLogFormRef = {
@@ -234,12 +236,13 @@ function TextbookEntryRow({
 }
 
 export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function PracticeLogForm(
-  { onSubmit, initialValues, existingRecordings = [] },
+  { onSubmit, initialValues, existingRecordings = [], onDirtyChange, onMoveExisting },
   ref,
 ) {
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
   const sessions = usePracticeLogStore((s) => s.sessions);
   const [showPicker, setShowPicker] = useState(false);
+  const [recDirty, setRecDirty] = useState(false);
 
   const recChangeRef = useRef<RecordingChange>({ toAdd: [], toDelete: [] });
 
@@ -254,7 +257,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
     watch,
     setValue,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<PracticeLogInput>({
     resolver: zodResolver(practiceLogSchema),
     mode: 'onTouched',
@@ -312,6 +315,18 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   const formNonBasicMinutes = formTextbookMinutes + (watchedOther ?? 0);
 
   const resetAll = useTimerStore((s) => s.resetAll);
+  const timersActive = useTimerStore((s) =>
+    Object.values(s.timers).some((t) => t?.status === 'running'),
+  );
+
+  // 入力変更・録音変更・タイマー稼働のいずれかがあれば未保存とみなして親へ通知する。
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  }, [onDirtyChange]);
+  useEffect(() => {
+    onDirtyChangeRef.current?.(isDirty || recDirty || timersActive);
+  }, [isDirty, recDirty, timersActive]);
 
   const submitForm = handleSubmit(async (data) => {
     await onSubmit(data);
@@ -350,6 +365,8 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           onChange={(change) => {
             recChangeRef.current = change;
           }}
+          onDirtyChange={setRecDirty}
+          onMoveExisting={onMoveExisting}
         />
 
         {/* 日付 */}

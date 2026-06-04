@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { useLessonRecordStore } from '@/store/lesson-record';
+import { type LessonRecord, useLessonRecordStore } from '@/store/lesson-record';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -613,5 +613,87 @@ describe('useLessonRecordStore', () => {
     const recordings = useLessonRecordStore.getState().records[0].recordings;
     expect(recordings).toHaveLength(1);
     expect(recordings[0].id).toBe('rec-2');
+  });
+});
+
+describe('useLessonRecordStore 録音の付け替え', () => {
+  const seedRecord = (recordings: LessonRecord['recordings']): LessonRecord => ({
+    id: 'lr-1',
+    heldAt: '2026-05-12T10:00:00',
+    advice: null,
+    notes: null,
+    textbookEntries: [],
+    recordings,
+  });
+
+  beforeEach(() => {
+    useLessonRecordStore.setState({ records: [], loading: false });
+    jest.clearAllMocks();
+  });
+
+  it('insertRecording: 空き index にファイルを移動して DB 挿入し state に追加する', async () => {
+    useLessonRecordStore.setState({
+      records: [seedRecord([{ id: 'rec-1', index: 1, localUri: 'file:///lr1-1.m4a', memo: null }])],
+    });
+    mockRecording().finalizeRecording.mockResolvedValueOnce('file:///lr-1-2.m4a');
+    mockFrom().mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'rec-new' } }),
+        }),
+      }),
+    });
+
+    const rec = await useLessonRecordStore
+      .getState()
+      .insertRecording('lr-1', 'file:///src.m4a', 'メモ');
+
+    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith('file:///src.m4a', 'lr-1', 2);
+    expect(rec).toEqual({ id: 'rec-new', index: 2, localUri: 'file:///lr-1-2.m4a', memo: 'メモ' });
+    expect(useLessonRecordStore.getState().records[0].recordings.map((r) => r.id)).toEqual([
+      'rec-1',
+      'rec-new',
+    ]);
+  });
+
+  it('insertRecording: 空きスロットが無い場合は null を返し state を変えない', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        seedRecord([
+          { id: 'rec-1', index: 1, localUri: 'file:///lr1-1.m4a', memo: null },
+          { id: 'rec-2', index: 2, localUri: 'file:///lr1-2.m4a', memo: null },
+          { id: 'rec-3', index: 3, localUri: 'file:///lr1-3.m4a', memo: null },
+        ]),
+      ],
+    });
+
+    const rec = await useLessonRecordStore
+      .getState()
+      .insertRecording('lr-1', 'file:///src.m4a', null);
+
+    expect(rec).toBeNull();
+    expect(mockRecording().finalizeRecording).not.toHaveBeenCalled();
+    expect(useLessonRecordStore.getState().records[0].recordings).toHaveLength(3);
+  });
+
+  it('deleteRecordingRow: DB 行のみ削除し state から除外する (ファイルは消さない)', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        seedRecord([
+          { id: 'rec-1', index: 1, localUri: 'file:///lr1-1.m4a', memo: null },
+          { id: 'rec-2', index: 2, localUri: 'file:///lr1-2.m4a', memo: null },
+        ]),
+      ],
+    });
+    const eqMock = jest.fn().mockResolvedValue({ error: null });
+    mockFrom().mockReturnValueOnce({ delete: jest.fn().mockReturnValue({ eq: eqMock }) });
+
+    await useLessonRecordStore.getState().deleteRecordingRow('lr-1', 'rec-1');
+
+    expect(eqMock).toHaveBeenCalledWith('id', 'rec-1');
+    expect(mockRecording().deleteRecording).not.toHaveBeenCalled();
+    expect(useLessonRecordStore.getState().records[0].recordings.map((r) => r.id)).toEqual([
+      'rec-2',
+    ]);
   });
 });

@@ -112,6 +112,12 @@ type PracticeLogState = {
     deletedRecordingIds?: string[],
   ) => Promise<MutationResult>;
   remove: (id: string) => Promise<void>;
+  insertRecording: (
+    sessionId: string,
+    srcUri: string,
+    memo: string | null,
+  ) => Promise<SessionRecording | null>;
+  deleteRecordingRow: (sessionId: string, recordingId: string) => Promise<void>;
 };
 
 export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
@@ -517,5 +523,47 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { error } = await supabase.from('practice_sessions').delete().eq('id', id);
     if (error) return;
     set({ sessions: get().sessions.filter((s) => s.id !== id) });
+  },
+
+  // 既存ファイルを当セッションへ移し DB 行を追加する (録音の記録間移動の移動先側)。
+  insertRecording: async (sessionId, srcUri, memo) => {
+    const session = get().sessions.find((s) => s.id === sessionId);
+    if (!session) return null;
+    const usedIndices = new Set(session.recordings.map((r) => r.index));
+    const index = ([1, 2, 3] as const).find((i) => !usedIndices.has(i));
+    if (index == null) return null;
+
+    const destUri = await finalizeRecording(srcUri, sessionId, index);
+    const { data: recData } = await supabase
+      .from('practice_session_recordings')
+      .insert({ session_id: sessionId, index, local_uri: destUri, memo: memo || null })
+      .select('id')
+      .single();
+    if (!recData) return null;
+
+    const newRec: SessionRecording = {
+      id: (recData as { id: string }).id,
+      index,
+      localUri: destUri,
+      memo: memo || null,
+    };
+    set({
+      sessions: get().sessions.map((s) =>
+        s.id === sessionId ? { ...s, recordings: [...s.recordings, newRec] } : s,
+      ),
+    });
+    return newRec;
+  },
+
+  // DB 行のみ削除する (移動元側)。ファイルは移動済みのため削除しない。
+  deleteRecordingRow: async (sessionId, recordingId) => {
+    await supabase.from('practice_session_recordings').delete().eq('id', recordingId);
+    set({
+      sessions: get().sessions.map((s) =>
+        s.id === sessionId
+          ? { ...s, recordings: s.recordings.filter((r) => r.id !== recordingId) }
+          : s,
+      ),
+    });
   },
 }));

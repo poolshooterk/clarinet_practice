@@ -16,6 +16,11 @@ jest.mock('expo-router', () => ({
   router: { back: jest.fn() },
   useFocusEffect: () => {},
   useLocalSearchParams: jest.fn().mockReturnValue({}),
+  useNavigation: () => ({ dispatch: jest.fn() }),
+}));
+
+jest.mock('@react-navigation/native', () => ({
+  usePreventRemove: () => {},
 }));
 
 jest.mock('expo-file-system/legacy', () => ({
@@ -141,6 +146,17 @@ describe('PracticeLogForm (integration)', () => {
       loading: false,
     });
     jest.clearAllMocks();
+  });
+
+  it('フィールドを編集すると onDirtyChange が true で呼ばれる', async () => {
+    const onDirtyChange = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} onDirtyChange={onDirtyChange} />);
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+
+    fireEvent.changeText(screen.getByLabelText('メモ'), '今日は調子が良い');
+    await waitFor(() => {
+      expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+    });
   });
 
   it('practicedAt を空にして保存するとバリデーションエラーが表示される', async () => {

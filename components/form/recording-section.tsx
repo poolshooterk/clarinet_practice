@@ -23,6 +23,8 @@ const KEEP_AWAKE_TAG = 'clarinet-recording';
 type Props = {
   existingRecordings: SessionRecording[];
   onChange: (change: RecordingChange) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  onMoveExisting?: (rec: SessionRecording) => void;
 };
 
 type RecordingCardProps = {
@@ -35,6 +37,7 @@ type RecordingCardProps = {
   onPlayStart: (key: string) => void;
   onPlayEnd: () => void;
   onMemoChange?: (memo: string) => void;
+  onMove?: () => void;
   onDelete: () => void;
 };
 
@@ -48,6 +51,7 @@ function RecordingCard({
   onPlayStart,
   onPlayEnd,
   onMemoChange,
+  onMove,
   onDelete,
 }: RecordingCardProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -143,6 +147,13 @@ function RecordingCard({
             </Paragraph>
           </YStack>
         </Pressable>
+        {onMove && (
+          <Pressable onPress={onMove} aria-label={`${label}を移動`}>
+            <Paragraph color="$blue9" fontSize="$2">
+              移動
+            </Paragraph>
+          </Pressable>
+        )}
         <Pressable onPress={onDelete} aria-label={`${label}を削除`}>
           <Paragraph color="$red9" fontSize="$4">
             ✕
@@ -165,7 +176,12 @@ function RecordingCard({
   );
 }
 
-function RecordingSectionNative({ existingRecordings, onChange }: Props) {
+function RecordingSectionNative({
+  existingRecordings,
+  onChange,
+  onDirtyChange,
+  onMoveExisting,
+}: Props) {
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [confirmed, setConfirmed] = useState<TempRecording[]>([]);
   const [activeStatus, setActiveStatus] = useState<ActiveStatus | null>(null);
@@ -189,6 +205,16 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
   const remaining = existingRecordings.filter((r) => !deletedIds.includes(r.id));
   const totalCount = remaining.length + confirmed.length;
   const canAdd = totalCount < 3 && activeStatus === null;
+
+  // 未保存の録音変更 (確定済み追加 / 削除マーク / 録音進行中) を親へ通知する。
+  const recDirty = confirmed.length > 0 || deletedIds.length > 0 || activeStatus !== null;
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  }, [onDirtyChange]);
+  useEffect(() => {
+    onDirtyChangeRef.current?.(recDirty);
+  }, [recDirty]);
 
   function notify(nextConfirmed: TempRecording[], nextDeletedIds: string[]) {
     onChangeRef.current({ toAdd: nextConfirmed, toDelete: nextDeletedIds });
@@ -291,6 +317,7 @@ function RecordingSectionNative({ existingRecordings, onChange }: Props) {
           isActive={playingKey === rec.id}
           onPlayStart={setPlayingKey}
           onPlayEnd={() => setPlayingKey(null)}
+          onMove={onMoveExisting ? () => onMoveExisting(rec) : undefined}
           onDelete={() => handleDeleteExisting(rec.id)}
         />
       ))}

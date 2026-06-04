@@ -1186,3 +1186,99 @@ describe('calcSessionTime', () => {
     expect(calcSessionTime(session)).toEqual({ basic: 0, nonBasic: 35 });
   });
 });
+
+describe('usePracticeLogStore 録音の付け替え', () => {
+  const seedSession = (recordings: PracticeSession['recordings']): PracticeSession => ({
+    id: 'session-1',
+    practicedAt: '2026-05-12',
+    durationMinutes: null,
+    otherMinutes: null,
+    otherMemo: null,
+    totalMinutes: null,
+    memo: null,
+    reedNumber: null,
+    textbookEntries: [],
+    basicMenuEntries: [],
+    recordings,
+  });
+
+  beforeEach(() => {
+    usePracticeLogStore.setState({ sessions: [], loading: false });
+    jest.clearAllMocks();
+  });
+
+  it('insertRecording: 空き index にファイルを移動して DB 挿入し state に追加する', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        seedSession([{ id: 'rec-1', index: 1, localUri: 'file:///s1-1.m4a', memo: null }]),
+      ],
+    });
+    mockRecording().finalizeRecording.mockResolvedValueOnce('file:///session-1-2.m4a');
+    mockSupabase().from.mockReturnValueOnce({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'rec-new' } }),
+        }),
+      }),
+    });
+
+    const rec = await usePracticeLogStore
+      .getState()
+      .insertRecording('session-1', 'file:///src.m4a', 'メモ');
+
+    expect(mockRecording().finalizeRecording).toHaveBeenCalledWith(
+      'file:///src.m4a',
+      'session-1',
+      2,
+    );
+    expect(rec).toEqual({
+      id: 'rec-new',
+      index: 2,
+      localUri: 'file:///session-1-2.m4a',
+      memo: 'メモ',
+    });
+    const recordings = usePracticeLogStore.getState().sessions[0].recordings;
+    expect(recordings.map((r) => r.id)).toEqual(['rec-1', 'rec-new']);
+  });
+
+  it('insertRecording: 空きスロットが無い場合は null を返し state を変えない', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        seedSession([
+          { id: 'rec-1', index: 1, localUri: 'file:///s1-1.m4a', memo: null },
+          { id: 'rec-2', index: 2, localUri: 'file:///s1-2.m4a', memo: null },
+          { id: 'rec-3', index: 3, localUri: 'file:///s1-3.m4a', memo: null },
+        ]),
+      ],
+    });
+
+    const rec = await usePracticeLogStore
+      .getState()
+      .insertRecording('session-1', 'file:///src.m4a', null);
+
+    expect(rec).toBeNull();
+    expect(mockRecording().finalizeRecording).not.toHaveBeenCalled();
+    expect(usePracticeLogStore.getState().sessions[0].recordings).toHaveLength(3);
+  });
+
+  it('deleteRecordingRow: DB 行のみ削除し state から除外する (ファイルは消さない)', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        seedSession([
+          { id: 'rec-1', index: 1, localUri: 'file:///s1-1.m4a', memo: null },
+          { id: 'rec-2', index: 2, localUri: 'file:///s1-2.m4a', memo: null },
+        ]),
+      ],
+    });
+    const eqMock = jest.fn().mockResolvedValue({ error: null });
+    mockSupabase().from.mockReturnValueOnce({ delete: jest.fn().mockReturnValue({ eq: eqMock }) });
+
+    await usePracticeLogStore.getState().deleteRecordingRow('session-1', 'rec-1');
+
+    expect(eqMock).toHaveBeenCalledWith('id', 'rec-1');
+    expect(mockRecording().deleteRecording).not.toHaveBeenCalled();
+    expect(usePracticeLogStore.getState().sessions[0].recordings.map((r) => r.id)).toEqual([
+      'rec-2',
+    ]);
+  });
+});

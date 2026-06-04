@@ -60,6 +60,12 @@ type LessonRecordState = {
     deletedRecordingIds?: string[],
   ) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  insertRecording: (
+    lessonRecordId: string,
+    srcUri: string,
+    memo: string | null,
+  ) => Promise<SessionRecording | null>;
+  deleteRecordingRow: (lessonRecordId: string, recordingId: string) => Promise<void>;
 };
 
 export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
@@ -328,5 +334,47 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
     const { error } = await supabase.from('lesson_records').delete().eq('id', id);
     if (error) return;
     set({ records: get().records.filter((r) => r.id !== id) });
+  },
+
+  // 既存ファイルを当レッスン記録へ移し DB 行を追加する (録音の記録間移動の移動先側)。
+  insertRecording: async (lessonRecordId, srcUri, memo) => {
+    const record = get().records.find((r) => r.id === lessonRecordId);
+    if (!record) return null;
+    const usedIndices = new Set(record.recordings.map((r) => r.index));
+    const index = ([1, 2, 3] as const).find((i) => !usedIndices.has(i));
+    if (index == null) return null;
+
+    const destUri = await finalizeRecording(srcUri, lessonRecordId, index);
+    const { data: recData } = await supabase
+      .from('lesson_record_recordings')
+      .insert({ lesson_record_id: lessonRecordId, index, local_uri: destUri, memo: memo || null })
+      .select('id')
+      .single();
+    if (!recData) return null;
+
+    const newRec: SessionRecording = {
+      id: recData.id,
+      index,
+      localUri: destUri,
+      memo: memo || null,
+    };
+    set({
+      records: get().records.map((r) =>
+        r.id === lessonRecordId ? { ...r, recordings: [...r.recordings, newRec] } : r,
+      ),
+    });
+    return newRec;
+  },
+
+  // DB 行のみ削除する (移動元側)。ファイルは移動済みのため削除しない。
+  deleteRecordingRow: async (lessonRecordId, recordingId) => {
+    await supabase.from('lesson_record_recordings').delete().eq('id', recordingId);
+    set({
+      records: get().records.map((r) =>
+        r.id === lessonRecordId
+          ? { ...r, recordings: r.recordings.filter((rec) => rec.id !== recordingId) }
+          : r,
+      ),
+    });
   },
 }));
