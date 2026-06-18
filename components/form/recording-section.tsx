@@ -2,7 +2,7 @@ import { Audio } from 'expo-av';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable } from 'react-native';
-import { Input, Paragraph, XStack, YStack } from 'tamagui';
+import { Input, Paragraph, Slider, XStack, YStack } from 'tamagui';
 
 import {
   createSound,
@@ -58,6 +58,11 @@ function RecordingCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  // ドラッグ中だけ true。表示値の切替に使う state と、ステータスコールバック内で
+  // 同期参照するための ref (state は再レンダ待ちで間に合わない) の二重管理。
+  const [seeking, setSeeking] = useState(false);
+  const [seekValue, setSeekValue] = useState(0);
+  const seekingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -84,8 +89,9 @@ function RecordingCard({
       soundRef.current = sound;
       sound.setOnPlaybackStatusUpdate((status) => {
         if (!status.isLoaded) return;
-        setPosition(status.positionMillis);
         setDuration(status.durationMillis ?? 0);
+        // ドラッグ中は再生進行による位置更新で表示値を上書きしない。
+        if (!seekingRef.current) setPosition(status.positionMillis);
         if (status.didJustFinish) {
           setIsPlaying(false);
           setPosition(0);
@@ -111,17 +117,37 @@ function RecordingCard({
           {label}
         </Paragraph>
         <YStack flex={1} gap="$1">
-          <YStack height={4} bg="$color3" rounded="$1" overflow="hidden">
-            <YStack
-              height={4}
-              bg="$blue9"
-              rounded="$1"
-              style={{ width: duration > 0 ? `${Math.round((position / duration) * 100)}%` : '0%' }}
-            />
-          </YStack>
+          <Slider
+            theme="blue"
+            size="$2"
+            aria-label={`${label}シークバー`}
+            disabled={duration === 0}
+            value={[seeking ? seekValue : Math.min(position, duration)]}
+            max={Math.max(duration, 1)}
+            step={200}
+            onSlideStart={(_e, value) => {
+              seekingRef.current = true;
+              setSeeking(true);
+              setSeekValue(value);
+            }}
+            onValueChange={([v]) => {
+              if (seekingRef.current) setSeekValue(v);
+            }}
+            onSlideEnd={(_e, value) => {
+              soundRef.current?.setPositionAsync(value).catch(() => {});
+              setPosition(value);
+              seekingRef.current = false;
+              setSeeking(false);
+            }}
+          >
+            <Slider.Track>
+              <Slider.TrackActive />
+            </Slider.Track>
+            <Slider.Thumb circular index={0} aria-label={`${label}再生位置`} />
+          </Slider>
           <XStack justify="space-between">
             <Paragraph fontSize="$1" color="$color10">
-              {formatMs(position)}
+              {formatMs(seeking ? seekValue : position)}
             </Paragraph>
             <Paragraph fontSize="$1" color="$color11">
               {formatMs(duration)}

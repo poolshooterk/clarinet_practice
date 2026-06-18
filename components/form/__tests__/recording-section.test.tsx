@@ -271,4 +271,58 @@ describe('RecordingSection', () => {
     renderWithProviders(<RecordingSection existingRecordings={existing} onChange={jest.fn()} />);
     expect(screen.queryByLabelText('録音 1を移動')).toBeNull();
   });
+
+  it('再生前 (Sound 未読込) はシークバーが無効', () => {
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
+    ];
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={jest.fn()} />);
+    expect(screen.getByLabelText('録音 1シークバー').props['aria-disabled']).toBe(true);
+  });
+
+  it('再生開始して duration が判明するとシークバーが有効になる', async () => {
+    const sound1 = makeSoundMock();
+    recordingLib().createSound.mockResolvedValue(sound1);
+
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
+    ];
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={jest.fn()} />);
+
+    fireEvent.press(screen.getByLabelText('録音 1再生'));
+    await waitFor(() => expect(sound1.setOnPlaybackStatusUpdate).toHaveBeenCalled());
+
+    const statusCallback = sound1.setOnPlaybackStatusUpdate.mock.calls[0][0] as (
+      status: Record<string, unknown>,
+    ) => void;
+    act(() => {
+      statusCallback({ isLoaded: true, positionMillis: 0, durationMillis: 5000 });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('録音 1シークバー').props['aria-disabled']).toBeFalsy(),
+    );
+  });
+
+  it('再生中の位置更新で経過時間ラベルが進む', async () => {
+    const sound1 = makeSoundMock();
+    recordingLib().createSound.mockResolvedValue(sound1);
+
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
+    ];
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={jest.fn()} />);
+
+    fireEvent.press(screen.getByLabelText('録音 1再生'));
+    await waitFor(() => expect(sound1.setOnPlaybackStatusUpdate).toHaveBeenCalled());
+
+    const statusCallback = sound1.setOnPlaybackStatusUpdate.mock.calls[0][0] as (
+      status: Record<string, unknown>,
+    ) => void;
+    act(() => {
+      statusCallback({ isLoaded: true, positionMillis: 65000, durationMillis: 120000 });
+    });
+
+    await waitFor(() => expect(screen.getByText('1:05')).toBeTruthy());
+  });
 });
