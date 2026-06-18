@@ -103,10 +103,10 @@ export const annualGoalYearEndReviewSchema = z.object({
 
 ```ts
 // (year, month) の月末 - 6 日 ≤ today、または (year, month) が today より過去
-export function canReviewMilestone(year: number, month: number, today: Date): boolean
+export function canReviewMilestone(year: number, month: number, today: Date): boolean;
 
 // 年末振り返り可能判定 (12 月最終週以降 または year が過去)
-export function canReviewAnnualGoal(year: number, today: Date): boolean
+export function canReviewAnnualGoal(year: number, today: Date): boolean;
 
 // sparse milestones から状態をカウント (unset = 12 - milestones.length)
 type GoalProgress = {
@@ -114,9 +114,9 @@ type GoalProgress = {
   partial: number;
   unachieved: number;
   unreviewed: number; // milestone 存在するが achievement = null
-  unset: number;      // milestone 行自体なし
+  unset: number; // milestone 行自体なし
 };
-export function calcGoalProgress(milestones: Milestone[]): GoalProgress
+export function calcGoalProgress(milestones: Milestone[]): GoalProgress;
 
 export const ACHIEVEMENT_LABELS = {
   achieved: '達成',
@@ -162,22 +162,22 @@ type State = {
 
 ### 新規ファイル
 
-| ファイル | 役割 |
-|---|---|
-| `app/(tabs)/annual-goals.tsx` | 年セレクター + 年間目標カード一覧 (新タブ) |
-| `app/annual-goal-form.tsx` | 目標 新規 / 編集 / 削除フォーム |
-| `app/annual-goal-detail.tsx` | 詳細 (12 ヶ月マイルストーン一覧 + 年末振り返りカード) |
-| `app/monthly-milestone-form.tsx` | マイルストーン 追加 / 編集 / 振り返り入力 / 削除 |
-| `components/annual-goal-card.tsx` | 目標カード (一覧用、進捗サマリー表示) |
-| `components/monthly-milestone-card.tsx` | 月マイルストーンカード |
-| `components/this-month-milestones-card.tsx` | ホーム上部用「今月のマイルストーン」 |
+| ファイル                                    | 役割                                                  |
+| ------------------------------------------- | ----------------------------------------------------- |
+| `app/(tabs)/annual-goals.tsx`               | 年セレクター + 年間目標カード一覧 (新タブ)            |
+| `app/annual-goal-form.tsx`                  | 目標 新規 / 編集 / 削除フォーム                       |
+| `app/annual-goal-detail.tsx`                | 詳細 (12 ヶ月マイルストーン一覧 + 年末振り返りカード) |
+| `app/monthly-milestone-form.tsx`            | マイルストーン 追加 / 編集 / 振り返り入力 / 削除      |
+| `components/annual-goal-card.tsx`           | 目標カード (一覧用、進捗サマリー表示)                 |
+| `components/monthly-milestone-card.tsx`     | 月マイルストーンカード                                |
+| `components/this-month-milestones-card.tsx` | ホーム上部用「今月のマイルストーン」                  |
 
 ### 既存変更ファイル
 
-| ファイル | 変更内容 |
-|---|---|
-| `app/(tabs)/_layout.tsx` | 新タブ `annual-goals` (`flag-outline` アイコン) を追加 (現5タブ→6タブ) |
-| `app/(tabs)/index.tsx` | ① 上部に `<ThisMonthMilestonesCard />` を挿入、② 月間サマリーを「合計」→「平均」に変更 |
+| ファイル                 | 変更内容                                                                               |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| `app/(tabs)/_layout.tsx` | 新タブ `annual-goals` (`flag-outline` アイコン) を追加 (現5タブ→6タブ)                 |
+| `app/(tabs)/index.tsx`   | ① 上部に `<ThisMonthMilestonesCard />` を挿入、② 月間サマリーを「合計」→「平均」に変更 |
 
 ## UI / UX 詳細
 
@@ -248,13 +248,13 @@ return total > 0
 
 プロジェクトのテスト戦略マトリクスに従い、unit と integration を以下のように分担:
 
-| 種別 | ファイル | 内容 |
-|---|---|---|
-| unit | `forms/__tests__/annual-goal.test.ts` | zod スキーマ網羅 (両 schema × valid/invalid/境界)、`canReviewMilestone` 境界値 (最終週 7 日前 / 当日 / 翌月 / 過去月)、`calcGoalProgress` の集計ロジック、`canReviewAnnualGoal` |
-| unit | `store/__tests__/annual-goal.test.ts` | CRUD アクションの state 遷移 (Supabase モック)、milestone の upsert / reviewMilestone / yearEndReview |
-| integration | `__tests__/integration/annual-goal-form.integration.test.tsx` | フォーム送信フロー (空送信エラー / 正常作成 / 編集 / 削除) |
-| integration | `__tests__/integration/monthly-milestone-form.integration.test.tsx` | マイルストーン編集 + 振り返り入力経路 (振り返り可能時期外でのボタン非表示確認) |
-| integration | `__tests__/integration/this-month-milestones.integration.test.tsx` | ホーム上部カードの表示条件 (当月マイルストーン有無、振り返りボタン表示) |
+| 種別        | ファイル                                                            | 内容                                                                                                                                                                            |
+| ----------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| unit        | `forms/__tests__/annual-goal.test.ts`                               | zod スキーマ網羅 (両 schema × valid/invalid/境界)、`canReviewMilestone` 境界値 (最終週 7 日前 / 当日 / 翌月 / 過去月)、`calcGoalProgress` の集計ロジック、`canReviewAnnualGoal` |
+| unit        | `store/__tests__/annual-goal.test.ts`                               | CRUD アクションの state 遷移 (Supabase モック)、milestone の upsert / reviewMilestone / yearEndReview                                                                           |
+| integration | `__tests__/integration/annual-goal-form.integration.test.tsx`       | フォーム送信フロー (空送信エラー / 正常作成 / 編集 / 削除)                                                                                                                      |
+| integration | `__tests__/integration/monthly-milestone-form.integration.test.tsx` | マイルストーン編集 + 振り返り入力経路 (振り返り可能時期外でのボタン非表示確認)                                                                                                  |
+| integration | `__tests__/integration/this-month-milestones.integration.test.tsx`  | ホーム上部カードの表示条件 (当月マイルストーン有無、振り返りボタン表示)                                                                                                         |
 
 平均表示の変更は `app/(tabs)/index.tsx` 内のシンプルな式変更のため、既存テストの追加修正で足りる場合は新規テストファイルを作らない。
 
