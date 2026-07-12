@@ -48,6 +48,10 @@ create policy "..." on <table> for delete using (auth.uid() = user_id);
 - `purchase_plans` — 購入計画 (PK = `id`、`user_id` に UNIQUE 制約でユーザごとに1行)。`maker_id` / `maker_name` / `model_id` / `model_name` / `target_price` / `monthly_savings_target`
 - `purchase_plan_savings` — 貯蓄実績 (`purchase_plan_id` 外部キー)。`year_month` / `amount` / `memo`。RLS は `purchase_plans` の `user_id` を JOIN で検証
 
+## トラブルシューティング
+
+- **無料枠プロジェクトの自動 pause**: 約1週間アクセスがないと Supabase プロジェクトが pause され、その間は DB / Auth がオフラインになる。症状は「正しい認証情報でもログインできない」「MCP / クライアントからの全 SQL が `Connection terminated due to connection timeout`」「auth ログが直近0件」。一方で管理 API (`mcp__supabase__get_project_url` 等) は応答するのが特徴。切り分けの第一歩は Supabase ダッシュボードのステータス (Active / Paused) 確認。Paused なら "Restore project" で数分待てば復旧する (pause 解除は MCP からは不可でダッシュボード操作が必要)
+
 ## テストでのモック
 
 `jest.setup.ts` で `@/lib/supabase` がグローバルモックされており、`supabase.auth.*` の各メソッドは `jest.fn()` になっている。結合テストでは `mockResolvedValueOnce` で戻り値を上書きして使う:
