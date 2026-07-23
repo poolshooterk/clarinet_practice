@@ -16,10 +16,12 @@ import { Button, Input, Paragraph, Select, XStack, YStack } from 'tamagui';
 import { FieldError } from '@/components/form/field-error';
 import { NumericInput } from '@/components/form/numeric-input';
 import { type RecordingChange, RecordingSection } from '@/components/form/recording-section';
+import { PRACTICE_SESSION_TIMER_KEY, SessionTimer } from '@/components/form/session-timer';
 import { TimerControl } from '@/components/timer-control';
 import {
   BASIC_GENRES,
   BASIC_MENUS,
+  formatClock,
   formatDate,
   type PracticeLogInput,
   practiceLogSchema,
@@ -27,7 +29,7 @@ import {
 } from '@/forms/practice-log';
 import { type SessionRecording, usePracticeLogStore } from '@/store/practice-log';
 import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
-import { useTimerStore } from '@/store/timer';
+import { getElapsedMs, useTimerStore } from '@/store/timer';
 
 type Props = {
   onSubmit: (data: PracticeLogInput) => void | Promise<void>;
@@ -270,6 +272,8 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
       otherMemo: '',
       memo: '',
       reedNumber: '',
+      startTime: '',
+      endTime: '',
       textbookEntries: lastTextbookEntries,
     },
   });
@@ -351,6 +355,10 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           setValue(`textbookEntries.${index}.durationMinutes`, timerState.stop(key));
         }
       });
+      const sessionEntry = timerState.timers[PRACTICE_SESSION_TIMER_KEY];
+      if (sessionEntry?.firstStartedAt != null) {
+        setValue('endTime', formatClock(sessionEntry.firstStartedAt + getElapsedMs(sessionEntry)));
+      }
       submitForm();
     },
     getRecordingChange: () => recChangeRef.current,
@@ -411,6 +419,57 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
             </YStack>
           )}
         />
+
+        {/* 練習時間帯 (セッションタイマー) */}
+        <YStack gap="$2">
+          <Paragraph color="$color12">練習時間帯 任意</Paragraph>
+          <SessionTimer
+            onTimesChange={({ startTime, endTime }) => {
+              setValue('startTime', startTime ?? '', { shouldDirty: true });
+              if (endTime != null) setValue('endTime', endTime, { shouldDirty: true });
+            }}
+          />
+          <XStack gap="$2" items="center">
+            <Controller
+              control={control}
+              name="startTime"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <YStack flex={1} gap="$1">
+                  <Paragraph fontSize="$2" color="$color10">
+                    開始
+                  </Paragraph>
+                  <Input
+                    value={value ?? ''}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="HH:MM"
+                    aria-label="練習開始時刻"
+                  />
+                  <FieldError message={errors.startTime?.message} />
+                </YStack>
+              )}
+            />
+            <Controller
+              control={control}
+              name="endTime"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <YStack flex={1} gap="$1">
+                  <Paragraph fontSize="$2" color="$color10">
+                    終了
+                  </Paragraph>
+                  <Input
+                    value={value ?? ''}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="HH:MM"
+                    aria-label="練習終了時刻"
+                  />
+                  <FieldError message={errors.endTime?.message} />
+                </YStack>
+              )}
+            />
+          </XStack>
+        </YStack>
 
         {/* メモ */}
         <Controller

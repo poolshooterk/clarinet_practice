@@ -66,6 +66,8 @@ export default function PracticeLogFormScreen() {
             otherMemo: editingSession.otherMemo ?? '',
             memo: editingSession.memo ?? '',
             reedNumber: editingSession.reedNumber ?? '',
+            startTime: editingSession.startTime ?? '',
+            endTime: editingSession.endTime ?? '',
             textbookEntries: editingSession.textbookEntries.map((e) => ({
               textbookId: e.textbookId,
               currentPage: e.currentPage,
