@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable } from 'react-native';
 import { Paragraph, XStack, YStack } from 'tamagui';
 
+import { LatestLessonHomeworkCard } from '@/components/latest-lesson-homework-card';
 import { formatHeldAt, today } from '@/forms/lesson-record';
 import { useLessonRecordStore } from '@/store/lesson-record';
 
@@ -100,6 +101,8 @@ export default function LessonScreen() {
                 </Paragraph>
               </Pressable>
             </XStack>
+
+            <LatestLessonHomeworkCard />
 
             {monthlySummary.count > 0 && (
               <YStack

@@ -2,8 +2,10 @@ import { usePreventRemove } from '@react-navigation/native';
 import { router, Stack, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
+import { Paragraph, YStack } from 'tamagui';
 
 import type { RecordingChange } from '@/components/form/recording-section';
+import { LessonHomeworkSection } from '@/components/lesson-homework-section';
 import { LessonRecordForm } from '@/components/lesson-record-form';
 import { RecordingMoveSheet } from '@/components/recording-move-sheet';
 import { type LessonRecordInput, splitHeldAt } from '@/forms/lesson-record';
@@ -104,6 +106,21 @@ export default function LessonRecordFormScreen() {
           onDirtyChange={setDirty}
           onMoveExisting={setMovingRec}
         />
+        {id && existing ? (
+          <YStack px="$4" pb="$4" gap="$2">
+            <Paragraph color="$color12" fontWeight="bold">
+              宿題
+            </Paragraph>
+            <LessonHomeworkSection lessonRecordId={id} homework={existing.homework} />
+          </YStack>
+        ) : null}
+        {!id ? (
+          <YStack px="$4" pb="$4">
+            <Paragraph fontSize="$2" color="$color10">
+              宿題はレッスンを保存後に追加できます
+            </Paragraph>
+          </YStack>
+        ) : null}
       </ScrollView>
       {id && (
         <RecordingMoveSheet
