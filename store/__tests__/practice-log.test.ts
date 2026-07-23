@@ -160,6 +160,8 @@ describe('usePracticeLogStore', () => {
       totalMinutes: null,
       memo: null,
       reedNumber: null,
+      startTime: null,
+      endTime: null,
       textbookEntries: [],
       basicMenuEntries: [],
       recordings: [],
@@ -338,6 +340,37 @@ describe('usePracticeLogStore', () => {
     expect(usePracticeLogStore.getState().sessions[0].otherMinutes).toBe(30);
   });
 
+  describe('add 開始/終了時刻', () => {
+    it('start_time/end_time を insert し、total は分数からのみ算出される', async () => {
+      mockSupabase().auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } });
+      const insert = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'new-1' }, error: null }),
+        }),
+      });
+      mockSupabase().from.mockReturnValue({ insert });
+
+      const result = await usePracticeLogStore.getState().add({
+        practicedAt: '2020-01-01',
+        longToneMinutes: 10,
+        textbookEntries: [],
+        startTime: '19:00',
+        endTime: '19:50',
+      } as any);
+
+      expect(result).toEqual({ ok: true });
+      // 最初の insert(=practice_sessions) 引数に start_time/end_time が入る
+      const sessionInsertArg = insert.mock.calls[0][0];
+      expect(sessionInsertArg.start_time).toBe('19:00');
+      expect(sessionInsertArg.end_time).toBe('19:50');
+      // total は longTone 10 分のみ (時刻は不参入)
+      expect(sessionInsertArg.total_minutes).toBe(10);
+      const session = usePracticeLogStore.getState().sessions[0];
+      expect(session.startTime).toBe('19:00');
+      expect(session.endTime).toBe('19:50');
+    });
+  });
+
   it('add でスケール教本の tempoBpms から max が tempo_bpm に格納される', async () => {
     mockCatalog().getState.mockReturnValue({
       textbooks: [
@@ -499,6 +532,8 @@ describe('usePracticeLogStore', () => {
           totalMinutes: null,
           memo: null,
           reedNumber: null,
+          startTime: null,
+          endTime: null,
           textbookEntries: [],
           basicMenuEntries: [],
           recordings: [],
@@ -512,6 +547,8 @@ describe('usePracticeLogStore', () => {
           totalMinutes: null,
           memo: null,
           reedNumber: null,
+          startTime: null,
+          endTime: null,
           textbookEntries: [],
           basicMenuEntries: [],
           recordings: [],
@@ -541,6 +578,8 @@ describe('usePracticeLogStore', () => {
       totalMinutes: null,
       memo: null,
       reedNumber: null,
+      startTime: null,
+      endTime: null,
       textbookEntries: [],
       basicMenuEntries: [{ menuType: 'long_tone', durationMinutes: 20, tempoBpms: [] }],
       recordings: [],
@@ -559,6 +598,8 @@ describe('usePracticeLogStore', () => {
             totalMinutes: null,
             memo: null,
             reedNumber: null,
+            startTime: null,
+            endTime: null,
             textbookEntries: [],
             basicMenuEntries: [],
             recordings: [],
@@ -749,6 +790,8 @@ describe('usePracticeLogStore', () => {
           totalMinutes: null,
           memo: null,
           reedNumber: null,
+          startTime: null,
+          endTime: null,
           textbookEntries: [],
           basicMenuEntries: [],
           recordings: [
@@ -868,6 +911,8 @@ describe('usePracticeLogStore', () => {
             totalMinutes: null,
             memo: null,
             reedNumber: null,
+            startTime: null,
+            endTime: null,
             textbookEntries: [],
             basicMenuEntries: [],
             recordings: [],
@@ -904,6 +949,8 @@ describe('usePracticeLogStore', () => {
             totalMinutes: null,
             memo: null,
             reedNumber: null,
+            startTime: null,
+            endTime: null,
             textbookEntries: [],
             basicMenuEntries: [],
             recordings: [],
@@ -944,6 +991,8 @@ describe('usePracticeLogStore', () => {
           totalMinutes: null,
           memo: null,
           reedNumber: null,
+          startTime: null,
+          endTime: null,
           textbookEntries: [],
           basicMenuEntries: [],
           recordings: [
@@ -1048,6 +1097,8 @@ describe('calcSessionTime', () => {
     totalMinutes: null,
     memo: null,
     reedNumber: null,
+    startTime: null,
+    endTime: null,
     textbookEntries: [],
     basicMenuEntries: [],
     recordings: [],
@@ -1197,6 +1248,8 @@ describe('usePracticeLogStore 録音の付け替え', () => {
     totalMinutes: null,
     memo: null,
     reedNumber: null,
+    startTime: null,
+    endTime: null,
     textbookEntries: [],
     basicMenuEntries: [],
     recordings,

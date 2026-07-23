@@ -36,6 +36,8 @@ const seedSession = (recordings: PracticeSession['recordings']): PracticeSession
   totalMinutes: null,
   memo: null,
   reedNumber: null,
+  startTime: null,
+  endTime: null,
   textbookEntries: [],
   basicMenuEntries: [],
   recordings,

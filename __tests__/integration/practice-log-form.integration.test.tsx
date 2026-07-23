@@ -421,6 +421,8 @@ describe('PracticeLogForm (integration)', () => {
             totalMinutes: null,
             memo: null,
             reedNumber: null,
+            startTime: null,
+            endTime: null,
             textbookEntries: [
               {
                 textbookId: TB1_ID,
@@ -459,6 +461,8 @@ describe('PracticeLogForm (integration)', () => {
             totalMinutes: null,
             memo: null,
             reedNumber: null,
+            startTime: null,
+            endTime: null,
             textbookEntries: [
               {
                 textbookId: 'deleted-textbook-id-that-is-not-a-valid-uuid',
@@ -615,6 +619,8 @@ function makeSession(overrides: Partial<PracticeSession>): PracticeSession {
     totalMinutes: null,
     memo: null,
     reedNumber: null,
+    startTime: null,
+    endTime: null,
     textbookEntries: [],
     basicMenuEntries: [],
     recordings: [],

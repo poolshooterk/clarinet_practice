@@ -15,6 +15,8 @@ function makeSession(
     totalMinutes: null,
     memo: null,
     reedNumber: null,
+    startTime: null,
+    endTime: null,
     textbookEntries: [],
     basicMenuEntries: [],
     recordings: [],

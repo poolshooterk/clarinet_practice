@@ -43,6 +43,8 @@ export type PracticeSession = {
   totalMinutes: number | null;
   memo: string | null;
   reedNumber: string | null;
+  startTime: string | null;
+  endTime: string | null;
   textbookEntries: TextbookEntry[];
   basicMenuEntries: BasicMenuEntry[];
   recordings: SessionRecording[];
@@ -70,6 +72,8 @@ type SessionRow = {
   total_minutes: number | null;
   memo: string | null;
   reed_number: string | null;
+  start_time: string | null;
+  end_time: string | null;
   practice_session_textbooks: {
     textbook_id: string;
     current_page: number;
@@ -132,7 +136,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data, error } = await supabase
       .from('practice_sessions')
       .select(
-        'id, practiced_at, duration_minutes, other_minutes, other_memo, total_minutes, memo, reed_number, ' +
+        'id, practiced_at, duration_minutes, other_minutes, other_memo, total_minutes, memo, reed_number, start_time, end_time, ' +
           'practice_session_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title, total_pages, genre ) ), ' +
           'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms ), ' +
           'practice_session_recordings ( id, index, local_uri, memo )',
@@ -153,6 +157,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         totalMinutes: row.total_minutes ?? null,
         memo: row.memo ?? null,
         reedNumber: row.reed_number ?? null,
+        startTime: row.start_time ?? null,
+        endTime: row.end_time ?? null,
         textbookEntries: (row.practice_session_textbooks ?? []).map((entry) => ({
           textbookId: entry.textbook_id,
           textbookTitle: entry.textbooks?.title ?? '',
@@ -210,6 +216,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         total_minutes: totalMinutesValue,
         memo: input.memo || null,
         reed_number: input.reedNumber || null,
+        start_time: input.startTime || null,
+        end_time: input.endTime || null,
       })
       .select()
       .single();
@@ -314,6 +322,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       totalMinutes: totalMinutesValue,
       memo: input.memo || null,
       reedNumber: input.reedNumber || null,
+      startTime: input.startTime || null,
+      endTime: input.endTime || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
         const maxTempo = computeMaxTempo(entry.tempoBpms);
@@ -372,6 +382,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
         total_minutes: totalMinutesValue,
         memo: input.memo || null,
         reed_number: input.reedNumber || null,
+        start_time: input.startTime || null,
+        end_time: input.endTime || null,
       })
       .eq('id', id);
     if (sessionError) return classifyError(sessionError);
@@ -491,6 +503,8 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       totalMinutes: totalMinutesValue,
       memo: input.memo || null,
       reedNumber: input.reedNumber || null,
+      startTime: input.startTime || null,
+      endTime: input.endTime || null,
       textbookEntries: input.textbookEntries.map((entry) => {
         const tb = catalogTextbooks.find((t) => t.id === entry.textbookId);
         const maxTempo = computeMaxTempo(entry.tempoBpms);
