@@ -232,6 +232,23 @@ describe('PracticeLogForm (integration)', () => {
     });
   });
 
+  it('開始/終了時刻を手入力して保存できる', async () => {
+    const onSubmit = jest.fn();
+    renderWithProviders(<PracticeLogForm onSubmit={onSubmit} />);
+
+    fireEvent.changeText(screen.getByLabelText('練習開始時刻'), '19:00');
+    fireEvent.changeText(screen.getByLabelText('練習終了時刻'), '19:50');
+
+    fireEvent.press(screen.getByLabelText('保存'));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      startTime: '19:00',
+      endTime: '19:50',
+    });
+  });
+
   it('タンギングに値を入力すると「テンポを追加」ボタンが表示される', async () => {
     renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
     expect(screen.queryByLabelText('テンポを追加')).toBeNull();
