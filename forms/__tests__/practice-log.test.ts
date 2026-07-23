@@ -1,4 +1,10 @@
-import { BASIC_MENUS, formatDate, practiceLogSchema, today } from '@/forms/practice-log';
+import {
+  BASIC_MENUS,
+  formatClock,
+  formatDate,
+  practiceLogSchema,
+  today,
+} from '@/forms/practice-log';
 
 describe('practiceLogSchema', () => {
   describe('有効なケース', () => {
@@ -468,5 +474,36 @@ describe('today()', () => {
   it('YYYY-MM-DD 形式で返す', () => {
     const result = today();
     expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('practiceLogSchema startTime/endTime', () => {
+  const base = { practicedAt: '2020-01-01', textbookEntries: [] };
+
+  it('HH:MM 形式の開始/終了を受け付ける', () => {
+    const r = practiceLogSchema.safeParse({ ...base, startTime: '19:00', endTime: '19:50' });
+    expect(r.success).toBe(true);
+  });
+
+  it('空文字は許容される (未入力)', () => {
+    const r = practiceLogSchema.safeParse({ ...base, startTime: '', endTime: '' });
+    expect(r.success).toBe(true);
+  });
+
+  it('片方だけの入力も許容される', () => {
+    const r = practiceLogSchema.safeParse({ ...base, startTime: '19:00', endTime: '' });
+    expect(r.success).toBe(true);
+  });
+
+  it('不正な形式は拒否される', () => {
+    const r = practiceLogSchema.safeParse({ ...base, startTime: '9時' });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe('formatClock', () => {
+  it('epoch を HH:MM に整形する', () => {
+    const d = new Date(2026, 0, 1, 19, 5, 0);
+    expect(formatClock(d.getTime())).toBe('19:05');
   });
 });

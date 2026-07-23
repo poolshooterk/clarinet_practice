@@ -40,6 +40,18 @@ export const practiceLogSchema = z.object({
     .string()
     .regex(/^[a-zA-Z0-9]*$/, '英数字のみ入力できます')
     .optional(),
+  startTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, '時刻は HH:MM 形式で入力してください')
+    .or(z.literal(''))
+    .nullable()
+    .optional(),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, '時刻は HH:MM 形式で入力してください')
+    .or(z.literal(''))
+    .nullable()
+    .optional(),
 });
 
 export type PracticeLogInput = z.infer<typeof practiceLogSchema>;
@@ -57,4 +69,11 @@ export function formatDate(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+export function formatClock(epochMs: number): string {
+  const d = new Date(epochMs);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
