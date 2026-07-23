@@ -19,7 +19,9 @@ describe('idle 状態', () => {
 describe('running 状態', () => {
   it('一時停止・停止 ボタンを表示する', () => {
     useTimerStore.setState({
-      timers: { test: { status: 'running', accumulatedMs: 0, startedAt: Date.now() } },
+      timers: {
+        test: { status: 'running', accumulatedMs: 0, startedAt: Date.now(), firstStartedAt: null },
+      },
     });
     renderWithProviders(<TimerControl timerKey="test" label="テスト" onStop={jest.fn()} />);
     expect(screen.getByLabelText('テストの一時停止')).toBeTruthy();
@@ -30,7 +32,9 @@ describe('running 状態', () => {
 describe('paused 状態', () => {
   it('再開・停止 ボタンを表示する', () => {
     useTimerStore.setState({
-      timers: { test: { status: 'paused', accumulatedMs: 5000, startedAt: null } },
+      timers: {
+        test: { status: 'paused', accumulatedMs: 5000, startedAt: null, firstStartedAt: null },
+      },
     });
     renderWithProviders(<TimerControl timerKey="test" label="テスト" onStop={jest.fn()} />);
     expect(screen.getByLabelText('テストの再開')).toBeTruthy();
@@ -41,7 +45,9 @@ describe('paused 状態', () => {
 describe('stopped 状態', () => {
   it('計測結果テキストとリセットボタンを表示する', () => {
     useTimerStore.setState({
-      timers: { test: { status: 'stopped', accumulatedMs: 61000, startedAt: null } },
+      timers: {
+        test: { status: 'stopped', accumulatedMs: 61000, startedAt: null, firstStartedAt: null },
+      },
     });
     renderWithProviders(<TimerControl timerKey="test" label="テスト" onStop={jest.fn()} />);
     expect(screen.getByLabelText('テストのリセット')).toBeTruthy();
@@ -52,7 +58,9 @@ describe('stopped 状態', () => {
 describe('onStop コールバック', () => {
   it('停止ボタンを押すと onStop が分数で呼ばれる', () => {
     useTimerStore.setState({
-      timers: { test: { status: 'paused', accumulatedMs: 61000, startedAt: null } },
+      timers: {
+        test: { status: 'paused', accumulatedMs: 61000, startedAt: null, firstStartedAt: null },
+      },
     });
     const onStop = jest.fn();
     renderWithProviders(<TimerControl timerKey="test" label="テスト" onStop={onStop} />);

@@ -8,6 +8,7 @@ export type TimerEntry = {
   status: TimerStatus;
   accumulatedMs: number;
   startedAt: number | null;
+  firstStartedAt: number | null;
 };
 
 type TimerState = {
@@ -19,7 +20,12 @@ type TimerState = {
   resetAll: () => void;
 };
 
-const defaultEntry: TimerEntry = { status: 'idle', accumulatedMs: 0, startedAt: null };
+const defaultEntry: TimerEntry = {
+  status: 'idle',
+  accumulatedMs: 0,
+  startedAt: null,
+  firstStartedAt: null,
+};
 
 export function getElapsedMs(entry: TimerEntry): number {
   if (entry.status === 'running' && entry.startedAt != null) {
@@ -34,16 +40,21 @@ export const useTimerStore = create<TimerState>()(
       timers: {},
 
       start: (key) =>
-        set((state) => ({
-          timers: {
-            ...state.timers,
-            [key]: {
-              ...(state.timers[key] ?? defaultEntry),
-              status: 'running',
-              startedAt: Date.now(),
+        set((state) => {
+          const prev = state.timers[key] ?? defaultEntry;
+          const now = Date.now();
+          return {
+            timers: {
+              ...state.timers,
+              [key]: {
+                ...prev,
+                status: 'running',
+                startedAt: now,
+                firstStartedAt: prev.firstStartedAt ?? now,
+              },
             },
-          },
-        })),
+          };
+        }),
 
       pause: (key) =>
         set((state) => {
@@ -57,6 +68,7 @@ export const useTimerStore = create<TimerState>()(
                 status: 'paused',
                 accumulatedMs: entry.accumulatedMs + elapsed,
                 startedAt: null,
+                firstStartedAt: entry.firstStartedAt,
               },
             },
           };
@@ -71,7 +83,12 @@ export const useTimerStore = create<TimerState>()(
         set((state) => ({
           timers: {
             ...state.timers,
-            [key]: { status: 'stopped', accumulatedMs: totalMs, startedAt: null },
+            [key]: {
+              status: 'stopped',
+              accumulatedMs: totalMs,
+              startedAt: null,
+              firstStartedAt: (state.timers[key] ?? defaultEntry).firstStartedAt,
+            },
           },
         }));
         return minutes;

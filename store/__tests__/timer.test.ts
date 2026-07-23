@@ -1,4 +1,4 @@
-import { useTimerStore } from '@/store/timer';
+import { getElapsedMs, useTimerStore } from '@/store/timer';
 
 beforeEach(() => {
   useTimerStore.setState({ timers: {} });
@@ -15,7 +15,9 @@ describe('start', () => {
 
   it('paused → running になる（再開）', () => {
     useTimerStore.setState({
-      timers: { long_tone: { status: 'paused', accumulatedMs: 5000, startedAt: null } },
+      timers: {
+        long_tone: { status: 'paused', accumulatedMs: 5000, startedAt: null, firstStartedAt: null },
+      },
     });
     useTimerStore.getState().start('long_tone');
     const entry = useTimerStore.getState().timers['long_tone'];
@@ -43,7 +45,9 @@ describe('pause', () => {
 
   it('idle 状態への pause は何もしない', () => {
     useTimerStore.setState({
-      timers: { long_tone: { status: 'idle', accumulatedMs: 0, startedAt: null } },
+      timers: {
+        long_tone: { status: 'idle', accumulatedMs: 0, startedAt: null, firstStartedAt: null },
+      },
     });
     useTimerStore.getState().pause('long_tone');
     expect(useTimerStore.getState().timers['long_tone'].status).toBe('idle');
@@ -53,7 +57,9 @@ describe('pause', () => {
 describe('stop', () => {
   it('1 秒以下 → 1 分（最小値）', () => {
     useTimerStore.setState({
-      timers: { long_tone: { status: 'paused', accumulatedMs: 500, startedAt: null } },
+      timers: {
+        long_tone: { status: 'paused', accumulatedMs: 500, startedAt: null, firstStartedAt: null },
+      },
     });
     const minutes = useTimerStore.getState().stop('long_tone');
     expect(minutes).toBe(1);
@@ -62,14 +68,28 @@ describe('stop', () => {
 
   it('ちょうど 60 秒 → 1 分', () => {
     useTimerStore.setState({
-      timers: { long_tone: { status: 'paused', accumulatedMs: 60000, startedAt: null } },
+      timers: {
+        long_tone: {
+          status: 'paused',
+          accumulatedMs: 60000,
+          startedAt: null,
+          firstStartedAt: null,
+        },
+      },
     });
     expect(useTimerStore.getState().stop('long_tone')).toBe(1);
   });
 
   it('61 秒 → 2 分（切り上げ）', () => {
     useTimerStore.setState({
-      timers: { long_tone: { status: 'paused', accumulatedMs: 61000, startedAt: null } },
+      timers: {
+        long_tone: {
+          status: 'paused',
+          accumulatedMs: 61000,
+          startedAt: null,
+          firstStartedAt: null,
+        },
+      },
     });
     expect(useTimerStore.getState().stop('long_tone')).toBe(2);
   });
@@ -94,7 +114,14 @@ describe('stop', () => {
 describe('reset', () => {
   it('stopped → idle に戻り accumulatedMs が 0 になる', () => {
     useTimerStore.setState({
-      timers: { long_tone: { status: 'stopped', accumulatedMs: 60000, startedAt: null } },
+      timers: {
+        long_tone: {
+          status: 'stopped',
+          accumulatedMs: 60000,
+          startedAt: null,
+          firstStartedAt: null,
+        },
+      },
     });
     useTimerStore.getState().reset('long_tone');
     const entry = useTimerStore.getState().timers['long_tone'];
@@ -110,5 +137,48 @@ describe('resetAll', () => {
     useTimerStore.getState().start('tonguing');
     useTimerStore.getState().resetAll();
     expect(useTimerStore.getState().timers).toEqual({});
+  });
+});
+
+describe('useTimerStore firstStartedAt', () => {
+  beforeEach(() => {
+    useTimerStore.setState({ timers: {} });
+    jest.restoreAllMocks();
+  });
+
+  it('初回 start で firstStartedAt がセットされる', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    useTimerStore.getState().start('practice-session');
+    expect(useTimerStore.getState().timers['practice-session'].firstStartedAt).toBe(1_000_000);
+  });
+
+  it('pause→再開(start)しても firstStartedAt は最初の値を保持する', () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const store = useTimerStore.getState();
+    store.start('practice-session');
+    now.mockReturnValue(1_060_000); // +60s
+    store.pause('practice-session');
+    now.mockReturnValue(1_120_000); // 再開
+    store.start('practice-session');
+    expect(useTimerStore.getState().timers['practice-session'].firstStartedAt).toBe(1_000_000);
+  });
+
+  it('stop 後も firstStartedAt を保持し、end = firstStartedAt + elapsed が導ける', () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const store = useTimerStore.getState();
+    store.start('practice-session');
+    now.mockReturnValue(1_180_000); // +180s
+    store.stop('practice-session');
+    const entry = useTimerStore.getState().timers['practice-session'];
+    expect(entry.firstStartedAt).toBe(1_000_000);
+    expect(entry.firstStartedAt! + getElapsedMs(entry)).toBe(1_180_000);
+  });
+
+  it('reset で firstStartedAt が null に戻る', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const store = useTimerStore.getState();
+    store.start('practice-session');
+    store.reset('practice-session');
+    expect(useTimerStore.getState().timers['practice-session'].firstStartedAt).toBeNull();
   });
 });
