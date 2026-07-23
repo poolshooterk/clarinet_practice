@@ -41,6 +41,7 @@ const RECORDS = [
       },
     ],
     recordings: [],
+    homework: [],
   },
   {
     id: 'lr-may2',
@@ -57,6 +58,7 @@ const RECORDS = [
       },
     ],
     recordings: [],
+    homework: [],
   },
   {
     id: 'lr-apr1',
@@ -65,6 +67,7 @@ const RECORDS = [
     notes: null,
     textbookEntries: [],
     recordings: [],
+    homework: [],
   },
 ];
 
@@ -118,6 +121,7 @@ describe('LessonScreen 月別ビュー (integration)', () => {
               memo: null,
             },
           ],
+          homework: [],
         },
       ],
       loading: false,

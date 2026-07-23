@@ -50,6 +50,7 @@ const seedRecord = (recordings: LessonRecord['recordings']): LessonRecord => ({
   notes: null,
   textbookEntries: [],
   recordings,
+  homework: [],
 });
 
 const insertChain = (id: string) => ({

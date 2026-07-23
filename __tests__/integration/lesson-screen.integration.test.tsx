@@ -36,6 +36,7 @@ describe('LessonScreen (integration)', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
       loading: false,

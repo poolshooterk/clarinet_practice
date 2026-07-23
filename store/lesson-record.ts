@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import type { HomeworkInput, HomeworkStatus } from '@/forms/homework';
 import { combineDateTime, type LessonRecordInput } from '@/forms/lesson-record';
 import { deleteRecording, finalizeRecording } from '@/lib/recording';
 import { supabase } from '@/lib/supabase';
@@ -17,6 +18,46 @@ type TextbookEntry = {
   tempoBpm: number | null;
 };
 
+export type Homework = {
+  id: string;
+  content: string;
+  dueDate: string | null;
+  textbookId: string | null;
+  textbookTitle: string;
+  reviewNote: string | null;
+  status: HomeworkStatus;
+  completedAt: string | null;
+};
+
+type HomeworkRow = {
+  id: string;
+  content: string;
+  due_date: string | null;
+  textbook_id: string | null;
+  review_note: string | null;
+  status: HomeworkStatus;
+  completed_at: string | null;
+  textbooks: { title: string } | null;
+};
+
+function mapHomework(row: HomeworkRow): Homework {
+  return {
+    id: row.id,
+    content: row.content,
+    dueDate: row.due_date,
+    textbookId: row.textbook_id,
+    textbookTitle: row.textbooks?.title ?? '',
+    reviewNote: row.review_note,
+    status: row.status,
+    completedAt: row.completed_at,
+  };
+}
+
+const HOMEWORK_SELECT =
+  'id, content, due_date, textbook_id, review_note, status, completed_at, textbooks ( title )';
+
+export type MutationResult = { ok: true } | { ok: false; reason: 'unknown' };
+
 export type LessonRecord = {
   id: string;
   heldAt: string;
@@ -24,6 +65,7 @@ export type LessonRecord = {
   notes: string | null;
   textbookEntries: TextbookEntry[];
   recordings: SessionRecording[];
+  homework: Homework[];
 };
 
 type LessonRecordTextbookRow = {
@@ -46,6 +88,7 @@ type LessonRecordRow = {
     local_uri: string;
     memo: string | null;
   }[];
+  lesson_homework: HomeworkRow[];
 };
 
 type LessonRecordState = {
@@ -66,6 +109,10 @@ type LessonRecordState = {
     memo: string | null,
   ) => Promise<SessionRecording | null>;
   deleteRecordingRow: (lessonRecordId: string, recordingId: string) => Promise<void>;
+  addHomework: (lessonRecordId: string, input: HomeworkInput) => Promise<MutationResult>;
+  updateHomework: (id: string, input: HomeworkInput) => Promise<MutationResult>;
+  updateHomeworkStatus: (id: string, status: HomeworkStatus) => Promise<void>;
+  removeHomework: (id: string) => Promise<void>;
 };
 
 export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
@@ -82,7 +129,10 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
       .select(
         'id, held_at, advice, notes, ' +
           'lesson_record_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title ) ), ' +
-          'lesson_record_recordings ( id, index, local_uri, memo )',
+          'lesson_record_recordings ( id, index, local_uri, memo ), ' +
+          'lesson_homework ( ' +
+          HOMEWORK_SELECT +
+          ' )',
       )
       .order('held_at', { ascending: false });
     set({ loading: false });
@@ -109,6 +159,7 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
           localUri: r.local_uri,
           memo: r.memo,
         })),
+        homework: (row.lesson_homework ?? []).map(mapHomework),
       })),
     });
   },
@@ -204,6 +255,7 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
             };
           }),
           recordings,
+          homework: [],
         },
         ...get().records,
       ],
@@ -375,6 +427,86 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
           ? { ...r, recordings: r.recordings.filter((rec) => rec.id !== recordingId) }
           : r,
       ),
+    });
+  },
+
+  addHomework: async (lessonRecordId, input) => {
+    const completedAt = input.status === 'done' ? new Date().toISOString() : null;
+    const { data, error } = await supabase
+      .from('lesson_homework')
+      .insert({
+        lesson_record_id: lessonRecordId,
+        content: input.content,
+        due_date: input.dueDate || null,
+        textbook_id: input.textbookId || null,
+        review_note: input.reviewNote || null,
+        status: input.status,
+        completed_at: completedAt,
+      })
+      .select(HOMEWORK_SELECT)
+      .single();
+    if (error || !data) return { ok: false, reason: 'unknown' };
+    const hw = mapHomework(data as unknown as HomeworkRow);
+    set({
+      records: get().records.map((r) =>
+        r.id === lessonRecordId ? { ...r, homework: [...r.homework, hw] } : r,
+      ),
+    });
+    return { ok: true };
+  },
+
+  updateHomework: async (id, input) => {
+    const completedAt = input.status === 'done' ? new Date().toISOString() : null;
+    const { data, error } = await supabase
+      .from('lesson_homework')
+      .update({
+        content: input.content,
+        due_date: input.dueDate || null,
+        textbook_id: input.textbookId || null,
+        review_note: input.reviewNote || null,
+        status: input.status,
+        completed_at: completedAt,
+      })
+      .eq('id', id)
+      .select(HOMEWORK_SELECT)
+      .single();
+    if (error || !data) return { ok: false, reason: 'unknown' };
+    const hw = mapHomework(data as unknown as HomeworkRow);
+    set({
+      records: get().records.map((r) => ({
+        ...r,
+        homework: r.homework.map((h) => (h.id === id ? hw : h)),
+      })),
+    });
+    return { ok: true };
+  },
+
+  updateHomeworkStatus: async (id, status) => {
+    const completedAt = status === 'done' ? new Date().toISOString() : null;
+    const { data, error } = await supabase
+      .from('lesson_homework')
+      .update({ status, completed_at: completedAt })
+      .eq('id', id)
+      .select(HOMEWORK_SELECT)
+      .single();
+    if (error || !data) return;
+    const hw = mapHomework(data as unknown as HomeworkRow);
+    set({
+      records: get().records.map((r) => ({
+        ...r,
+        homework: r.homework.map((h) => (h.id === id ? hw : h)),
+      })),
+    });
+  },
+
+  removeHomework: async (id) => {
+    const { error } = await supabase.from('lesson_homework').delete().eq('id', id);
+    if (error) return;
+    set({
+      records: get().records.map((r) => ({
+        ...r,
+        homework: r.homework.filter((h) => h.id !== id),
+      })),
     });
   },
 }));

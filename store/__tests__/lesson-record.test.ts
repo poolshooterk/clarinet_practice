@@ -119,6 +119,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
     });
@@ -257,6 +258,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
     });
@@ -294,6 +296,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
     });
@@ -339,6 +342,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
     });
@@ -367,6 +371,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
     });
@@ -402,6 +407,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
     });
@@ -441,6 +447,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
         {
           id: 'lr-2',
@@ -449,6 +456,7 @@ describe('useLessonRecordStore', () => {
           notes: null,
           textbookEntries: [],
           recordings: [],
+          homework: [],
         },
       ],
     });
@@ -539,6 +547,7 @@ describe('useLessonRecordStore', () => {
               memo: null,
             },
           ],
+          homework: [],
         },
       ],
     });
@@ -576,6 +585,7 @@ describe('useLessonRecordStore', () => {
               memo: null,
             },
           ],
+          homework: [],
         },
       ],
     });
@@ -624,6 +634,7 @@ describe('useLessonRecordStore 録音の付け替え', () => {
     notes: null,
     textbookEntries: [],
     recordings,
+    homework: [],
   });
 
   beforeEach(() => {
@@ -695,5 +706,105 @@ describe('useLessonRecordStore 録音の付け替え', () => {
     expect(useLessonRecordStore.getState().records[0].recordings.map((r) => r.id)).toEqual([
       'rec-2',
     ]);
+  });
+});
+
+describe('宿題アクション', () => {
+  beforeEach(() => {
+    useLessonRecordStore.setState({
+      records: [
+        {
+          id: 'lr-1',
+          heldAt: '2026-07-20T10:00:00+09:00',
+          advice: null,
+          notes: null,
+          textbookEntries: [],
+          recordings: [],
+          homework: [],
+        },
+      ],
+      loading: false,
+    });
+    jest.clearAllMocks();
+  });
+
+  it('addHomework で nested 配列に追加される', async () => {
+    mockFrom().mockReturnValue({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'hw-1',
+              content: 'ロングトーン',
+              due_date: null,
+              textbook_id: null,
+              review_note: null,
+              status: 'not_started',
+              completed_at: null,
+              textbooks: null,
+            },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    const r = await useLessonRecordStore
+      .getState()
+      .addHomework('lr-1', { content: 'ロングトーン', status: 'not_started' });
+    expect(r).toEqual({ ok: true });
+    expect(useLessonRecordStore.getState().records[0].homework).toHaveLength(1);
+  });
+
+  it('updateHomeworkStatus done で completedAt がセットされる', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        {
+          id: 'lr-1',
+          heldAt: 'x',
+          advice: null,
+          notes: null,
+          textbookEntries: [],
+          recordings: [],
+          homework: [
+            {
+              id: 'hw-1',
+              content: 'x',
+              dueDate: null,
+              textbookId: null,
+              textbookTitle: '',
+              reviewNote: null,
+              status: 'not_started',
+              completedAt: null,
+            },
+          ],
+        },
+      ],
+      loading: false,
+    });
+    mockFrom().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: {
+                id: 'hw-1',
+                content: 'x',
+                due_date: null,
+                textbook_id: null,
+                review_note: null,
+                status: 'done',
+                completed_at: '2026-07-21T00:00:00Z',
+                textbooks: null,
+              },
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    });
+    await useLessonRecordStore.getState().updateHomeworkStatus('hw-1', 'done');
+    const hw = useLessonRecordStore.getState().records[0].homework[0];
+    expect(hw.status).toBe('done');
+    expect(hw.completedAt).not.toBeNull();
   });
 });
