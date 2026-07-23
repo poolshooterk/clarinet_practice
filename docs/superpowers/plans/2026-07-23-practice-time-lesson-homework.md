@@ -316,15 +316,11 @@ git commit -m "feat: practice_sessions に start_time/end_time 列を追加"
 describe('add 開始/終了時刻', () => {
   it('start_time/end_time を insert し、total は分数からのみ算出される', async () => {
     mockSupabase().auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } });
-    const insert = jest
-      .fn()
-      .mockReturnValue({
-        select: jest
-          .fn()
-          .mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: { id: 'new-1' }, error: null }),
-          }),
-      });
+    const insert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({ data: { id: 'new-1' }, error: null }),
+      }),
+    });
     mockSupabase().from.mockReturnValue({ insert });
 
     const result = await usePracticeLogStore.getState().add({
