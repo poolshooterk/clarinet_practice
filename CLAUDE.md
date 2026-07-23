@@ -179,7 +179,7 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - **`@types/jest` は明示ロード**: `tsconfig.json` の `compilerOptions.types: ["jest"]` で型を取り込む
 - **`tsc --noEmit` はそのまま通る**: `tsconfig.json` の `exclude` で `app-example/` を除外しているため、ワークアラウンド (`grep -v ...`) は不要
 - **CI = ローカル品質チェック 4 ステップと同等**: `.github/workflows/ci.yml` で Node 20 環境の `npm ci` → lint → format:check → tsc → test を順に走らせる
-- **`<Theme name="blue">` でデフォルト Button がブルーアクセントになる**: `app/_layout.tsx` の `<TamaguiProvider>` 直下で `<Stack>` を `<Theme name="blue">` でラップしている。`theme="red"` など明示指定されたものは変更されない
+- **アクセントボタンは各所で明示的に `theme="blue"` を付ける**: グローバルな `<Theme>` ラッパーは無い (`app/_layout.tsx` は `<TamaguiProvider>` 直下に `<Stack>` を置くだけ)。保存等の主要ボタンは個別に `theme="blue"`、破壊的操作は `theme="red"` を指定する。新しいフォームでも同じ Button の theme 指定を踏襲すること
 - **EAS Build は `.env.local` を読まない**: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` は開発時 `.env.local` 経由で参照されるが、EAS Build ではこのファイルが無視される。`eas secret:create --scope project` で EAS シークレットに登録しないとビルドされた APK が起動時にクラッシュする
 - **E2E の APP_ID は環境依存**: `e2e:android` スクリプトの `APP_ID=host.exp.exponent` は Expo Go 専用。preview ビルドをインストールした実機に対して Maestro を実行する場合は `APP_ID=com.keikei.clarinetpractice` を指定する
 - **練習記録は `(user_id, practiced_at)` で同日 1 件のみ**: DB 側に UNIQUE 制約 `practice_sessions_user_id_practiced_at_key`。新規 vs 編集モードは `app/practice-log-form.tsx` で URL params `?id=` の有無により 1:1 に確定し、フォーム内での日付変更や同日既存検出による自動切替は **行わない**。新規モードでの未来日 (`practicedAt > today()`) は zod schema が弾く。新規モードで既存日付と被るデータを submit した場合は Postgres `23505` を `classifyError` (`store/practice-log.ts`) が `'duplicate'` reason に変換し、Alert で「一覧から該当の記録を選んで編集してください」と案内する。新機能で別経路から `practice_sessions` へ INSERT を増やす場合はこの不変条件を踏まえる
