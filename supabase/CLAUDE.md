@@ -35,7 +35,7 @@ create policy "..." on <table> for delete using (auth.uid() = user_id);
 主要テーブルと関係 (詳細は `supabase/migrations/` を参照):
 
 - `profiles` — ユーザプロフィール (1:1 with `auth.users`)
-- `practice_sessions` — 練習記録ヘッダー。`user_id` / `practiced_at` / `other_minutes` / `other_memo` / `total_minutes` / `memo`
+- `practice_sessions` — 練習記録ヘッダー。`user_id` / `practiced_at` / `other_minutes` / `other_memo` / `total_minutes` / `memo` / `start_time` / `end_time` (`start_time`/`end_time` は `HH:MM` 文字列。セッションタイマー由来の記録用メタデータで分数計算に不参入)
 - `practice_session_basic_menus` — 基礎練習エントリ (ロングトーン / タンギング)。`menu_type` / `duration_minutes`
 - `practice_session_basic_menu_tempos` — タンギングテンポ。`tempo_bpm`
 - `practice_session_textbooks` — 教本進捗エントリ。`textbook_id` / `current_page` / `duration_minutes` / `tempo_bpm`
@@ -43,6 +43,7 @@ create policy "..." on <table> for delete using (auth.uid() = user_id);
 - `user_equipment` — 所有楽器セット (PK = `user_id`、ユーザごとに1行)。`instrument` (`instrument_maker_id` / `instrument_model_id` で `instrument_makers` / `instrument_models` を参照、`instrument_purchase_price` / `instrument_start_date` / `instrument_photo_uri`) + `reed` / `ligature` / `mouthpiece` の `*_name` / `*_start_date` カラムを 1 行に格納。書き込みは `upsert` (`user_id` 衝突時 UPDATE)
 - `instrument_makers` — メーカーマスタ (カタログストア `store/instrument-catalog.ts` が管理)
 - `lesson_records` — レッスン記録
+- `lesson_homework` — レッスンの宿題。`lesson_record_id` / `content` / `due_date` / `textbook_id` / `review_note` / `status('not_started'|'in_progress'|'done')` / `completed_at`。RLS は親 `lesson_records.user_id` を EXISTS で検証。進捗ステータスはレッスン後に独立更新するため、`store/lesson-record.ts` の id 単位 CRUD で扱いレッスン保存の delete-all-reinsert には含めない
 - `practice_session_recordings` — 練習セッション録音 (最大3本/セッション)。`session_id` / `index(1-3)` / `local_uri` / `memo`。`UNIQUE(session_id, index)`
 - `lesson_record_recordings` — レッスン録音 (最大3本/レッスン)。`lesson_record_id` / `index(1-3)` / `local_uri` / `memo`。`UNIQUE(lesson_record_id, index)`
 - `purchase_plans` — 購入計画 (PK = `id`、`user_id` に UNIQUE 制約でユーザごとに1行)。`maker_id` / `maker_name` / `model_id` / `model_name` / `target_price` / `monthly_savings_target`

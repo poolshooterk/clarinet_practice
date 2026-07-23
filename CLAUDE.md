@@ -141,6 +141,7 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - `app/annual-goal-form.tsx` — 年間目標 登録/編集フォーム画面 (スタック遷移)
 - `app/annual-goal-detail.tsx` — 年間目標詳細 (12ヶ月マイルストーン一覧) 画面 (スタック遷移)
 - `app/monthly-milestone-form.tsx` — 月別マイルストーン編集フォーム画面 (スタック遷移)
+- `app/homework-form.tsx` — 宿題 登録/編集フォーム画面 (スタック遷移)
 
 ### Where do I add X
 
@@ -190,6 +191,8 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - **`ThisMonthMilestonesCard` は表示する月を prop で受ける**: `components/this-month-milestones-card.tsx` は `new Date()` ではなく練習記録画面 (`app/(tabs)/index.tsx`) の `selectedMonth` (`"YYYY-MM"`) を受け取り、その年月でマイルストーンをフィルタする。月送りで別月を表示しても当月分が出ないようにするため
 - **未保存警告の離脱ガードは画面側に置く**: 練習/レッスンのフォーム画面 (`app/practice-log-form.tsx` / `app/lesson-record-form.tsx`) が `@react-navigation/native` の `usePreventRemove(dirty, …)` で戻る操作を捕捉し、破棄確認 Alert を出す。`dirty` はフォーム部品 (`components/practice-log-form.tsx` / `components/lesson-record-form.tsx`) の `onDirtyChange` で集約した値で、`RHF formState.isDirty` ∨ 録音の未保存変更 (`RecordingSection` の `onDirtyChange` = 確定済み追加/削除/録音進行中) ∨ (練習のみ) タイマー稼働。保存・削除成功時は画面の `savedRef.current = true` を立ててから `router.back()` し、ガードのコールバック内で `savedRef` を見て即 `navigation.dispatch(data.action)` してバイパスする (`dirty` state のクリアは再レンダー待ちで間に合わないため ref で判定する)。ガードをフォーム部品側に置くと `RecordingSection` を直接 render する結合テストが navigation context を要求して壊れるため、画面側に置くのが前提
 - **録音の記録間移動は「移動先 insert → 移動元 row 削除」の順で行う**: `store/recording-transfer.ts` の `moveRecording` が、移動先ストアの `insertRecording` (= `finalizeRecording` でファイルを `{移動先id}-{空きindex}.m4a` へ移動し DB 行 insert) を先に実行し、成功時のみ移動元ストアの `deleteRecordingRow` (= **DB 行のみ削除、ファイルは消さない**) を呼ぶ。`deleteRecording` (ファイル削除) を使う既存の `update`/`remove` の録音削除とは別物。移動先候補は `buildMoveCandidates` が自記録と満杯 (録音3件) を除外して日付降順で返す。UI は `components/recording-move-sheet.tsx` (RN `Modal`)。RLS は両録音テーブルとも `FOR ALL USING(... user_id = auth.uid())` (`WITH CHECK` 省略 → INSERT も USING で判定) のため同一ユーザーの別記録への付け替えが通る。種別をまたぐ移動でも DB マイグレーションは不要
+- **練習記録の開始/終了時刻は独立セッションタイマーで算出する**: `components/form/session-timer.tsx` (`SessionTimer`) が `store/timer.ts` を専用キー `'practice-session'` で駆動し、`firstStartedAt` (初回開始 epoch。`start` で `?? Date.now()`、pause/stop で保持、reset で null) を開始時刻、`firstStartedAt + 計測 elapsed` を終了時刻として `HH:MM` で練習フォームへ供給する (壁時計の停止時刻ではない)。`practice_sessions.start_time`/`end_time` (text) に保存され、`total_minutes`/`calcSessionTime` の分数計算には不参入。フォームには開始/終了の HH:MM `Input` も置き手入力で修正可能。送信時にタイマー稼働中なら imperative submit で `endTime` を再計算し、保存後は `resetAll()` でタイマーごとリセットされる
+- **レッスン宿題はレッスン保存の delete-all-reinsert に含めない**: `lesson_homework` は `store/lesson-record.ts` の `addHomework`/`updateHomework`/`updateHomeworkStatus`/`removeHomework` で id 単位に CRUD する。`lesson_records` の `update` は textbook 子を全削除→再挿入するが、宿題を同じ扱いにするとレッスン後に独立更新した進捗ステータス (`not_started`/`in_progress`/`done`) が消えるため。宿題は `LessonRecord` にネストしてフェッチし (`update` の optimistic は `{ ...r }` スプレッドで保持)、作成は保存済みレッスン (編集モード) から `app/homework-form.tsx` 経由でのみ行う (新規レッスンは id 未確定のため)。lesson タブの `components/latest-lesson-homework-card.tsx` が `records[0]` (直近レッスン) の宿題を表示しステータスをトグルする
 
 ### ドメインヘルパー
 
