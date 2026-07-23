@@ -456,7 +456,17 @@ export const useLessonRecordStore = create<LessonRecordState>()((set, get) => ({
   },
 
   updateHomework: async (id, input) => {
-    const completedAt = input.status === 'done' ? new Date().toISOString() : null;
+    // 既に done の宿題を編集 (内容/振り返り等) しても完了時刻を保持する。
+    // done への遷移時のみ新しい時刻を打つ。done 以外は null。
+    const existing = get()
+      .records.flatMap((r) => r.homework)
+      .find((h) => h.id === id);
+    const completedAt =
+      input.status === 'done'
+        ? existing?.status === 'done'
+          ? existing.completedAt
+          : new Date().toISOString()
+        : null;
     const { data, error } = await supabase
       .from('lesson_homework')
       .update({

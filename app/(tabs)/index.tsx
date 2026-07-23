@@ -166,7 +166,9 @@ export default function PracticeLogScreen() {
               </XStack>
               {item.startTime || item.endTime ? (
                 <Paragraph fontSize="$2" color="$color10" mb="$1">
-                  {`${item.startTime ?? ''}${item.endTime ? `–${item.endTime}` : ''}`}
+                  {item.startTime && item.endTime
+                    ? `${item.startTime}–${item.endTime}`
+                    : (item.startTime ?? item.endTime)}
                 </Paragraph>
               ) : null}
               {(() => {

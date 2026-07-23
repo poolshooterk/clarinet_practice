@@ -286,6 +286,51 @@ describe('useLessonRecordStore', () => {
     expect(records[0].notes).toBe('メモ');
   });
 
+  it('update しても homework は保持される (delete-all-reinsert に巻き込まれない)', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        {
+          id: 'lr-1',
+          heldAt: '2026-05-15T05:00:00.000Z',
+          advice: null,
+          notes: null,
+          textbookEntries: [],
+          recordings: [],
+          homework: [
+            {
+              id: 'hw-1',
+              content: 'ロングトーン',
+              dueDate: null,
+              textbookId: null,
+              textbookTitle: '',
+              reviewNote: null,
+              status: 'in_progress',
+              completedAt: null,
+            },
+          ],
+        },
+      ],
+    });
+    // 1st from(): lesson_records update
+    mockFrom().mockReturnValueOnce({
+      update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+    // 2nd from(): lesson_record_textbooks delete
+    mockFrom().mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+    await useLessonRecordStore.getState().update('lr-1', {
+      date: '2026-05-20',
+      time: '10:00',
+      advice: '新しいアドバイス',
+      notes: '',
+      textbookEntries: [],
+    });
+    const { records } = useLessonRecordStore.getState();
+    expect(records[0].homework).toHaveLength(1);
+    expect(records[0].homework[0]).toMatchObject({ id: 'hw-1', status: 'in_progress' });
+  });
+
   it('update: textbookEntries あり → delete 後に INSERT される', async () => {
     useLessonRecordStore.setState({
       records: [
@@ -806,5 +851,58 @@ describe('宿題アクション', () => {
     const hw = useLessonRecordStore.getState().records[0].homework[0];
     expect(hw.status).toBe('done');
     expect(hw.completedAt).not.toBeNull();
+  });
+
+  it('updateHomework: 既に done の宿題を編集しても completed_at を保持する', async () => {
+    useLessonRecordStore.setState({
+      records: [
+        {
+          id: 'lr-1',
+          heldAt: 'x',
+          advice: null,
+          notes: null,
+          textbookEntries: [],
+          recordings: [],
+          homework: [
+            {
+              id: 'hw-1',
+              content: '旧内容',
+              dueDate: null,
+              textbookId: null,
+              textbookTitle: '',
+              reviewNote: null,
+              status: 'done',
+              completedAt: '2026-07-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+      loading: false,
+    });
+    const update = jest.fn().mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'hw-1',
+              content: '新内容',
+              due_date: null,
+              textbook_id: null,
+              review_note: null,
+              status: 'done',
+              completed_at: '2026-07-01T00:00:00.000Z',
+              textbooks: null,
+            },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    mockFrom().mockReturnValue({ update });
+    await useLessonRecordStore
+      .getState()
+      .updateHomework('hw-1', { content: '新内容', status: 'done' });
+    // DB へ渡す completed_at は編集時の now ではなく元の値を保持する。
+    expect(update.mock.calls[0][0].completed_at).toBe('2026-07-01T00:00:00.000Z');
   });
 });
