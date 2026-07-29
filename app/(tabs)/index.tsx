@@ -107,14 +107,21 @@ export default function PracticeLogScreen() {
             {monthSessions.length > 0 && (
               <PracticeChart sessions={monthSessions} month={selectedMonth} />
             )}
-            <Pressable
-              onPress={() => router.push('/practice-log-form')}
-              style={{ alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 4 }}
-            >
-              <Paragraph color="$blue9" fontSize="$2">
-                ＋ 記録
-              </Paragraph>
-            </Pressable>
+            <XStack justify="space-between" items="center" px="$4" py="$1">
+              <Pressable
+                onPress={() => router.push('/embouchure-checklist')}
+                aria-label="アンブシュア確認チェックリストを開く"
+              >
+                <Paragraph color="$blue9" fontSize="$2">
+                  アンブシュア確認
+                </Paragraph>
+              </Pressable>
+              <Pressable onPress={() => router.push('/practice-log-form')}>
+                <Paragraph color="$blue9" fontSize="$2">
+                  ＋ 記録
+                </Paragraph>
+              </Pressable>
+            </XStack>
           </YStack>
         }
         ListEmptyComponent={
