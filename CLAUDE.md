@@ -142,6 +142,7 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - `app/annual-goal-detail.tsx` — 年間目標詳細 (12ヶ月マイルストーン一覧) 画面 (スタック遷移)
 - `app/monthly-milestone-form.tsx` — 月別マイルストーン編集フォーム画面 (スタック遷移)
 - `app/homework-form.tsx` — 宿題 登録/編集フォーム画面 (スタック遷移)
+- `app/embouchure-checklist.tsx` — アンブシュア確認チェックリスト画面 (スタック遷移)
 
 ### Where do I add X
 
@@ -228,7 +229,7 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 
 ### テスト戦略マトリクス
 
-このプロジェクトは **Tamagui をモックしない** (`jest.setup.ts` でモックするのは AsyncStorage のみ) ため、UI を含む結合テストが実物の Tamagui + RHF + zod + Zustand を貫通する。結果として「結合テストの信頼性が高い」「単体は純粋ロジック専用に絞れる」という非対称が生まれる。以下の責務分担はこの前提に立つ。
+このプロジェクトは **Tamagui / RHF / zod / Zustand をモックしない** ため、UI を含む結合テストが実物のこれらを貫通する。結果として「結合テストの信頼性が高い」「単体は純粋ロジック専用に絞れる」という非対称が生まれる。以下の責務分担はこの前提に立つ。`jest.setup.ts` の global モックは境界依存のみに限定する: AsyncStorage (Zustand persist のバックエンド)、`@/lib/supabase` クライアント、`@expo/vector-icons` (マウント時の非同期フォント読み込みが act 警告を出すため `Ionicons` をアイコン名 Text に差し替え)。
 
 #### ライブラリ別の検証責務
 
