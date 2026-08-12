@@ -7,7 +7,11 @@ import { Button, Paragraph, YStack } from 'tamagui';
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
 import { RecordingMoveSheet } from '@/components/recording-move-sheet';
 import { type PracticeLogInput } from '@/forms/practice-log';
-import { type SessionRecording, usePracticeLogStore } from '@/store/practice-log';
+import {
+  MAX_SESSIONS_PER_DAY,
+  type SessionRecording,
+  usePracticeLogStore,
+} from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
 
 export default function PracticeLogFormScreen() {
@@ -79,6 +83,17 @@ export default function PracticeLogFormScreen() {
     [editingSession],
   );
 
+  // 同じ日に複数の記録があるときだけ、どの回を編集しているかをタイトルに出す
+  const title = useMemo(() => {
+    if (!editingSession) return '練習を記録';
+    const sameDayCount = sessions.filter(
+      (s) => s.practicedAt === editingSession.practicedAt,
+    ).length;
+    return sameDayCount > 1
+      ? `練習記録を編集（${editingSession.sessionNo}回目）`
+      : '練習記録を編集';
+  }, [editingSession, sessions]);
+
   const handleSubmit = async (data: PracticeLogInput) => {
     const recChange = formRef.current?.getRecordingChange() ?? { toAdd: [], toDelete: [] };
     const result = effectiveId
@@ -87,8 +102,8 @@ export default function PracticeLogFormScreen() {
     if (!result.ok) {
       Alert.alert(
         '保存できません',
-        result.reason === 'duplicate'
-          ? '同じ日付の練習記録が既に存在します。一覧から該当の記録を選んで編集してください。'
+        result.reason === 'limit'
+          ? `同じ日に記録できるのは${MAX_SESSIONS_PER_DAY}回までです。一覧から該当の記録を選んで編集してください。`
           : '保存中にエラーが発生しました。時間を置いて再度お試しください。',
       );
       return;
@@ -117,7 +132,7 @@ export default function PracticeLogFormScreen() {
     <>
       <Stack.Screen
         options={{
-          title: effectiveId ? '練習記録を編集' : '練習を記録',
+          title: effectiveId ? title : '練習を記録',
           headerShown: true,
           headerRight: () => (
             <Pressable onPress={() => formRef.current?.submit()}>

@@ -9,6 +9,7 @@ function makeSession(
   return {
     id,
     practicedAt,
+    sessionNo: 1,
     durationMinutes,
     otherMinutes: null,
     otherMemo: null,

@@ -50,13 +50,22 @@ export function buildMoveCandidates(
 ): MoveCandidate[] {
   const isSelf = (kind: RecordKind, id: string) => kind === sourceType && id === sourceRecordId;
 
+  // 同じ日に複数の練習記録があると日付だけでは区別できないため「N回目」を添える
+  const multiSessionDates = new Set(
+    sessions
+      .filter((s, _, all) => all.filter((x) => x.practicedAt === s.practicedAt).length > 1)
+      .map((s) => s.practicedAt),
+  );
+
   const practiceCandidates: MoveCandidate[] = sessions
     .filter((s) => !isSelf('practice', s.id) && s.recordings.length < MAX_RECORDINGS)
     .map((s) => ({
       kind: 'practice',
       id: s.id,
       date: s.practicedAt,
-      label: `練習 ${s.practicedAt}`,
+      label: multiSessionDates.has(s.practicedAt)
+        ? `練習 ${s.practicedAt} ${s.sessionNo}回目`
+        : `練習 ${s.practicedAt}`,
     }));
 
   const lessonCandidates: MoveCandidate[] = records

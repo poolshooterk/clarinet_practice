@@ -1,4 +1,11 @@
-import { calcSessionTime, type PracticeSession, usePracticeLogStore } from '@/store/practice-log';
+import {
+  calcSessionTime,
+  groupSessionsByDate,
+  MAX_SESSIONS_PER_DAY,
+  nextSessionNo,
+  type PracticeSession,
+  usePracticeLogStore,
+} from '@/store/practice-log';
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -47,34 +54,37 @@ describe('usePracticeLogStore', () => {
     });
     mockSupabase().from.mockReturnValueOnce({
       select: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({
-          data: [
-            {
-              id: 'session-1',
-              practiced_at: '2026-05-12',
-              duration_minutes: 25,
-              memo: 'テスト',
-              practice_session_textbooks: [
-                {
-                  textbook_id: 'tb-1',
-                  current_page: 14,
-                  duration_minutes: null,
-                  tempo_bpm: null,
-                  textbooks: {
-                    title: 'ローズ 32のエチュード',
-                    total_pages: 32,
-                    genre: 'エチュード',
+        order: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: 'session-1',
+                practiced_at: '2026-05-12',
+                session_no: 1,
+                duration_minutes: 25,
+                memo: 'テスト',
+                practice_session_textbooks: [
+                  {
+                    textbook_id: 'tb-1',
+                    current_page: 14,
+                    duration_minutes: null,
+                    tempo_bpm: null,
+                    textbooks: {
+                      title: 'ローズ 32のエチュード',
+                      total_pages: 32,
+                      genre: 'エチュード',
+                    },
                   },
-                },
-              ],
-              practice_session_basic_menus: [
-                { menu_type: 'long_tone', duration_minutes: 15, tempo_bpms: null },
-                { menu_type: 'tonguing', duration_minutes: 10, tempo_bpms: null },
-              ],
-              practice_session_recordings: [],
-            },
-          ],
-          error: null,
+                ],
+                practice_session_basic_menus: [
+                  { menu_type: 'long_tone', duration_minutes: 15, tempo_bpms: null },
+                  { menu_type: 'tonguing', duration_minutes: 10, tempo_bpms: null },
+                ],
+                practice_session_recordings: [],
+              },
+            ],
+            error: null,
+          }),
         }),
       }),
     });
@@ -109,27 +119,30 @@ describe('usePracticeLogStore', () => {
     });
     mockSupabase().from.mockReturnValueOnce({
       select: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({
-          data: [
-            {
-              id: 'session-1',
-              practiced_at: '2026-05-12',
-              duration_minutes: null,
-              memo: null,
-              practice_session_textbooks: [
-                {
-                  textbook_id: 'tb-1',
-                  current_page: 5,
-                  duration_minutes: null,
-                  tempo_bpm: null,
-                  textbooks: { title: 'テスト教本', total_pages: null, genre: null },
-                },
-              ],
-              practice_session_basic_menus: [],
-              practice_session_recordings: [],
-            },
-          ],
-          error: null,
+        order: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: 'session-1',
+                practiced_at: '2026-05-12',
+                session_no: 1,
+                duration_minutes: null,
+                memo: null,
+                practice_session_textbooks: [
+                  {
+                    textbook_id: 'tb-1',
+                    current_page: 5,
+                    duration_minutes: null,
+                    tempo_bpm: null,
+                    textbooks: { title: 'テスト教本', total_pages: null, genre: null },
+                  },
+                ],
+                practice_session_basic_menus: [],
+                practice_session_recordings: [],
+              },
+            ],
+            error: null,
+          }),
         }),
       }),
     });
@@ -154,6 +167,7 @@ describe('usePracticeLogStore', () => {
     const existing = {
       id: 'old',
       practicedAt: '2026-05-11',
+      sessionNo: 1,
       durationMinutes: null,
       otherMinutes: null,
       otherMemo: null,
@@ -526,6 +540,7 @@ describe('usePracticeLogStore', () => {
         {
           id: 'session-1',
           practicedAt: '2026-05-12',
+          sessionNo: 1,
           durationMinutes: null,
           otherMinutes: null,
           otherMemo: null,
@@ -541,6 +556,7 @@ describe('usePracticeLogStore', () => {
         {
           id: 'session-2',
           practicedAt: '2026-05-11',
+          sessionNo: 1,
           durationMinutes: null,
           otherMinutes: null,
           otherMemo: null,
@@ -572,6 +588,7 @@ describe('usePracticeLogStore', () => {
     const existingSession: PracticeSession = {
       id: 'session-1',
       practicedAt: '2026-05-10',
+      sessionNo: 1,
       durationMinutes: 20,
       otherMinutes: null,
       otherMemo: null,
@@ -592,6 +609,7 @@ describe('usePracticeLogStore', () => {
           {
             id: 'session-2',
             practicedAt: '2026-05-09',
+            sessionNo: 1,
             durationMinutes: null,
             otherMinutes: null,
             otherMemo: null,
@@ -784,6 +802,7 @@ describe('usePracticeLogStore', () => {
         {
           id: 'session-1',
           practicedAt: '2026-05-19',
+          sessionNo: 1,
           durationMinutes: null,
           otherMinutes: null,
           otherMemo: null,
@@ -905,6 +924,7 @@ describe('usePracticeLogStore', () => {
           {
             id: 'session-1',
             practicedAt: '2026-05-19',
+            sessionNo: 1,
             durationMinutes: null,
             otherMinutes: null,
             otherMemo: null,
@@ -943,6 +963,7 @@ describe('usePracticeLogStore', () => {
           {
             id: 'session-1',
             practicedAt: '2026-05-19',
+            sessionNo: 1,
             durationMinutes: null,
             otherMinutes: null,
             otherMemo: null,
@@ -985,6 +1006,7 @@ describe('usePracticeLogStore', () => {
         {
           id: 'session-abc',
           practicedAt: '2026-05-19',
+          sessionNo: 1,
           durationMinutes: null,
           otherMinutes: null,
           otherMemo: null,
@@ -1061,23 +1083,26 @@ describe('usePracticeLogStore', () => {
     });
     mockSupabase().from.mockReturnValueOnce({
       select: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({
-          data: [
-            {
-              id: 'session-1',
-              practiced_at: '2026-05-21',
-              duration_minutes: null,
-              other_minutes: null,
-              other_memo: null,
-              total_minutes: null,
-              memo: null,
-              reed_number: 'B2',
-              practice_session_textbooks: [],
-              practice_session_basic_menus: [],
-              practice_session_recordings: [],
-            },
-          ],
-          error: null,
+        order: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: 'session-1',
+                practiced_at: '2026-05-21',
+                session_no: 1,
+                duration_minutes: null,
+                other_minutes: null,
+                other_memo: null,
+                total_minutes: null,
+                memo: null,
+                reed_number: 'B2',
+                practice_session_textbooks: [],
+                practice_session_basic_menus: [],
+                practice_session_recordings: [],
+              },
+            ],
+            error: null,
+          }),
         }),
       }),
     });
@@ -1091,6 +1116,7 @@ describe('calcSessionTime', () => {
   const base: PracticeSession = {
     id: 's1',
     practicedAt: '2026-05-16',
+    sessionNo: 1,
     durationMinutes: null,
     otherMinutes: null,
     otherMemo: null,
@@ -1242,6 +1268,7 @@ describe('usePracticeLogStore 録音の付け替え', () => {
   const seedSession = (recordings: PracticeSession['recordings']): PracticeSession => ({
     id: 'session-1',
     practicedAt: '2026-05-12',
+    sessionNo: 1,
     durationMinutes: null,
     otherMinutes: null,
     otherMemo: null,
@@ -1333,5 +1360,195 @@ describe('usePracticeLogStore 録音の付け替え', () => {
     expect(usePracticeLogStore.getState().sessions[0].recordings.map((r) => r.id)).toEqual([
       'rec-2',
     ]);
+  });
+});
+
+describe('nextSessionNo / groupSessionsByDate', () => {
+  const s = (id: string, practicedAt: string, sessionNo: number): PracticeSession => ({
+    id,
+    practicedAt,
+    sessionNo,
+    durationMinutes: null,
+    otherMinutes: null,
+    otherMemo: null,
+    totalMinutes: null,
+    memo: null,
+    reedNumber: null,
+    startTime: null,
+    endTime: null,
+    textbookEntries: [],
+    basicMenuEntries: [],
+    recordings: [],
+  });
+
+  describe('nextSessionNo', () => {
+    it('その日に記録が無ければ 1', () => {
+      expect(nextSessionNo([], '2026-08-12')).toBe(1);
+    });
+
+    it('1 が埋まっていれば 2', () => {
+      expect(nextSessionNo([s('a', '2026-08-12', 1)], '2026-08-12')).toBe(2);
+    });
+
+    it('欠番があればその最小値を再利用する', () => {
+      const sessions = [s('a', '2026-08-12', 1), s('c', '2026-08-12', 3)];
+      expect(nextSessionNo(sessions, '2026-08-12')).toBe(2);
+    });
+
+    it('3 件埋まっていれば null', () => {
+      const sessions = [s('a', '2026-08-12', 1), s('b', '2026-08-12', 2), s('c', '2026-08-12', 3)];
+      expect(nextSessionNo(sessions, '2026-08-12')).toBeNull();
+    });
+
+    it('別日の記録は影響しない', () => {
+      const sessions = [s('a', '2026-08-11', 1), s('b', '2026-08-11', 2), s('c', '2026-08-11', 3)];
+      expect(nextSessionNo(sessions, '2026-08-12')).toBe(1);
+    });
+
+    it('excludeId を渡すと自分の番号を空きとして扱う', () => {
+      const sessions = [s('a', '2026-08-12', 1), s('b', '2026-08-12', 2), s('c', '2026-08-12', 3)];
+      expect(nextSessionNo(sessions, '2026-08-12', 'b')).toBe(2);
+    });
+
+    it('MAX_SESSIONS_PER_DAY は 3', () => {
+      expect(MAX_SESSIONS_PER_DAY).toBe(3);
+    });
+  });
+
+  describe('groupSessionsByDate', () => {
+    it('空配列は空配列', () => {
+      expect(groupSessionsByDate([])).toEqual([]);
+    });
+
+    it('日付降順・同日は sessionNo 昇順に並べる', () => {
+      const sessions = [s('c', '2026-08-12', 2), s('a', '2026-08-11', 1), s('b', '2026-08-12', 1)];
+      const groups = groupSessionsByDate(sessions);
+      expect(groups.map((g) => g.date)).toEqual(['2026-08-12', '2026-08-11']);
+      expect(groups[0].sessions.map((x) => x.id)).toEqual(['b', 'c']);
+      expect(groups[1].sessions.map((x) => x.id)).toEqual(['a']);
+    });
+
+    it('元の配列を破壊しない', () => {
+      const sessions = [s('c', '2026-08-12', 2), s('b', '2026-08-12', 1)];
+      groupSessionsByDate(sessions);
+      expect(sessions.map((x) => x.id)).toEqual(['c', 'b']);
+    });
+  });
+});
+
+describe('1 日の記録上限', () => {
+  const s = (id: string, practicedAt: string, sessionNo: number): PracticeSession => ({
+    id,
+    practicedAt,
+    sessionNo,
+    durationMinutes: null,
+    otherMinutes: null,
+    otherMemo: null,
+    totalMinutes: null,
+    memo: null,
+    reedNumber: null,
+    startTime: null,
+    endTime: null,
+    textbookEntries: [],
+    basicMenuEntries: [],
+    recordings: [],
+  });
+
+  beforeEach(() => {
+    usePracticeLogStore.setState({ sessions: [], loading: false });
+    jest.clearAllMocks();
+    mockCatalog().getState.mockReturnValue({ textbooks: [] });
+  });
+
+  it('add: 同日 2 件目は session_no 2 で insert される', async () => {
+    usePracticeLogStore.setState({ sessions: [s('a', '2026-08-12', 1)] });
+    mockSupabase().auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } });
+    const insert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({ data: { id: 'new-session' }, error: null }),
+      }),
+    });
+    mockSupabase().from.mockReturnValueOnce({ insert });
+
+    const result = await usePracticeLogStore
+      .getState()
+      .add({ practicedAt: '2026-08-12', textbookEntries: [] });
+
+    expect(result).toEqual({ ok: true });
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ session_no: 2 }));
+    expect(usePracticeLogStore.getState().sessions[0].sessionNo).toBe(2);
+  });
+
+  it('add: 同日 3 件あると DB に触らず { ok: false, reason: "limit" }', async () => {
+    usePracticeLogStore.setState({
+      sessions: [s('a', '2026-08-12', 1), s('b', '2026-08-12', 2), s('c', '2026-08-12', 3)],
+    });
+    mockSupabase().auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } });
+
+    const result = await usePracticeLogStore
+      .getState()
+      .add({ practicedAt: '2026-08-12', textbookEntries: [] });
+
+    expect(result).toEqual({ ok: false, reason: 'limit' });
+    expect(mockSupabase().from).not.toHaveBeenCalled();
+  });
+
+  it('update: 日付を変えなければ session_no は据え置き', async () => {
+    usePracticeLogStore.setState({ sessions: [s('a', '2026-08-12', 2)] });
+    const update = jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+    mockSupabase().from.mockReturnValueOnce({ update });
+    mockSupabase().from.mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+
+    const result = await usePracticeLogStore
+      .getState()
+      .update('a', { practicedAt: '2026-08-12', textbookEntries: [] });
+
+    expect(result).toEqual({ ok: true });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ session_no: 2 }));
+  });
+
+  it('update: 日付を変えると移動先の空き番号で採番し直す', async () => {
+    usePracticeLogStore.setState({
+      sessions: [s('a', '2026-08-12', 2), s('b', '2026-08-11', 1)],
+    });
+    const update = jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+    mockSupabase().from.mockReturnValueOnce({ update });
+    mockSupabase().from.mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+    mockSupabase().from.mockReturnValueOnce({
+      delete: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+    });
+
+    const result = await usePracticeLogStore
+      .getState()
+      .update('a', { practicedAt: '2026-08-11', textbookEntries: [] });
+
+    expect(result).toEqual({ ok: true });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ session_no: 2 }));
+    expect(usePracticeLogStore.getState().sessions[0].sessionNo).toBe(2);
+  });
+
+  it('update: 移動先の日が満杯なら DB に触らず limit', async () => {
+    usePracticeLogStore.setState({
+      sessions: [
+        s('a', '2026-08-12', 1),
+        s('b', '2026-08-11', 1),
+        s('c', '2026-08-11', 2),
+        s('d', '2026-08-11', 3),
+      ],
+    });
+
+    const result = await usePracticeLogStore
+      .getState()
+      .update('a', { practicedAt: '2026-08-11', textbookEntries: [] });
+
+    expect(result).toEqual({ ok: false, reason: 'limit' });
+    expect(mockSupabase().from).not.toHaveBeenCalled();
   });
 });

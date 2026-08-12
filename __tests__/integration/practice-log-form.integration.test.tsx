@@ -432,6 +432,7 @@ describe('PracticeLogForm (integration)', () => {
           {
             id: 'prev-session',
             practicedAt: '2026-05-14',
+            sessionNo: 1,
             durationMinutes: 20,
             otherMinutes: null,
             otherMemo: null,
@@ -472,6 +473,7 @@ describe('PracticeLogForm (integration)', () => {
           {
             id: 'prev-session',
             practicedAt: '2026-05-14',
+            sessionNo: 1,
             durationMinutes: 20,
             otherMinutes: null,
             otherMemo: null,
@@ -630,6 +632,7 @@ function makeSession(overrides: Partial<PracticeSession>): PracticeSession {
   return {
     id: 'session-id',
     practicedAt: '2026-05-15',
+    sessionNo: 1,
     durationMinutes: null,
     otherMinutes: null,
     otherMemo: null,
@@ -738,8 +741,8 @@ describe('PracticeLogFormScreen (urlId による新規/編集モード分離 + �
     expect(screen.getByLabelText('練習記録を削除')).toBeTruthy();
   });
 
-  it('保存時に add が duplicate を返したら Alert が出て router.back は呼ばれない', async () => {
-    const addMock = jest.fn().mockResolvedValue({ ok: false, reason: 'duplicate' });
+  it('保存時に add が limit を返したら Alert が出て router.back は呼ばれない', async () => {
+    const addMock = jest.fn().mockResolvedValue({ ok: false, reason: 'limit' });
     usePracticeLogStore.setState({ sessions: [], add: addMock });
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
@@ -749,7 +752,7 @@ describe('PracticeLogFormScreen (urlId による新規/編集モード分離 + �
     fireEvent.press(screen.getByLabelText('保存'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('保存できません', expect.stringContaining('同じ日付'));
+      expect(alertSpy).toHaveBeenCalledWith('保存できません', expect.stringContaining('3回まで'));
     });
     expect(router.back).not.toHaveBeenCalled();
     expect(addMock).toHaveBeenCalled();

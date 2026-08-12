@@ -37,6 +37,8 @@ export type SessionRecording = {
 export type PracticeSession = {
   id: string;
   practicedAt: string;
+  /** 同じ日の何回目の練習か (1..3)。DB の UNIQUE (user_id, practiced_at, session_no) に対応 */
+  sessionNo: number;
   durationMinutes: number | null;
   otherMinutes: number | null;
   otherMemo: string | null;
@@ -66,6 +68,7 @@ export function calcSessionTime(session: PracticeSession): { basic: number; nonB
 type SessionRow = {
   id: string;
   practiced_at: string;
+  session_no: number;
   duration_minutes: number | null;
   other_minutes: number | null;
   other_memo: string | null;
@@ -94,7 +97,49 @@ type SessionRow = {
   }[];
 };
 
-export type MutationResult = { ok: true } | { ok: false; reason: 'duplicate' | 'unknown' };
+/** 1 日に登録できる練習記録の上限 */
+export const MAX_SESSIONS_PER_DAY = 3;
+
+/**
+ * 指定日の 1..MAX_SESSIONS_PER_DAY のうち最小の空き番号を返す。
+ * 空きが無ければ null (= その日はもう記録できない)。
+ * `excludeId` を渡すと自分自身の番号を空きとして扱う (日付変更を伴う編集用)。
+ */
+export function nextSessionNo(
+  sessions: PracticeSession[],
+  date: string,
+  excludeId?: string,
+): number | null {
+  const used = new Set(
+    sessions.filter((s) => s.practicedAt === date && s.id !== excludeId).map((s) => s.sessionNo),
+  );
+  for (let no = 1; no <= MAX_SESSIONS_PER_DAY; no++) {
+    if (!used.has(no)) return no;
+  }
+  return null;
+}
+
+export type SessionGroup = { date: string; sessions: PracticeSession[] };
+
+/** 一覧表示用に日付でまとめる。日付は降順、同じ日の中は sessionNo 昇順 */
+export function groupSessionsByDate(sessions: PracticeSession[]): SessionGroup[] {
+  const byDate = new Map<string, PracticeSession[]>();
+  for (const session of sessions) {
+    const group = byDate.get(session.practicedAt);
+    if (group) group.push(session);
+    else byDate.set(session.practicedAt, [session]);
+  }
+  return [...byDate.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, group]) => ({
+      date,
+      sessions: [...group].sort((a, b) => a.sessionNo - b.sessionNo),
+    }));
+}
+
+export type MutationResult =
+  | { ok: true }
+  | { ok: false; reason: 'duplicate' | 'limit' | 'unknown' };
 
 function classifyError(error: { code?: string } | null | undefined): MutationResult {
   if (!error) return { ok: false, reason: 'unknown' };
@@ -136,12 +181,14 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data, error } = await supabase
       .from('practice_sessions')
       .select(
-        'id, practiced_at, duration_minutes, other_minutes, other_memo, total_minutes, memo, reed_number, start_time, end_time, ' +
+        'id, practiced_at, session_no, duration_minutes, other_minutes, other_memo, total_minutes, memo, reed_number, start_time, end_time, ' +
           'practice_session_textbooks ( textbook_id, current_page, duration_minutes, tempo_bpm, textbooks ( title, total_pages, genre ) ), ' +
           'practice_session_basic_menus ( menu_type, duration_minutes, tempo_bpms ), ' +
           'practice_session_recordings ( id, index, local_uri, memo )',
       )
-      .order('practiced_at', { ascending: false });
+      // sessions[0] が「直近の回」になるよう、同じ日の中も新しい回から並べる
+      .order('practiced_at', { ascending: false })
+      .order('session_no', { ascending: false });
     set({ loading: false });
 
     if (error || !data) return;
@@ -151,6 +198,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       sessions: rows.map((row) => ({
         id: row.id,
         practicedAt: row.practiced_at,
+        sessionNo: row.session_no ?? 1,
         durationMinutes: row.duration_minutes ?? null,
         otherMinutes: row.other_minutes ?? null,
         otherMemo: row.other_memo ?? null,
@@ -187,6 +235,9 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return { ok: false, reason: 'unknown' };
 
+    const sessionNo = nextSessionNo(get().sessions, input.practicedAt);
+    if (sessionNo == null) return { ok: false, reason: 'limit' };
+
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
     const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
@@ -210,6 +261,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .insert({
         user_id: userData.user.id,
         practiced_at: input.practicedAt,
+        session_no: sessionNo,
         duration_minutes: totalDuration > 0 ? totalDuration : null,
         other_minutes: input.otherMinutes ?? null,
         other_memo: input.otherMemo || null,
@@ -316,6 +368,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const newSession: PracticeSession = {
       id: sessionId,
       practicedAt: input.practicedAt,
+      sessionNo,
       durationMinutes: totalDuration > 0 ? totalDuration : null,
       otherMinutes: input.otherMinutes ?? null,
       otherMemo: input.otherMemo || null,
@@ -354,6 +407,14 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     tempRecordings?: TempRecording[],
     deletedRecordingIds?: string[],
   ) => {
+    const currentSession = get().sessions.find((s) => s.id === id);
+    // 日付を変えたときだけ移動先の日で採番し直す (同じ日なら回数は据え置き)
+    const dateChanged = currentSession != null && currentSession.practicedAt !== input.practicedAt;
+    const sessionNo = dateChanged
+      ? nextSessionNo(get().sessions, input.practicedAt, id)
+      : (currentSession?.sessionNo ?? 1);
+    if (sessionNo == null) return { ok: false, reason: 'limit' };
+
     const totalDuration = (input.longToneMinutes ?? 0) + (input.tonguingMinutes ?? 0);
 
     const catalogTextbooks = useTextbookCatalogStore.getState().textbooks;
@@ -376,6 +437,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
       .from('practice_sessions')
       .update({
         practiced_at: input.practicedAt,
+        session_no: sessionNo,
         duration_minutes: totalDuration > 0 ? totalDuration : null,
         other_minutes: input.otherMinutes ?? null,
         other_memo: input.otherMemo || null,
@@ -497,6 +559,7 @@ export const usePracticeLogStore = create<PracticeLogState>()((set, get) => ({
     const updatedSession: PracticeSession = {
       id,
       practicedAt: input.practicedAt,
+      sessionNo,
       durationMinutes: totalDuration > 0 ? totalDuration : null,
       otherMinutes: input.otherMinutes ?? null,
       otherMemo: input.otherMemo || null,

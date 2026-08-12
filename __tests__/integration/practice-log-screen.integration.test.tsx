@@ -41,9 +41,15 @@ function formatMonthLabel(month: string): string {
   return `${y}年${Number(m)}月`;
 }
 
-const makeSession = (id: string, practicedAt: string, durationMinutes: number | null = null) => ({
+const makeSession = (
+  id: string,
+  practicedAt: string,
+  durationMinutes: number | null = null,
+  sessionNo = 1,
+) => ({
   id,
   practicedAt,
+  sessionNo,
   durationMinutes,
   otherMinutes: null,
   otherMemo: null,
@@ -128,5 +134,45 @@ describe('PracticeLogScreen (integration)', () => {
     });
     renderWithProviders(<PracticeLogScreen />);
     expect(screen.queryByLabelText('月別練習グラフ')).toBeNull();
+  });
+
+  describe('1 日複数回の記録', () => {
+    it('同じ日の記録は日付ヘッダー 1 つにまとまり回数バッジが付く', () => {
+      usePracticeLogStore.setState({
+        sessions: [makeSession('s1', THIS_DATE, 30, 1), makeSession('s2', THIS_DATE, 20, 2)],
+        loading: false,
+      });
+      renderWithProviders(<PracticeLogScreen />);
+
+      expect(screen.getAllByText(new RegExp(THIS_DATE))).toHaveLength(1);
+      expect(screen.getByText('1回目')).toBeTruthy();
+      expect(screen.getByText('2回目')).toBeTruthy();
+    });
+
+    it('1 日 1 件だけの日には回数バッジを出さない', () => {
+      usePracticeLogStore.setState({
+        sessions: [makeSession('s1', THIS_DATE, 30, 1)],
+        loading: false,
+      });
+      renderWithProviders(<PracticeLogScreen />);
+
+      expect(screen.queryByText('1回目')).toBeNull();
+    });
+
+    it('月サマリの平均は記録件数ではなく練習した日数で割る', () => {
+      const otherDate = `${THIS_MONTH}-16`;
+      usePracticeLogStore.setState({
+        sessions: [
+          makeSession('s1', THIS_DATE, 30, 1),
+          makeSession('s2', THIS_DATE, 30, 2),
+          makeSession('s3', otherDate, 60, 1),
+        ],
+        loading: false,
+      });
+      renderWithProviders(<PracticeLogScreen />);
+
+      // 合計 120 分 / 2 日 = 60 分
+      expect(screen.getByText('2日 / 3回 / 平均: 60分/日')).toBeTruthy();
+    });
   });
 });

@@ -30,6 +30,7 @@ const mockRecording = () => jest.requireMock('@/lib/recording');
 const seedSession = (recordings: PracticeSession['recordings']): PracticeSession => ({
   id: 'session-1',
   practicedAt: '2026-05-12',
+  sessionNo: 1,
   durationMinutes: null,
   otherMinutes: null,
   otherMemo: null,
@@ -174,10 +175,12 @@ describe('buildMoveCandidates', () => {
     id: string,
     practicedAt: string,
     recordings: PracticeSession['recordings'],
+    sessionNo = 1,
   ): PracticeSession => ({
     ...seedSession(recordings),
     id,
     practicedAt,
+    sessionNo,
   });
   const makeRecord = (
     id: string,
@@ -205,5 +208,28 @@ describe('buildMoveCandidates', () => {
     ]);
     expect(candidates[0].label).toContain('練習');
     expect(candidates[1].label).toContain('レッスン');
+  });
+
+  it('同じ日に複数の練習記録があるときは候補ラベルに N回目 を付ける', () => {
+    const sessions = [
+      makeSession('s1', '2026-05-10', oneRec, 1), // 移動元 (自記録) → 除外
+      makeSession('s2', '2026-05-25', [], 1),
+      makeSession('s3', '2026-05-25', [], 2),
+    ];
+
+    const candidates = buildMoveCandidates(sessions, [], 'practice', 's1');
+
+    expect(candidates.map((c) => c.label)).toEqual([
+      '練習 2026-05-25 1回目',
+      '練習 2026-05-25 2回目',
+    ]);
+  });
+
+  it('その日 1 件だけの練習記録は日付のみのラベルになる', () => {
+    const sessions = [makeSession('s1', '2026-05-10', oneRec), makeSession('s2', '2026-05-25', [])];
+
+    const candidates = buildMoveCandidates(sessions, [], 'practice', 's1');
+
+    expect(candidates[0].label).toBe('練習 2026-05-25');
   });
 });
