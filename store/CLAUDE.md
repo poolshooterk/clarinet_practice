@@ -8,9 +8,9 @@
 - アクションは状態と同じストア内に同梱する (`set` / `get` を閉じ込める)。コンポーネント側からはセレクタ経由で関数を取り出して呼ぶ
 - 永続化が必要なストアは `persist` middleware + `createJSONStorage(() => AsyncStorage)` を使う。`name` はプロジェクト固有のプレフィックス付きで重複を避ける (例: `expo-template-settings`)
 - middleware は `persist` のみ採用。`devtools` / `immer` / `subscribeWithSelector` 等は必要になった時点で個別検討
-- 参照実装: `store/lesson-record.ts` (Supabase 連携 CRUD) / `store/settings.ts` (永続化 + UI 連携) / `store/practice-log.ts` (Supabase 連携、スネークケース → キャメルケース変換、CRUD アクション)
+- 参照実装: `store/lesson-record.ts` (Supabase 連携 CRUD) / `store/practice-preference.ts` (永続化 + UI 連携の最小例) / `store/practice-log.ts` (Supabase 連携、スネークケース → キャメルケース変換、CRUD アクション)。**`store/settings.ts` はテンプレート残骸**でどの画面からもマウントされていないため参考にしないこと
 - ストアが小さいうちはスライス分割やラッパーを作らない (過剰抽象化を避ける)
 - **`store/counter.ts` はテンプレート残骸**: ドメインコードから参照されていない。参考実装として使わないこと
 - **カタログストア** (`store/instrument-catalog.ts` / `store/textbook-catalog.ts`): 複数機能が参照するルックアップデータを管理する読み取り中心のストア。`persist` でローカルキャッシュし、`useFocusEffect` 経由で `fetchAll` して最新化する。CRUD ストアと区別し、ユーザデータは持たない
 - 単体テストは `store/__tests__/` に配置し、`useFooStore.getState()` を直接叩いて状態遷移を検証する (UI レンダリング不要のため `renderHook` 不使用)。`persist` を使うストアは `jest.setup.ts` の AsyncStorage 公式モックが自動適用されるため追加設定不要
-- **DB 制約違反を呼び出し側に返す CRUD アクション**: 一意制約違反などユーザに通知すべき回復可能エラーは、戻り値を `Promise<{ ok: true } | { ok: false; reason: 'duplicate' | 'unknown' }>` で表現し、画面側で `Alert.alert` 等の UI を出す。Postgres エラーコード `23505` を `'duplicate'` にマップする。参照実装: `store/practice-log.ts` の `MutationResult` 型と `classifyError` ヘルパー (`add` / `update` がこの形を返す)
+- **DB 制約違反を呼び出し側に返す CRUD アクション**: 一意制約違反などユーザに通知すべき回復可能エラーは、戻り値を `Promise<{ ok: true } | { ok: false; reason: ... }>` で表現し、画面側で `Alert.alert` 等の UI を出す。Postgres エラーコード `23505` を `'duplicate'` にマップする。参照実装: `store/practice-log.ts` の `MutationResult` 型 (`'duplicate' | 'limit' | 'unknown'`) と `classifyError` ヘルパー (`add` / `update` がこの形を返す)。`'limit'` のように **DB へ投げる前にストア側で弾ける制約は独自 reason を足す**のが方針

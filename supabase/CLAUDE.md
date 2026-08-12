@@ -35,9 +35,8 @@ create policy "..." on <table> for delete using (auth.uid() = user_id);
 主要テーブルと関係 (詳細は `supabase/migrations/` を参照):
 
 - `profiles` — ユーザプロフィール (1:1 with `auth.users`)
-- `practice_sessions` — 練習記録ヘッダー。`user_id` / `practiced_at` / `other_minutes` / `other_memo` / `total_minutes` / `memo` / `start_time` / `end_time` (`start_time`/`end_time` は `HH:MM` 文字列。セッションタイマー由来の記録用メタデータで分数計算に不参入)
-- `practice_session_basic_menus` — 基礎練習エントリ (ロングトーン / タンギング)。`menu_type` / `duration_minutes`
-- `practice_session_basic_menu_tempos` — タンギングテンポ。`tempo_bpm`
+- `practice_sessions` — 練習記録ヘッダー。`user_id` / `practiced_at` / `session_no` / `duration_minutes` / `other_minutes` / `other_memo` / `total_minutes` / `memo` / `reed_number` / `start_time` / `end_time`。`session_no smallint not null default 1` + `CHECK (between 1 and 3)` + `UNIQUE (user_id, practiced_at, session_no)` で**同日 最大 3 件**。`start_time`/`end_time` は `HH:MM` 文字列で、セッションタイマー由来の記録用メタデータのため分数計算に不参入
+- `practice_session_basic_menus` — 基礎練習エントリ (ロングトーン / タンギング)。`menu_type` / `duration_minutes` / `tempo_bpms integer[]`。`UNIQUE (session_id, menu_type)`。テンポは**子テーブルではなく配列カラム** (`20260515000002_tempo_bpms_array.sql` でスカラー `tempo_bpm` から移行済み)
 - `practice_session_textbooks` — 教本進捗エントリ。`textbook_id` / `current_page` / `duration_minutes` / `tempo_bpm`
 - `textbooks` — 教本カタログ (カタログストア `store/textbook-catalog.ts` が管理)
 - `user_equipment` — 所有楽器セット (PK = `user_id`、ユーザごとに1行)。`instrument` (`instrument_maker_id` / `instrument_model_id` で `instrument_makers` / `instrument_models` を参照、`instrument_purchase_price` / `instrument_start_date` / `instrument_photo_uri`) + `reed` / `ligature` / `mouthpiece` の `*_name` / `*_start_date` カラムを 1 行に格納。書き込みは `upsert` (`user_id` 衝突時 UPDATE)

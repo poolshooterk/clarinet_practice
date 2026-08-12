@@ -14,4 +14,4 @@
 - 「true 必須」のチェックは `z.boolean().refine((v) => v === true, ...)` を使う (`z.literal(true)` だと推論型が `true` 固定になり `defaultValues` で `false` を渡せなくなる)
 - **zod スキーマと date ヘルパー (`parseYmd` / `formatDate` / `today`) は `forms/` 配下にモジュールとして切り出す** (例: `forms/profile.ts`)。UI 非依存にして単体テスト可能にする。route ファイルからは `import { profileSchema, parseYmd, formatDate } from '@/forms/profile'`
 - フォーム共通コンポーネント (例: 必須エラー表示) は **`components/form/` に配置**。シンプルなものはテスト容易性と再利用のために早めに切り出して構わない (`FieldError` がその例)
-- 参照実装: `components/profile-form.tsx` + `forms/profile.ts` + `components/form/field-error.tsx`。route ファイル (例: `app/practice-log-form.tsx`) からは対応するフォームコンポーネントを貼るだけにする (page と form の責務分離)
+- 参照実装: `components/practice-log-form.tsx` + `forms/practice-log.ts` + `components/form/field-error.tsx`。route ファイル (`app/practice-log-form.tsx`) からは対応するフォームコンポーネントを貼るだけにする (page と form の責務分離)。**`components/profile-form.tsx` + `forms/profile.ts` はテンプレート残骸**でドメインから参照されていないため参考にしないこと
