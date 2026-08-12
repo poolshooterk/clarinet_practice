@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 以下はテンプレート時代の遺物でドメイン機能から参照されていない。新規実装のお手本にすると汎用テンプレートの発想を引きずるので、参照実装が必要なときはドメイン側 (`components/practice-log-form.tsx` / `store/practice-log.ts` 等) を見ること。
 
 - `store/counter.ts` / `components/profile-form.tsx` / `forms/profile.ts` と各テスト、`.maestro/profile-form.yaml`
-- `package.json` の `name` は `expo-template` のまま、`README.md` も汎用テンプレートの説明のまま (アプリ名は `app.json` の `クラリネット練習` / slug `clarinet-practice` が実体)
+- `package.json` の `name` は `expo-template` のまま (アプリ名は `app.json` の `クラリネット練習` / slug `clarinet-practice` が実体)。`README.md` は 2026-08-12 にドメイン向けへ書き換え済み
 - `npm run reset-project` は **実行できない**。`scripts/reset-project.js` は git に存在せず、`scripts/` にあるのは `generate-icon.py` (アプリアイコン生成) のみ。同様に `app-example/` も生成されることはなく、`.gitignore` / `tsconfig.json` の `exclude` に残っているのは無害な残骸
 
 ## Commands
