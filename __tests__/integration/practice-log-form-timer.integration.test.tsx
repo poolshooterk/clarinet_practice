@@ -2,6 +2,7 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 import { PracticeLogForm } from '@/components/practice-log-form';
+import { usePracticePreferenceStore } from '@/store/practice-preference';
 import { useTimerStore } from '@/store/timer';
 import { renderWithProviders, screen } from '@/test-utils/render';
 
@@ -38,6 +39,7 @@ jest.mock('@/store/practice-log', () => ({
 
 beforeEach(() => {
   useTimerStore.setState({ timers: {} });
+  usePracticePreferenceStore.setState({ autoStartMenu: 'none' });
 });
 
 it('計測開始 → 停止 でロングトーン分数フィールドが更新される', async () => {
@@ -72,4 +74,33 @@ it('手動時刻入力でタンギング分数フィールドが更新される'
   await waitFor(() => {
     expect(screen.getByLabelText('タンギング')).toHaveProp('value', '15');
   });
+});
+
+it('自動開始設定がロングトーンなら練習開始でロングトーンのタイマーも走る', () => {
+  usePracticePreferenceStore.setState({ autoStartMenu: 'long_tone' });
+  renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+
+  fireEvent.press(screen.getByLabelText('練習の計測開始'));
+
+  expect(useTimerStore.getState().timers['long_tone']?.status).toBe('running');
+});
+
+it('自動開始設定が none なら練習開始でメニューのタイマーは走らない', () => {
+  renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+
+  fireEvent.press(screen.getByLabelText('練習の計測開始'));
+
+  expect(useTimerStore.getState().timers['long_tone']).toBeUndefined();
+});
+
+it('既に手動で開始済みのタイマーは自動開始で上書きされない', () => {
+  usePracticePreferenceStore.setState({ autoStartMenu: 'long_tone' });
+  renderWithProviders(<PracticeLogForm onSubmit={jest.fn()} />);
+
+  fireEvent.press(screen.getByLabelText('ロングトーンの計測開始'));
+  const startedAt = useTimerStore.getState().timers['long_tone']?.firstStartedAt;
+
+  fireEvent.press(screen.getByLabelText('練習の計測開始'));
+
+  expect(useTimerStore.getState().timers['long_tone']?.firstStartedAt).toBe(startedAt);
 });

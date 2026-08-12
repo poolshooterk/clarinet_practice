@@ -9,6 +9,8 @@ export const PRACTICE_SESSION_TIMER_KEY = 'practice-session';
 
 type Props = {
   onTimesChange: (times: { startTime: string | null; endTime: string | null }) => void;
+  /** 未計測 (idle) から計測を始めたときだけ呼ばれる。一時停止からの再開では呼ばれない */
+  onFirstStart?: () => void;
 };
 
 function formatElapsed(ms: number): string {
@@ -18,7 +20,7 @@ function formatElapsed(ms: number): string {
   return `${mm}:${ss}`;
 }
 
-export function SessionTimer({ onTimesChange }: Props) {
+export function SessionTimer({ onTimesChange, onFirstStart }: Props) {
   const timers = useTimerStore((s) => s.timers);
   const start = useTimerStore((s) => s.start);
   const pause = useTimerStore((s) => s.pause);
@@ -86,8 +88,10 @@ export function SessionTimer({ onTimesChange }: Props) {
   }
 
   function handleStart() {
+    const wasIdle = (useTimerStore.getState().timers[key]?.status ?? 'idle') === 'idle';
     start(key);
     reportTimes(false);
+    if (wasIdle) onFirstStart?.();
   }
   function handlePause() {
     pause(key);

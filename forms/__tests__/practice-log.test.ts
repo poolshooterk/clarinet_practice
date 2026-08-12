@@ -1,8 +1,10 @@
 import {
+  AUTO_START_MENUS,
   BASIC_MENUS,
   formatClock,
   formatDate,
   practiceLogSchema,
+  resolveAutoStartTimerKey,
   today,
 } from '@/forms/practice-log';
 
@@ -505,5 +507,39 @@ describe('formatClock', () => {
   it('epoch を HH:MM に整形する', () => {
     const d = new Date(2026, 0, 1, 19, 5, 0);
     expect(formatClock(d.getTime())).toBe('19:05');
+  });
+});
+
+describe('resolveAutoStartTimerKey', () => {
+  it('none はタイマーキーを返さない', () => {
+    expect(resolveAutoStartTimerKey('none')).toBeNull();
+  });
+
+  it('基礎メニューは menu_type がそのままキーになる', () => {
+    expect(resolveAutoStartTimerKey('long_tone')).toBe('long_tone');
+    expect(resolveAutoStartTimerKey('tonguing')).toBe('tonguing');
+  });
+
+  it('その他は other キーになる', () => {
+    expect(resolveAutoStartTimerKey('other')).toBe('other');
+  });
+
+  it('教本は 1 行目の field id からキーを組み立てる', () => {
+    expect(resolveAutoStartTimerKey('textbook', 'abc123')).toBe('textbook-abc123');
+  });
+
+  it('教本行が無いときは自動開始しない', () => {
+    expect(resolveAutoStartTimerKey('textbook')).toBeNull();
+    expect(resolveAutoStartTimerKey('textbook', '')).toBeNull();
+  });
+
+  it('教本以外は field id を渡しても影響しない', () => {
+    expect(resolveAutoStartTimerKey('long_tone', 'abc123')).toBe('long_tone');
+  });
+
+  it('AUTO_START_MENUS の全選択肢を解決できる', () => {
+    for (const menu of AUTO_START_MENUS) {
+      expect(() => resolveAutoStartTimerKey(menu.value, 'abc123')).not.toThrow();
+    }
   });
 });

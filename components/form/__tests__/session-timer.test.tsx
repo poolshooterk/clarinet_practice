@@ -27,4 +27,43 @@ describe('SessionTimer', () => {
     fireEvent.press(getByLabelText('練習の停止'));
     expect(onTimesChange).toHaveBeenLastCalledWith({ startTime: '19:00', endTime: '19:50' });
   });
+
+  describe('onFirstStart', () => {
+    it('初回の練習開始で 1 回だけ呼ばれる', () => {
+      const onFirstStart = jest.fn();
+      const { getByLabelText } = renderWithProviders(
+        <SessionTimer onTimesChange={jest.fn()} onFirstStart={onFirstStart} />,
+      );
+      fireEvent.press(getByLabelText('練習の計測開始'));
+      expect(onFirstStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('一時停止からの再開では呼ばれない', () => {
+      const onFirstStart = jest.fn();
+      const { getByLabelText } = renderWithProviders(
+        <SessionTimer onTimesChange={jest.fn()} onFirstStart={onFirstStart} />,
+      );
+      fireEvent.press(getByLabelText('練習の計測開始'));
+      fireEvent.press(getByLabelText('練習の一時停止'));
+      fireEvent.press(getByLabelText('練習の再開'));
+      expect(onFirstStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('リセット後に再度開始すると改めて呼ばれる', () => {
+      const onFirstStart = jest.fn();
+      const { getByLabelText } = renderWithProviders(
+        <SessionTimer onTimesChange={jest.fn()} onFirstStart={onFirstStart} />,
+      );
+      fireEvent.press(getByLabelText('練習の計測開始'));
+      fireEvent.press(getByLabelText('練習の停止'));
+      fireEvent.press(getByLabelText('練習タイマーのリセット'));
+      fireEvent.press(getByLabelText('練習の計測開始'));
+      expect(onFirstStart).toHaveBeenCalledTimes(2);
+    });
+
+    it('未指定でも練習開始で例外にならない', () => {
+      const { getByLabelText } = renderWithProviders(<SessionTimer onTimesChange={jest.fn()} />);
+      expect(() => fireEvent.press(getByLabelText('練習の計測開始'))).not.toThrow();
+    });
+  });
 });

@@ -9,6 +9,38 @@ export type BasicMenuType = (typeof BASIC_MENUS)[number]['type'];
 
 export const BASIC_GENRES = ['スケール', 'エチュード'] as const;
 
+/** 練習開始時に自動で計測を始めるメニューの選択肢 (設定画面で選ぶ) */
+export const AUTO_START_MENUS = [
+  { value: 'none', label: '自動開始しない' },
+  { value: 'long_tone', label: 'ロングトーン' },
+  { value: 'tonguing', label: 'タンギング' },
+  { value: 'textbook', label: '教本 (1つ目)' },
+  { value: 'other', label: 'その他' },
+] as const;
+
+export type AutoStartMenu = (typeof AUTO_START_MENUS)[number]['value'];
+
+/**
+ * 自動開始メニューを練習記録フォームのタイマーキーへ解決する。
+ * 教本は `useFieldArray` の 1 行目の field id からキーを組み立てるため、
+ * 教本行が無い (= id が渡らない) 場合は自動開始しない。
+ */
+export function resolveAutoStartTimerKey(
+  menu: AutoStartMenu,
+  firstTextbookFieldId?: string,
+): string | null {
+  switch (menu) {
+    case 'long_tone':
+    case 'tonguing':
+    case 'other':
+      return menu;
+    case 'textbook':
+      return firstTextbookFieldId ? `textbook-${firstTextbookFieldId}` : null;
+    default:
+      return null;
+  }
+}
+
 const tonguingBpmEntrySchema = z.object({
   bpm: z
     .number()

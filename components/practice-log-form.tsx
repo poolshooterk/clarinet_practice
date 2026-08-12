@@ -25,9 +25,11 @@ import {
   formatDate,
   type PracticeLogInput,
   practiceLogSchema,
+  resolveAutoStartTimerKey,
   today,
 } from '@/forms/practice-log';
 import { type SessionRecording, usePracticeLogStore } from '@/store/practice-log';
+import { usePracticePreferenceStore } from '@/store/practice-preference';
 import { type Textbook, useTextbookCatalogStore } from '@/store/textbook-catalog';
 import { getElapsedMs, useTimerStore } from '@/store/timer';
 
@@ -318,6 +320,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
 
   const formNonBasicMinutes = formTextbookMinutes + (watchedOther ?? 0);
 
+  const autoStartMenu = usePracticePreferenceStore((s) => s.autoStartMenu);
   const resetAll = useTimerStore((s) => s.resetAll);
   const timersActive = useTimerStore((s) =>
     Object.values(s.timers).some((t) => t?.status === 'running'),
@@ -331,6 +334,16 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
   useEffect(() => {
     onDirtyChangeRef.current?.(isDirty || recDirty || timersActive);
   }, [isDirty, recDirty, timersActive]);
+
+  // 「練習開始」を押したときに、設定で選んだメニューのタイマーも同時に走らせる。
+  // 既に手動で開始 / 停止済みのタイマーは上書きしない。
+  function handleAutoStart() {
+    const key = resolveAutoStartTimerKey(autoStartMenu, fields[0]?.id);
+    if (key == null) return;
+    const timerState = useTimerStore.getState();
+    if ((timerState.timers[key]?.status ?? 'idle') !== 'idle') return;
+    timerState.start(key);
+  }
 
   const submitForm = handleSubmit(async (data) => {
     await onSubmit(data);
@@ -428,6 +441,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
               setValue('startTime', startTime ?? '', { shouldDirty: true });
               if (endTime != null) setValue('endTime', endTime, { shouldDirty: true });
             }}
+            onFirstStart={handleAutoStart}
           />
           <XStack gap="$2" items="center">
             <Controller
