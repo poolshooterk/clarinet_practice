@@ -8,9 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 クラリネット練習を記録・管理するための Expo アプリ。練習記録 (基礎練習: ロングトーン / タンギング、教則本進捗) と所有楽器・購入計画の管理を行う。
 
-このリポジトリは Expo テンプレート (`reset-project` スクリプト) を起点に立ち上がっているが、現在はクラリネット練習アプリとして発展している。**新機能追加時はドメイン要件 (練習記録 / 教則本 / 楽器管理) を優先**し、テンプレート時代の「汎用性のために抽象化する」発想は基本適用しない。ただしテンプレート由来の品質基盤 (ESLint / Prettier / strict TS / 4 ステップ品質チェック / フォーム実装方針 / テスト方針) は維持する。
+このリポジトリは Expo テンプレートを起点に立ち上がっているが、現在はクラリネット練習アプリとして発展している。**新機能追加時はドメイン要件 (練習記録 / 教則本 / 楽器管理) を優先**し、テンプレート時代の「汎用性のために抽象化する」発想は基本適用しない。ただしテンプレート由来の品質基盤 (ESLint / Prettier / strict TS / 4 ステップ品質チェック / フォーム実装方針 / テスト方針) は維持する。
 
-`reset-project` スクリプトはテンプレート由来のため残してあるが、本プロジェクトでは使用しない (実行するとドメインコードが `app-example/` に退避されてしまう)。
+### テンプレート由来の残骸 (参照実装として使わないこと)
+
+以下はテンプレート時代の遺物でドメイン機能から参照されていない。新規実装のお手本にすると汎用テンプレートの発想を引きずるので、参照実装が必要なときはドメイン側 (`components/practice-log-form.tsx` / `store/practice-log.ts` 等) を見ること。
+
+- `store/counter.ts` / `components/profile-form.tsx` / `forms/profile.ts` と各テスト、`.maestro/profile-form.yaml`
+- `package.json` の `name` は `expo-template` のまま、`README.md` も汎用テンプレートの説明のまま (アプリ名は `app.json` の `クラリネット練習` / slug `clarinet-practice` が実体)
+- `npm run reset-project` は **実行できない**。`scripts/reset-project.js` は git に存在せず、`scripts/` にあるのは `generate-icon.py` (アプリアイコン生成) のみ。同様に `app-example/` も生成されることはなく、`.gitignore` / `tsconfig.json` の `exclude` に残っているのは無害な残骸
 
 ## Commands
 
@@ -27,8 +33,10 @@ npm test               # Run Jest (jest-expo preset) once
 npm run test:watch     # Run Jest in watch mode
 npm run e2e:ios        # Run Maestro E2E flows on iOS Simulator (Expo Go / requires `npx expo start` running)
 npm run e2e:android    # Run Maestro E2E flows on Android Emulator (Expo Go / requires `npx expo start` running)
-npm run reset-project  # Move app/, components/, hooks/, constants/, scripts/ to app-example/ and recreate a blank app/ (store/ や assets/ は影響を受けない)
+npx tsc --noEmit       # TypeScript 型チェック (npm script は無い。品質チェック 4 ステップの 1 つ)
 ```
+
+`npm run reset-project` は package.json に残っているが実体ファイルが無く実行できない (上記「テンプレート由来の残骸」参照)。
 
 EAS Build (dev server 不要の実機配布用 APK):
 
@@ -122,7 +130,7 @@ npm test              # Jest がすべてパス
 ## メタ規約
 
 - コメント / コミットメッセージ / ドキュメントは**日本語が標準**。外部パッケージ由来の英語コメント／識別子はそのまま引用して構わない
-- `app-example/` は `reset-project` が旧 `app/` を退避するための **gitignore 済み**ディレクトリ。fresh clone には存在しない (CLAUDE.md / README.md などで参照しないこと)
+- `app-example/` は fresh clone にも作業ツリーにも存在しない (生成する手段が既に無い)。`.gitignore` / `tsconfig.json` の `exclude` に名前が残っているだけなので、ドキュメントやコードから参照しないこと
 
 ## Architecture
 
@@ -183,7 +191,8 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - **アクセントボタンは各所で明示的に `theme="blue"` を付ける**: グローバルな `<Theme>` ラッパーは無い (`app/_layout.tsx` は `<TamaguiProvider>` 直下に `<Stack>` を置くだけ)。保存等の主要ボタンは個別に `theme="blue"`、破壊的操作は `theme="red"` を指定する。新しいフォームでも同じ Button の theme 指定を踏襲すること
 - **EAS Build は `.env.local` を読まない**: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` は開発時 `.env.local` 経由で参照されるが、EAS Build ではこのファイルが無視される。`eas secret:create --scope project` で EAS シークレットに登録しないとビルドされた APK が起動時にクラッシュする
 - **E2E の APP_ID は環境依存**: `e2e:android` スクリプトの `APP_ID=host.exp.exponent` は Expo Go 専用。preview ビルドをインストールした実機に対して Maestro を実行する場合は `APP_ID=com.keikei.clarinetpractice` を指定する
-- **練習記録は `(user_id, practiced_at)` で同日 1 件のみ**: DB 側に UNIQUE 制約 `practice_sessions_user_id_practiced_at_key`。新規 vs 編集モードは `app/practice-log-form.tsx` で URL params `?id=` の有無により 1:1 に確定し、フォーム内での日付変更や同日既存検出による自動切替は **行わない**。新規モードでの未来日 (`practicedAt > today()`) は zod schema が弾く。新規モードで既存日付と被るデータを submit した場合は Postgres `23505` を `classifyError` (`store/practice-log.ts`) が `'duplicate'` reason に変換し、Alert で「一覧から該当の記録を選んで編集してください」と案内する。新機能で別経路から `practice_sessions` へ INSERT を増やす場合はこの不変条件を踏まえる
+- **練習記録は同日 最大 3 件 (`session_no` 1..3)**: DB 側に `practice_sessions.session_no smallint not null default 1` + `CHECK (session_no between 1 and 3)` + UNIQUE 制約 `practice_sessions_user_id_practiced_at_session_no_key`。回数はユーザに入力させず `nextSessionNo(sessions, date, excludeId?)` (`store/practice-log.ts`) が「その日の 1..3 の最小の空き番号」を採番する (削除で空いた番号は再利用)。`add` は保存前に採番し、空きが無ければ DB に触らず `{ ok: false, reason: 'limit' }`。`update` は**日付を変えたときだけ**移動先の日で再採番し、満杯なら同じく `'limit'`。画面側は Alert で「同じ日に記録できるのは3回までです」と案内する。新規 vs 編集モードは `app/practice-log-form.tsx` で URL params `?id=` の有無により 1:1 に確定し、フォーム内での日付変更や同日既存検出による自動切替は **行わない**。新規モードでの未来日 (`practicedAt > today()`) は zod schema が弾く。端末間競合等で Postgres `23505` が返った場合は `classifyError` が `'duplicate'` reason に変換する。新機能で別経路から `practice_sessions` へ INSERT を増やす場合はこの不変条件を踏まえる
+- **練習記録一覧は日付でグループ化して表示する**: `app/(tabs)/index.tsx` の `FlatList` は `groupSessionsByDate(monthSessions)` (`store/practice-log.ts`) が返す `{ date, sessions }[]` を 1 要素 = 1 日として描画し、日付ヘッダーの下に回ごとの `SessionCard` を並べる。「N回目」バッジはその日に 2 件以上あるときだけ出す。月サマリの「平均: X分/日」は**記録件数ではなく練習した日数** (`monthGroups.length`) で割る。`fetchAll` の並びは `practiced_at desc, session_no desc` で、`sessions[0]` が「直近の回」= 練習フォームの教本行プレフィル元になる
 - **練習記録フォーム表示時は教本カタログ・練習記録を必ず再フェッチ**: `app/practice-log-form.tsx` の `useFocusEffect` で `useTextbookCatalogStore.getState().fetchAll()` / `usePracticeLogStore.getState().fetchAll()` を呼ぶ。教本カタログが空のまま `<Select>` を render すると、選択中 textbook の UUID がトリガーにそのまま露出する (Tamagui `Select.Value` は `Select.Item` の `ItemText` 解決に失敗すると value 文字列を表示するため)
 - **録音は 3 点セットで成立する**: ① `lib/recording.ts` の `Audio.setAudioModeAsync` は Android キー (`interruptionModeAndroid: DoNotMix` / `staysActiveInBackground` / `shouldDuckAndroid: false` 等) を必ず渡す ② `components/form/recording-section.tsx` の `RecordingSection` は録音中だけ `activateKeepAwakeAsync('clarinet-recording')` で画面スリープを抑止し pause / stop / unmount で `deactivateKeepAwake('clarinet-recording')` ③ `app.json` の Android `permissions` に `WAKE_LOCK` / `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MICROPHONE` を含める。どれかを欠くと Android で 2 分前後で録音内容が無音になる回帰が再発する。`app.json` permission 変更は OTA 不可なので `eas build --platform android --profile preview` で APK を再ビルドする必要がある
 - **録音の再生は同時に 1 つだけ**: `components/form/recording-section.tsx` の `RecordingSectionNative` が `playingKey: string | null` を保持して「いま再生中のカード」を 1 つだけ追跡する。各 `RecordingCard` は再生開始時に `onPlayStart(recordingKey)` で親 state を上書きし、`isActive=false` への遷移を `useEffect` で検知して自分の `Sound.pauseAsync()` を呼ぶ。これは同一 `RecordingSection` インスタンス内の排他であり、別画面の `RecordingSection` とは独立 (グローバル単一インスタンスではない)。別経路で録音を再生する UI を増やす場合は、同じく親側で `playingKey` を持って `RecordingCard` に `isActive` / `onPlayStart` / `onPlayEnd` を渡す配線を踏襲する
@@ -212,10 +221,14 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - **`@react-native-community/datetimepicker`** — 日付ピッカー。**Web 非対応**のため `Platform.OS` で分岐し、Web では Tamagui `Input` への直接入力にフォールバック
 - **`@supabase/supabase-js`** — 認証 + DB クライアント。シングルトンは `lib/supabase.ts`。認証エラーの日本語マッピングは `lib/auth-errors.ts`
 - **`expo-file-system/legacy`** — 録音ファイル管理 (`lib/recording.ts`)。新 API への移行は未完了で legacy を継続使用。テストでは `jest.mock('expo-file-system/legacy', () => ({ getInfoAsync: jest.fn().mockResolvedValue({ exists: false }) }))` でモックする (`lib/__tests__/recording.test.ts` / `__tests__/integration/practice-log-form.integration.test.tsx` 参照)
+- **`expo-av`** — 録音/再生の実体 (`Audio.Recording` / `Audio.Sound`)。`app.json` の plugins に `["expo-av", { microphonePermission: ... }]` を登録済み。SDK 54 では後継の `expo-audio` が存在するが**移行していない**。移行すると `lib/recording.ts` の `setAudioModeAsync` のキー名と `RecordingSection` の Sound ライフサイクルが全面的に変わり、Android 無音化の回帰リスクを直撃するため、着手する場合は「録音は 3 点セットで成立する」の不変条件を先に読むこと
+- **`expo-keep-awake`** — 録音中の画面スリープ抑止 (`components/form/recording-section.tsx`)。**`package.json` に直接依存として書かれておらず `expo` の推移的依存に乗っている**。録音の必須 3 点セットの 1 つがこの状態なので、依存関係の整理をするなら `npx expo install expo-keep-awake` で明示依存に昇格させてから触ること
 
 ## Supabase
 
 詳細は `supabase/CLAUDE.md` を参照 (環境変数 / 認証フロー / DB アクセスパターン / RLS ポリシー / DB スキーマ / テストモック)。
+
+`.mcp.json` でプロジェクトスコープの Supabase MCP サーバー (HTTP) が設定済み。`mcp__supabase__execute_sql` で**本番 DB に実データが入った状態で直接クエリできる**ため、スキーマ確認・実データの傾向調査・マイグレーション適用 (`mcp__supabase__apply_migration`) はローカル Supabase を立てずに実行できる。**接続先は本番プロジェクトなので、DDL / UPDATE / DELETE を投げる前は必ずユーザに確認する**。
 
 ## フォームの実装方針
 
