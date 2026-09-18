@@ -140,6 +140,9 @@ export function SessionTimer({ onTimesChange, onFirstStart }: Props) {
       <Paragraph fontSize="$2" color="$color10">
         {stoppedMinutes}分計測済
       </Paragraph>
+      <Button size="$2" onPress={handleStart} aria-label="練習の再開">
+        再開
+      </Button>
       <Button size="$2" onPress={handleReset} aria-label="練習タイマーのリセット">
         リセット
       </Button>
