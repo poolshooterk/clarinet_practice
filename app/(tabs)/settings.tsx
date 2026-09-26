@@ -47,6 +47,20 @@ export default function Settings() {
           <Paragraph color="$color10">›</Paragraph>
         </XStack>
       </Pressable>
+      <Pressable onPress={() => router.push('/data-export')}>
+        <XStack
+          items="center"
+          justify="space-between"
+          p="$4"
+          bg="$color2"
+          rounded="$4"
+          borderWidth={1}
+          borderColor="$borderColor"
+        >
+          <Paragraph>📤 データの書き出し</Paragraph>
+          <Paragraph color="$color10">›</Paragraph>
+        </XStack>
+      </Pressable>
     </YStack>
   );
 }

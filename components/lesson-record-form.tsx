@@ -168,6 +168,7 @@ type Props = {
   onDelete?: () => void;
   onDirtyChange?: (dirty: boolean) => void;
   onMoveExisting?: (rec: SessionRecording) => void;
+  onShareExisting?: (rec: SessionRecording, recordingNo: number) => void;
 };
 
 export function LessonRecordForm({
@@ -177,6 +178,7 @@ export function LessonRecordForm({
   onDelete,
   onDirtyChange,
   onMoveExisting,
+  onShareExisting,
 }: Props) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -225,6 +227,7 @@ export function LessonRecordForm({
         onChange={setRecChange}
         onDirtyChange={setRecDirty}
         onMoveExisting={onMoveExisting}
+        onShareExisting={onShareExisting}
       />
       <Controller
         control={control}

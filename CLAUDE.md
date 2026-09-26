@@ -152,6 +152,7 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - `app/homework-form.tsx` — 宿題 登録/編集フォーム画面 (スタック遷移)
 - `app/embouchure-checklist.tsx` — アンブシュア確認チェックリスト画面 (スタック遷移)
 - `app/practice-settings.tsx` — 練習設定画面 (スタック遷移)。設定タブから開く
+- `app/data-export.tsx` — データの書き出し画面 (練習/レッスン記録の CSV 共有)。設定タブから開く
 
 ### Where do I add X
 
@@ -206,6 +207,8 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - **「練習開始」で初めの練習タイマーを自動起動する設定は端末ローカル**: 選択肢と解決ロジックは `forms/practice-log.ts` の `AUTO_START_MENUS` / `resolveAutoStartTimerKey(menu, firstTextbookFieldId)` にあり、値の保持は `store/practice-preference.ts` (persist / AsyncStorage `clarinet-practice-preference`, 既定 `'none'`)。`forms/` は `store/` を import しない依存方向を保つため、選択肢定義とキー解決は forms 側に置きストアは型だけ import する。`SessionTimer` の `onFirstStart` は **`idle → running` の初回だけ**発火し (一時停止からの「再開」では発火しない)、`components/practice-log-form.tsx` 側で対象タイマーが `idle` のときだけ `start` する (手動で開始/停止済みのタイマーは上書きしない)。教本は `useFieldArray` の 1 行目の field id から `textbook-${id}` を組み立てるため、教本行が 0 件なら何も起動しない
 - **レッスン宿題はレッスン保存の delete-all-reinsert に含めない**: `lesson_homework` は `store/lesson-record.ts` の `addHomework`/`updateHomework`/`updateHomeworkStatus`/`removeHomework` で id 単位に CRUD する。`lesson_records` の `update` は textbook 子を全削除→再挿入するが、宿題を同じ扱いにするとレッスン後に独立更新した進捗ステータス (`not_started`/`in_progress`/`done`) が消えるため。宿題は `LessonRecord` にネストしてフェッチし (`update` の optimistic は `{ ...r }` スプレッドで保持)、作成は保存済みレッスン (編集モード) から `app/homework-form.tsx` 経由でのみ行う (新規レッスンは id 未確定のため)。lesson タブの `components/latest-lesson-homework-card.tsx` が `records[0]` (直近レッスン) の宿題を表示しステータスをトグルする
 
+- **記録・録音の書き出しは OS 共有シート経由**: Google ドライブ等への「コピー」は特定サービスの API/認証を持たず、`expo-sharing` の共有シートで保存先アプリをユーザに選ばせる。整形は純粋関数の `lib/export-format.ts` (1 件テキスト / 一覧 CSV / 録音ファイル名)、I/O は `lib/export.ts` (`cacheDirectory/export/` へ書き出し or 複製してから `shareAsync`)。録音は元ファイル `{recordId}-{index}.m4a` を**移動せず複製**して日付入りの ASCII 名で渡す (元ファイルを動かすと DB の `local_uri` と食い違う)。CSV は Excel 向けに BOM + CRLF。`expo-sharing` は 1 回 1 ファイルしか渡せないため、録音は各記録の編集画面の `RecordingSection` (`onShareExisting`) から 1 件ずつ共有する。`expo-sharing` はネイティブモジュールなので preview APK は再ビルドが必要
+
 ### ドメインヘルパー
 
 コードベース固有の計算関数。追加実装時に車輪の再発明をしないよう把握しておく。
@@ -224,6 +227,7 @@ expo-router v6 のファイルベースルーティング。`app/_layout.tsx` �
 - **`@supabase/supabase-js`** — 認証 + DB クライアント。シングルトンは `lib/supabase.ts`。認証エラーの日本語マッピングは `lib/auth-errors.ts`
 - **`expo-file-system/legacy`** — 録音ファイル管理 (`lib/recording.ts`)。新 API への移行は未完了で legacy を継続使用。テストでは `jest.mock('expo-file-system/legacy', () => ({ getInfoAsync: jest.fn().mockResolvedValue({ exists: false }) }))` でモックする (`lib/__tests__/recording.test.ts` / `__tests__/integration/practice-log-form.integration.test.tsx` 参照)
 - **`expo-av`** — 録音/再生の実体 (`Audio.Recording` / `Audio.Sound`)。`app.json` の plugins に `["expo-av", { microphonePermission: ... }]` を登録済み。SDK 54 では後継の `expo-audio` が存在するが**移行していない**。移行すると `lib/recording.ts` の `setAudioModeAsync` のキー名と `RecordingSection` の Sound ライフサイクルが全面的に変わり、Android 無音化の回帰リスクを直撃するため、着手する場合は「録音は 3 点セットで成立する」の不変条件を先に読むこと
+- **`expo-sharing`** — 記録・録音の書き出し (`lib/export.ts`)。`npx expo install` で導入済み。テストでは `expo-sharing` と `expo-file-system/legacy` をファイル単位で `jest.mock` する (`lib/__tests__/export.test.ts` 参照)
 - **`expo-keep-awake`** — 録音中の画面スリープ抑止 (`components/form/recording-section.tsx`)。**`package.json` に直接依存として書かれておらず `expo` の推移的依存に乗っている**。録音の必須 3 点セットの 1 つがこの状態なので、依存関係の整理をするなら `npx expo install expo-keep-awake` で明示依存に昇格させてから触ること
 
 ## Supabase
