@@ -28,6 +28,25 @@ describe('SessionTimer', () => {
     expect(onTimesChange).toHaveBeenLastCalledWith({ startTime: '19:00', endTime: '19:50' });
   });
 
+  it('停止後に再開すると計測が継続し、はじめの開始時刻は変わらない', () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(new Date(2026, 0, 1, 19, 0, 0).getTime());
+    const onTimesChange = jest.fn();
+    const { getByLabelText } = renderWithProviders(<SessionTimer onTimesChange={onTimesChange} />);
+    fireEvent.press(getByLabelText('練習の計測開始'));
+    now.mockReturnValue(new Date(2026, 0, 1, 19, 30, 0).getTime()); // +30分
+    fireEvent.press(getByLabelText('練習の停止'));
+    expect(onTimesChange).toHaveBeenLastCalledWith({ startTime: '19:00', endTime: '19:30' });
+
+    now.mockReturnValue(new Date(2026, 0, 1, 19, 40, 0).getTime()); // 停止から10分後に再開
+    fireEvent.press(getByLabelText('練習の再開'));
+    expect(useTimerStore.getState().timers['practice-session']?.status).toBe('running');
+    expect(useTimerStore.getState().timers['practice-session']?.accumulatedMs).toBe(30 * 60_000);
+
+    now.mockReturnValue(new Date(2026, 0, 1, 19, 55, 0).getTime()); // 再開から15分後に停止
+    fireEvent.press(getByLabelText('練習の停止'));
+    expect(onTimesChange).toHaveBeenLastCalledWith({ startTime: '19:00', endTime: '19:45' });
+  });
+
   describe('onFirstStart', () => {
     it('初回の練習開始で 1 回だけ呼ばれる', () => {
       const onFirstStart = jest.fn();
@@ -45,6 +64,17 @@ describe('SessionTimer', () => {
       );
       fireEvent.press(getByLabelText('練習の計測開始'));
       fireEvent.press(getByLabelText('練習の一時停止'));
+      fireEvent.press(getByLabelText('練習の再開'));
+      expect(onFirstStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('停止からの再開では呼ばれない', () => {
+      const onFirstStart = jest.fn();
+      const { getByLabelText } = renderWithProviders(
+        <SessionTimer onTimesChange={jest.fn()} onFirstStart={onFirstStart} />,
+      );
+      fireEvent.press(getByLabelText('練習の計測開始'));
+      fireEvent.press(getByLabelText('練習の停止'));
       fireEvent.press(getByLabelText('練習の再開'));
       expect(onFirstStart).toHaveBeenCalledTimes(1);
     });
