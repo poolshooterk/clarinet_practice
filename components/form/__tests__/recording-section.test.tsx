@@ -272,6 +272,31 @@ describe('RecordingSection', () => {
     expect(screen.queryByLabelText('録音 1を移動')).toBeNull();
   });
 
+  it('onShareExisting あり: 既存録音に共有ボタンが出て押すと録音と表示番号を渡して呼ばれる', () => {
+    const onShareExisting = jest.fn();
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
+      { id: 'rec-3', index: 3, localUri: 'file:///recordings/s-3.m4a', memo: null },
+    ];
+    renderWithProviders(
+      <RecordingSection
+        existingRecordings={existing}
+        onChange={jest.fn()}
+        onShareExisting={onShareExisting}
+      />,
+    );
+    fireEvent.press(screen.getByLabelText('録音 2を共有'));
+    expect(onShareExisting).toHaveBeenCalledWith(existing[1], 2);
+  });
+
+  it('onShareExisting なし: 共有ボタンは表示されない', () => {
+    const existing: SessionRecording[] = [
+      { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },
+    ];
+    renderWithProviders(<RecordingSection existingRecordings={existing} onChange={jest.fn()} />);
+    expect(screen.queryByLabelText('録音 1を共有')).toBeNull();
+  });
+
   it('再生前 (Sound 未読込) はシークバーが無効', () => {
     const existing: SessionRecording[] = [
       { id: 'rec-1', index: 1, localUri: 'file:///recordings/s-1.m4a', memo: null },

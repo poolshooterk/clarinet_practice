@@ -2,13 +2,15 @@ import { usePreventRemove } from '@react-navigation/native';
 import { router, Stack, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
-import { Paragraph, YStack } from 'tamagui';
+import { Button, Paragraph, YStack } from 'tamagui';
 
 import type { RecordingChange } from '@/components/form/recording-section';
 import { LessonHomeworkSection } from '@/components/lesson-homework-section';
 import { LessonRecordForm } from '@/components/lesson-record-form';
 import { RecordingMoveSheet } from '@/components/recording-move-sheet';
 import { type LessonRecordInput, splitHeldAt } from '@/forms/lesson-record';
+import { exportErrorMessage, shareRecordingFile, shareTextFile } from '@/lib/export';
+import { formatLessonRecordText, recordingExportFileName } from '@/lib/export-format';
 import { useLessonRecordStore } from '@/store/lesson-record';
 import type { SessionRecording } from '@/store/practice-log';
 import { useTextbookCatalogStore } from '@/store/textbook-catalog';
@@ -89,6 +91,27 @@ export default function LessonRecordFormScreen() {
     ]);
   };
 
+  const handleShareRecording = async (rec: SessionRecording, recordingNo: number) => {
+    if (!existing) return;
+    const { date } = splitHeldAt(existing.heldAt);
+    const result = await shareRecordingFile(
+      rec.localUri,
+      recordingExportFileName('lesson', date, recordingNo),
+    );
+    if (!result.ok) Alert.alert('書き出せません', exportErrorMessage(result.reason));
+  };
+
+  const handleExportText = async () => {
+    if (!existing) return;
+    const { date } = splitHeldAt(existing.heldAt);
+    const result = await shareTextFile(
+      `clarinet_lesson_${date}.txt`,
+      formatLessonRecordText(existing),
+      'text',
+    );
+    if (!result.ok) Alert.alert('書き出せません', exportErrorMessage(result.reason));
+  };
+
   return (
     <>
       <Stack.Screen
@@ -105,6 +128,7 @@ export default function LessonRecordFormScreen() {
           onDelete={id ? handleDelete : undefined}
           onDirtyChange={setDirty}
           onMoveExisting={setMovingRec}
+          onShareExisting={existing ? handleShareRecording : undefined}
         />
         {id && existing ? (
           <YStack px="$4" pb="$4" gap="$2">
@@ -112,6 +136,9 @@ export default function LessonRecordFormScreen() {
               宿題
             </Paragraph>
             <LessonHomeworkSection lessonRecordId={id} homework={existing.homework} />
+            <Button mt="$2" onPress={handleExportText} aria-label="レッスン記録を書き出す">
+              この記録を書き出す (Google ドライブ等)
+            </Button>
           </YStack>
         ) : null}
         {!id ? (

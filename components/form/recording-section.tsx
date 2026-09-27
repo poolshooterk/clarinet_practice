@@ -25,6 +25,8 @@ type Props = {
   onChange: (change: RecordingChange) => void;
   onDirtyChange?: (dirty: boolean) => void;
   onMoveExisting?: (rec: SessionRecording) => void;
+  /** 保存済み録音を外部へ書き出す。recordingNo は画面上の「録音 N」の N */
+  onShareExisting?: (rec: SessionRecording, recordingNo: number) => void;
 };
 
 type RecordingCardProps = {
@@ -38,6 +40,7 @@ type RecordingCardProps = {
   onPlayEnd: () => void;
   onMemoChange?: (memo: string) => void;
   onMove?: () => void;
+  onShare?: () => void;
   onDelete: () => void;
 };
 
@@ -52,6 +55,7 @@ function RecordingCard({
   onPlayEnd,
   onMemoChange,
   onMove,
+  onShare,
   onDelete,
 }: RecordingCardProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -173,6 +177,13 @@ function RecordingCard({
             </Paragraph>
           </YStack>
         </Pressable>
+        {onShare && (
+          <Pressable onPress={onShare} aria-label={`${label}を共有`}>
+            <Paragraph color="$blue9" fontSize="$2">
+              共有
+            </Paragraph>
+          </Pressable>
+        )}
         {onMove && (
           <Pressable onPress={onMove} aria-label={`${label}を移動`}>
             <Paragraph color="$blue9" fontSize="$2">
@@ -207,6 +218,7 @@ function RecordingSectionNative({
   onChange,
   onDirtyChange,
   onMoveExisting,
+  onShareExisting,
 }: Props) {
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [confirmed, setConfirmed] = useState<TempRecording[]>([]);
@@ -343,6 +355,7 @@ function RecordingSectionNative({
           isActive={playingKey === rec.id}
           onPlayStart={setPlayingKey}
           onPlayEnd={() => setPlayingKey(null)}
+          onShare={onShareExisting ? () => onShareExisting(rec, i + 1) : undefined}
           onMove={onMoveExisting ? () => onMoveExisting(rec) : undefined}
           onDelete={() => handleDeleteExisting(rec.id)}
         />

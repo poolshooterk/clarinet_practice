@@ -39,6 +39,7 @@ type Props = {
   existingRecordings?: SessionRecording[];
   onDirtyChange?: (dirty: boolean) => void;
   onMoveExisting?: (rec: SessionRecording) => void;
+  onShareExisting?: (rec: SessionRecording, recordingNo: number) => void;
 };
 
 export type PracticeLogFormRef = {
@@ -240,7 +241,14 @@ function TextbookEntryRow({
 }
 
 export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function PracticeLogForm(
-  { onSubmit, initialValues, existingRecordings = [], onDirtyChange, onMoveExisting },
+  {
+    onSubmit,
+    initialValues,
+    existingRecordings = [],
+    onDirtyChange,
+    onMoveExisting,
+    onShareExisting,
+  },
   ref,
 ) {
   const textbooks = useTextbookCatalogStore((s) => s.textbooks);
@@ -388,6 +396,7 @@ export const PracticeLogForm = forwardRef<PracticeLogFormRef, Props>(function Pr
           }}
           onDirtyChange={setRecDirty}
           onMoveExisting={onMoveExisting}
+          onShareExisting={onShareExisting}
         />
 
         {/* 日付 */}

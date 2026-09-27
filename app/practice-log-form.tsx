@@ -7,6 +7,8 @@ import { Button, Paragraph, YStack } from 'tamagui';
 import { PracticeLogForm, type PracticeLogFormRef } from '@/components/practice-log-form';
 import { RecordingMoveSheet } from '@/components/recording-move-sheet';
 import { type PracticeLogInput } from '@/forms/practice-log';
+import { exportErrorMessage, shareRecordingFile, shareTextFile } from '@/lib/export';
+import { formatPracticeSessionText, recordingExportFileName } from '@/lib/export-format';
 import {
   MAX_SESSIONS_PER_DAY,
   type SessionRecording,
@@ -128,6 +130,30 @@ export default function PracticeLogFormScreen() {
     ]);
   };
 
+  const handleShareRecording = async (rec: SessionRecording, recordingNo: number) => {
+    if (!editingSession) return;
+    const result = await shareRecordingFile(
+      rec.localUri,
+      recordingExportFileName(
+        'practice',
+        editingSession.practicedAt,
+        recordingNo,
+        editingSession.sessionNo,
+      ),
+    );
+    if (!result.ok) Alert.alert('書き出せません', exportErrorMessage(result.reason));
+  };
+
+  const handleExportText = async () => {
+    if (!editingSession) return;
+    const result = await shareTextFile(
+      `clarinet_practice_${editingSession.practicedAt}_${editingSession.sessionNo}.txt`,
+      formatPracticeSessionText(editingSession),
+      'text',
+    );
+    if (!result.ok) Alert.alert('書き出せません', exportErrorMessage(result.reason));
+  };
+
   return (
     <>
       <Stack.Screen
@@ -150,9 +176,15 @@ export default function PracticeLogFormScreen() {
         existingRecordings={editingSession?.recordings ?? []}
         onDirtyChange={setDirty}
         onMoveExisting={setMovingRec}
+        onShareExisting={editingSession ? handleShareRecording : undefined}
       />
       {effectiveId && (
-        <YStack px="$4" pb="$6">
+        <YStack px="$4" pb="$6" gap="$3">
+          {editingSession && (
+            <Button onPress={handleExportText} aria-label="練習記録を書き出す">
+              この記録を書き出す (Google ドライブ等)
+            </Button>
+          )}
           <Button theme="red" onPress={handleDelete} aria-label="練習記録を削除">
             この練習記録を削除
           </Button>
